@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 import React, { useEffect } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native'
 import { useAuth } from '../lib/auth'
+import AppLayout from './app-layout'
 
 const BRAND_BLUE = "#2DB6FF"
 const BRAND_PINK = "#F47CC6"
@@ -79,8 +80,9 @@ export default function MainFeatures() {
   ]
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF", paddingTop: 50 }}>
-      <View style={{ flex: 1, paddingHorizontal: 20 }}>
+    <AppLayout>
+      <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+        <View style={{ flex: 1, paddingHorizontal: 20 }}>
         {/* Main Content */}
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <View style={{ alignItems: "center", gap: 24 }}>
@@ -161,7 +163,8 @@ export default function MainFeatures() {
             </Text>
           </Pressable>
         </View>
-             </View>
-     </View>
-   )
- }
+      </View>
+    </View>
+    </AppLayout>
+  )
+}

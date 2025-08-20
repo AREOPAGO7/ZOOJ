@@ -72,8 +72,8 @@ export default function WelcomeComplete() {
         <View style={{ paddingBottom: 40 }}>
           <Pressable
             onPress={() => {
-              // Navigate to main features page
-              router.push('/main-features')
+              // Navigate to accueil page
+              router.push('/pages/accueil')
             }}
             style={{ borderRadius: 12, overflow: "hidden" }}
           >

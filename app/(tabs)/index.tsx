@@ -99,11 +99,11 @@ export default function App() {
           console.log("Couple check error:", coupleError)
         }
         
-        // Check if profile is completed
+        // Check if profile is completed (has couple)
         if (profile.completed) {
-          console.log("User has completed profile, go directly to main features")
-          // User has completed profile, go directly to main features page (skip welcome page)
-          router.push('/main-features')
+          console.log("User has completed profile, go directly to accueil")
+          // User has completed profile, go directly to accueil page (skip welcome page)
+          router.push('/pages/accueil')
         } else {
           // Check if user has interests
           if (profile.interests && profile.interests.length > 0) {
@@ -115,9 +115,9 @@ export default function App() {
             }
             
             if (couple) {
-              console.log("User has profile, interests, and couple, go to main features")
-              // User has complete profile, go to main features page
-              router.push('/main-features')
+              console.log("User has profile, interests, and couple, go to accueil")
+              // User has complete profile, go to accueil page
+              router.push('/pages/accueil')
             } else {
               console.log("User has profile and interests but no couple, go to invite codes")
               // User has profile and interests but no couple, go to invite codes section
@@ -331,9 +331,13 @@ export default function App() {
         return
       }
 
+      // Mark both profiles as completed since they now have a couple
+      await profileService.updateProfile(user.id, { completed: true })
+      await profileService.updateProfile(partnerProfile.id, { completed: true })
+
       setRedeemSuccess("Relation créée avec succès!")
       setTimeout(() => {
-        setScreen("welcome")
+        router.push('/pages/accueil')
       }, 2000)
     } catch (error) {
       setRedeemError("Une erreur inattendue s'est produite")
@@ -355,14 +359,18 @@ export default function App() {
     
     setIsInterestsLoading(true)
     try {
-      // Update profile with selected interests and mark as completed
+      // Update profile with selected interests but DON'T mark as completed yet
       await profileService.updateProfile(user.id, { 
         interests: selectedInterests,
-        completed: true 
+        completed: false // Keep as false until couple is formed
       })
       
-      // Redirect to welcome completion page for first-time users
-      router.push('/welcome-complete')
+      // Get the user's invite code and go to invite codes section
+      const { data: profile } = await profileService.getProfile(user.id)
+      if (profile) {
+        setMyInviteCode(profile.invite_code || "")
+        setScreen("inviteCodes")
+      }
     } catch (error) {
       console.error("Error updating interests:", error)
     } finally {

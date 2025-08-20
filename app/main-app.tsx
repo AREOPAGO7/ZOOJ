@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import React, { useEffect } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { useAuth } from '../lib/auth'
+import AppLayout from './app-layout'
 
 const BRAND_BLUE = "#2DB6FF"
 const BRAND_PINK = "#F47CC6"
@@ -35,8 +36,9 @@ export default function MainApp() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF", paddingTop: 50 }}>
-      <View style={{ flex: 1, paddingHorizontal: 20 }}>
+    <AppLayout>
+      <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+        <View style={{ flex: 1, paddingHorizontal: 20 }}>
         {/* Main Content */}
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <View style={{ alignItems: "center", gap: 24 }}>
@@ -66,8 +68,8 @@ export default function MainApp() {
         <View style={{ paddingBottom: 40, gap: 16 }}>
           <Pressable
             onPress={() => {
-              // Navigate to the main app features page
-              router.push('/main-features')
+              // Navigate to the accueil page
+              router.push('/pages/accueil')
             }}
             style={{ borderRadius: 12, overflow: "hidden" }}
           >
@@ -87,7 +89,8 @@ export default function MainApp() {
             </Text>
           </Pressable>
         </View>
-             </View>
-     </View>
-   )
- }
+      </View>
+    </View>
+    </AppLayout>
+  )
+}
