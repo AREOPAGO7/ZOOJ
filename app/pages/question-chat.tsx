@@ -666,13 +666,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -687,6 +688,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#374151',
+    marginTop: 0,
   },
   headerSubtitle: {
     fontSize: 14,
@@ -708,6 +710,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    marginTop: 8,
   },
   questionText: {
     fontSize: 18,
@@ -743,7 +746,7 @@ const styles = StyleSheet.create({
   },
   messagesContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 8,
   },
   messageContainer: {
     flexDirection: 'row',
@@ -906,7 +909,7 @@ const styles = StyleSheet.create({
   },
   chatSection: {
     flex: 1,
-    marginTop: 20,
+    marginTop: 12,
   },
   chatTitle: {
     fontSize: 16,
