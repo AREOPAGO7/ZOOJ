@@ -52,48 +52,37 @@ export default function QuestionsPage() {
       const { data: coupleData } = await questionService.getCouple(user!.id);
       setCouple(coupleData);
 
-      // Get all questions directly from the questions table (for testing)
-      const { data: questionsData } = await questionService.getAllQuestions();
+      // Get daily questions for this couple with question content
+      const { data: dailyQuestionsData } = await supabase
+        .from('daily_questions')
+        .select(`
+          *,
+          question:questions(
+            id,
+            content,
+            created_at
+          )
+        `)
+        .eq('couple_id', coupleData.id);
       
-      // Get all answers for questions to check if both partners answered
+      console.log('Daily questions for couple:', dailyQuestionsData);
+
+      // Get all answers for daily questions to check if both partners answered
       const { data: allAnswers } = await supabase
         .from('answers')
         .select(`
           *,
           daily_question:daily_questions(
+            id,
             question_id
           )
         `);
 
-      // Get daily questions to check for duplicates
-      const { data: dailyQuestions } = await supabase
-        .from('daily_questions')
-        .select('*')
-        .eq('couple_id', coupleData.id);
-      
-      console.log('Daily questions for couple:', dailyQuestions);
-
       // Mark questions with answer status
-      const questionsWithAnswerStatus = questionsData?.map(question => {
-        // Find the daily question for this specific question today
-        const today = new Date().toISOString().split('T')[0];
-        const dailyQuestionForThisQuestion = dailyQuestions?.find(dq => 
-          dq.question_id === question.id && dq.scheduled_for === today
-        );
-        
-        if (!dailyQuestionForThisQuestion) {
-          // No daily question for this question today
-          return {
-            ...question,
-            answered: false,
-            bothAnswered: false,
-            answerCount: 0
-          };
-        }
-        
+      const questionsWithAnswerStatus = dailyQuestionsData?.map(dailyQuestion => {
         // Get answers for this specific daily question
         const questionAnswers = allAnswers?.filter((answer: any) => 
-          answer.daily_question_id === dailyQuestionForThisQuestion.id
+          answer.daily_question_id === dailyQuestion.id
         ) || [];
         
         const userAnswered = questionAnswers.some((answer: any) => 
@@ -103,7 +92,11 @@ export default function QuestionsPage() {
         const bothAnswered = questionAnswers.length >= 2;
         
         return {
-          ...question,
+          id: dailyQuestion.question.id,
+          content: dailyQuestion.question.content,
+          created_at: dailyQuestion.question.created_at,
+          daily_question_id: dailyQuestion.id,
+          scheduled_for: dailyQuestion.scheduled_for,
           answered: userAnswered,
           bothAnswered,
           answerCount: questionAnswers.length
@@ -179,92 +172,38 @@ export default function QuestionsPage() {
         return;
       }
 
-      // Get or create daily_question entry for THIS SPECIFIC QUESTION
-      const today = new Date().toISOString().split('T')[0];
-      console.log('Checking for existing daily question for this specific question on date:', today);
+      // Use the daily_question_id from the question object
+      const dailyQuestionId = question.daily_question_id;
       
-      // Check if there's already a daily question for this SPECIFIC question and couple today
-      let { data: existingDailyQuestion, error: existingError } = await supabase
-        .from('daily_questions')
-        .select('*')
-        .eq('couple_id', coupleData.id)
-        .eq('question_id', question.id)
-        .eq('scheduled_for', today)
-        .single();
-
-      if (existingError && existingError.code !== 'PGRST116') {
-        console.error('Error checking existing daily question:', existingError);
+      if (!dailyQuestionId) {
+        console.error('No daily question ID found for question:', question);
+        alert('Erreur: Question quotidienne non trouvée');
+        return;
       }
 
-      let dailyQuestion = existingDailyQuestion;
+      console.log('Using daily question ID:', dailyQuestionId);
+      
+      // Check if this specific question is already answered by this user
+      const { data: existingAnswer } = await supabase
+        .from('answers')
+        .select('*')
+        .eq('daily_question_id', dailyQuestionId)
+        .eq('user_id', user!.id)
+        .single();
 
-      if (!existingDailyQuestion) {
-        // No daily question for this specific question today, create one
-        console.log('Creating daily question for this specific question:', {
-          couple_id: coupleData.id,
-          question_id: question.id,
-          scheduled_for: today
-        });
-
-        const { data: newDailyQuestion, error: createError } = await supabase
-          .from('daily_questions')
-          .insert({
-            couple_id: coupleData.id,
-            question_id: question.id,
-            scheduled_for: today
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating daily question:', createError);
-          console.error('Error details:', {
-            message: createError.message,
-            details: createError.details,
-            hint: createError.hint,
-            code: createError.code
-          });
-          
-          // Show more specific error message
-          let errorMessage = 'Erreur lors de la création de la question quotidienne';
-          if (createError.message) {
-            errorMessage += `: ${createError.message}`;
-          }
-          if (createError.hint) {
-            errorMessage += `\n\nConseil: ${createError.hint}`;
-          }
-          
-          alert(errorMessage);
-          return;
-        }
-        
-        console.log('Daily question created successfully:', newDailyQuestion);
-        dailyQuestion = newDailyQuestion;
-      } else {
-        console.log('Using existing daily question for this specific question:', existingDailyQuestion);
-        
-        // Check if this specific question is already answered by this user
-        const { data: existingAnswer } = await supabase
-          .from('answers')
-          .select('*')
-          .eq('daily_question_id', existingDailyQuestion.id)
-          .eq('user_id', user!.id)
-          .single();
-
-        if (existingAnswer) {
-          alert('Vous avez déjà répondu à cette question aujourd\'hui');
-          setExpandedQuestionId(null);
-          return;
-        }
+      if (existingAnswer) {
+        alert('Vous avez déjà répondu à cette question aujourd\'hui');
+        setExpandedQuestionId(null);
+        return;
       }
 
       // Submit the answer
-      console.log('Submitting answer with daily_question_id:', dailyQuestion.id);
+      console.log('Submitting answer with daily_question_id:', dailyQuestionId);
       
       const { data: answerData, error: answerError } = await supabase
         .from('answers')
         .insert({
-          daily_question_id: dailyQuestion.id,
+          daily_question_id: dailyQuestionId,
           user_id: user!.id,
           answer_text: answerTexts[question.id].trim()
         })
@@ -304,20 +243,12 @@ export default function QuestionsPage() {
         return;
       }
 
-      // Get answers for this question today
-      const today = new Date().toISOString().split('T')[0];
+      // Use the daily_question_id from the question object
+      const dailyQuestionId = question.daily_question_id;
       
-      // First get the daily question for this specific question today
-      const { data: dailyQuestion } = await supabase
-        .from('daily_questions')
-        .select('*')
-        .eq('couple_id', coupleData.id)
-        .eq('question_id', question.id)
-        .eq('scheduled_for', today)
-        .single();
-
-      if (!dailyQuestion) {
-        alert('Aucune question quotidienne trouvée pour aujourd\'hui');
+      if (!dailyQuestionId) {
+        console.error('No daily question ID found for question:', question);
+        alert('Erreur: Question quotidienne non trouvée');
         return;
       }
 
@@ -325,7 +256,7 @@ export default function QuestionsPage() {
       const { data: answers } = await supabase
         .from('answers')
         .select('*')
-        .eq('daily_question_id', dailyQuestion.id);
+        .eq('daily_question_id', dailyQuestionId);
 
       // Check if both partners have answered
       if (answers && answers.length >= 2) {
