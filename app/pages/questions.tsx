@@ -52,8 +52,11 @@ export default function QuestionsPage() {
       const { data: coupleData } = await questionService.getCouple(user!.id);
       setCouple(coupleData);
 
-      // Get daily questions for this couple with question content
-      const { data: dailyQuestionsData } = await supabase
+      // Get global questions (couple_id is NULL) and couple-specific questions
+      const today = new Date().toISOString().split('T')[0];
+      
+      // First, get global questions (couple_id is NULL) for today
+      const { data: globalQuestionsData } = await supabase
         .from('daily_questions')
         .select(`
           *,
@@ -63,9 +66,25 @@ export default function QuestionsPage() {
             created_at
           )
         `)
-        .eq('couple_id', coupleData.id);
+        .is('couple_id', null)
+        .eq('scheduled_for', today);
       
-      console.log('Daily questions for couple:', dailyQuestionsData);
+      // Get couple-specific questions for today
+      const { data: coupleQuestionsData } = await supabase
+        .from('daily_questions')
+        .select(`
+          *,
+          question:questions(
+            id,
+            content,
+            created_at
+          )
+        `)
+        .eq('couple_id', coupleData.id)
+        .eq('scheduled_for', today);
+      
+      console.log('Global questions for today:', globalQuestionsData);
+      console.log('Couple questions for today:', coupleQuestionsData);
 
       // Get all answers for daily questions to check if both partners answered
       const { data: allAnswers } = await supabase
@@ -78,9 +97,8 @@ export default function QuestionsPage() {
           )
         `);
 
-      // Mark questions with answer status
-      const questionsWithAnswerStatus = dailyQuestionsData?.map(dailyQuestion => {
-        // Get answers for this specific daily question
+      // Process couple-specific questions first
+      const coupleQuestionsWithStatus = coupleQuestionsData?.map(dailyQuestion => {
         const questionAnswers = allAnswers?.filter((answer: any) => 
           answer.daily_question_id === dailyQuestion.id
         ) || [];
@@ -99,9 +117,49 @@ export default function QuestionsPage() {
           scheduled_for: dailyQuestion.scheduled_for,
           answered: userAnswered,
           bothAnswered,
-          answerCount: questionAnswers.length
+          answerCount: questionAnswers.length,
+          isGlobal: false
         };
       }) || [];
+
+      // Process global questions, but exclude those that this couple has already answered
+      const globalQuestionsWithStatus = globalQuestionsData?.map(dailyQuestion => {
+        // Check if this couple has already answered this question (created a couple-specific record)
+        const coupleHasAnswered = coupleQuestionsData?.some(cq => 
+          cq.question_id === dailyQuestion.question_id
+        );
+        
+        // If couple has already answered, skip this global question
+        if (coupleHasAnswered) {
+          return null;
+        }
+        
+        // Check if this user has answered the global question
+        const questionAnswers = allAnswers?.filter((answer: any) => 
+          answer.daily_question_id === dailyQuestion.id
+        ) || [];
+        
+        const userAnswered = questionAnswers.some((answer: any) => 
+          answer.user_id === user!.id
+        );
+        
+        const bothAnswered = questionAnswers.length >= 2;
+        
+        return {
+          id: dailyQuestion.question.id,
+          content: dailyQuestion.question.content,
+          created_at: dailyQuestion.question.created_at,
+          daily_question_id: dailyQuestion.id,
+          scheduled_for: dailyQuestion.scheduled_for,
+          answered: userAnswered,
+          bothAnswered,
+          answerCount: questionAnswers.length,
+          isGlobal: true
+        };
+      }).filter(Boolean) || [];
+
+      // Combine both types of questions
+      const questionsWithAnswerStatus = [...coupleQuestionsWithStatus, ...globalQuestionsWithStatus];
 
       setQuestions(questionsWithAnswerStatus);
       
@@ -172,13 +230,42 @@ export default function QuestionsPage() {
         return;
       }
 
-      // Use the daily_question_id from the question object
-      const dailyQuestionId = question.daily_question_id;
+      // Check if this is a global question (couple_id is NULL)
+      const isGlobalQuestion = question.isGlobal;
+      let dailyQuestionId = question.daily_question_id;
       
-      if (!dailyQuestionId) {
-        console.error('No daily question ID found for question:', question);
-        alert('Erreur: Question quotidienne non trouvée');
-        return;
+      if (isGlobalQuestion) {
+        // For global questions, we need to create a couple-specific record
+        console.log('This is a global question, creating couple-specific record');
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Create a new daily_question record for this couple
+        const { data: newDailyQuestion, error: createError } = await supabase
+          .from('daily_questions')
+          .insert({
+            couple_id: coupleData.id,
+            question_id: question.id,
+            scheduled_for: today
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error('Error creating couple-specific daily question:', createError);
+          alert('Erreur lors de la création de la question quotidienne');
+          return;
+        }
+        
+        dailyQuestionId = newDailyQuestion.id;
+        console.log('Created couple-specific daily question:', newDailyQuestion);
+      } else {
+        // For couple-specific questions, use the existing daily_question_id
+        if (!dailyQuestionId) {
+          console.error('No daily question ID found for question:', question);
+          alert('Erreur: Question quotidienne non trouvée');
+          return;
+        }
       }
 
       console.log('Using daily question ID:', dailyQuestionId);
@@ -243,13 +330,32 @@ export default function QuestionsPage() {
         return;
       }
 
-      // Use the daily_question_id from the question object
-      const dailyQuestionId = question.daily_question_id;
+      // For global questions, we need to find the couple-specific record
+      let dailyQuestionId = question.daily_question_id;
       
-      if (!dailyQuestionId) {
-        console.error('No daily question ID found for question:', question);
-        alert('Erreur: Question quotidienne non trouvée');
-        return;
+      if (question.isGlobal) {
+        // Find the couple-specific daily question record
+        const today = new Date().toISOString().split('T')[0];
+        const { data: coupleDailyQuestion } = await supabase
+          .from('daily_questions')
+          .select('*')
+          .eq('couple_id', coupleData.id)
+          .eq('question_id', question.id)
+          .eq('scheduled_for', today)
+          .single();
+        
+        if (!coupleDailyQuestion) {
+          alert('Question non trouvée pour ce couple');
+          return;
+        }
+        
+        dailyQuestionId = coupleDailyQuestion.id;
+      } else {
+        if (!dailyQuestionId) {
+          console.error('No daily question ID found for question:', question);
+          alert('Erreur: Question quotidienne non trouvée');
+          return;
+        }
       }
 
       // Get answers for this specific daily question
@@ -312,6 +418,13 @@ export default function QuestionsPage() {
             <Text style={styles.questionDate}>
               {formatDate(item.created_at)}
             </Text>
+            
+            {/* Today's Question Indicator */}
+            {item.isGlobal && (
+              <Text style={styles.globalIndicator}>
+                📅 Question du jour
+              </Text>
+            )}
             
             {/* Answer Status */}
             {item.answerCount === 1 && (
@@ -655,5 +768,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  globalIndicator: {
+    fontSize: 12,
+    color: '#2DB6FF',
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

@@ -1,0 +1,48 @@
+name: Daily Question
+
+on:
+  workflow_dispatch:  # Allows manual triggering
+  schedule:
+    - cron: '0 8 * * *'  # Daily at 08:00 UTC
+
+jobs:
+  insert-question:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Insert daily question
+        env:
+          SUPABASE_URL: 'https://xrgwsykeswhdtqwsyrbh.supabase.co'
+          SUPABASE_SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZ3dzeWtlc3doZHRxd3N5cmJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MTA5MjEsImV4cCI6MjA3MTE4NjkyMX0.jituJbUd0KWkElsn5-Laf96_GBjTjAPDa5kRFdO5xr0'
+        run: |
+          #!/usr/bin/env bash
+          echo "Selecting a random question..."
+
+          RANDOM_QUESTION_ID=$(curl -s \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            "$SUPABASE_URL/rest/v1/questions?select=id&order=random()&limit=1" \
+            | jq -r '.[0].id')
+
+          if [ -z "$RANDOM_QUESTION_ID" ] || [ "$RANDOM_QUESTION_ID" = "null" ]; then
+            echo "No question found!"
+            exit 1
+          fi
+
+          echo "Random question selected: $RANDOM_QUESTION_ID"
+
+          RESPONSE=$(curl -s -X POST \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{ \"question_id\": \"$RANDOM_QUESTION_ID\", \"couple_id\": null, \"scheduled_for\": \"$(date +%Y-%m-%d)\" }" \
+            "$SUPABASE_URL/rest/v1/daily_questions?return=representation")
+
+          echo "Inserted daily question response:"
+          echo "$RESPONSE"
