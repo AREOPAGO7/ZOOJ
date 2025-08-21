@@ -7,7 +7,7 @@ on:
 
 jobs:
   insert-question:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest 
 
     steps:
       - name: Checkout repo
