@@ -10,6 +10,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
   createProfile: (profileData: any) => Promise<{ error: any }>
+  resetPassword: (email: string) => Promise<{ error: any }>
+  updatePassword: (newPassword: string) => Promise<{ error: any }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -120,6 +122,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'zooj://new-password', // Deep link to new password page
+      })
+      
+      if (error) {
+        console.error("Auth context: Password reset error:", error)
+        return { error }
+      }
+      
+      console.log("Auth context: Password reset email sent successfully to:", email)
+      return { error: null }
+    } catch (error) {
+      console.error("Auth context: Password reset exception:", error)
+      return { error: { message: 'Une erreur inattendue s\'est produite' } }
+    }
+  }
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      
+      if (error) {
+        console.error("Auth context: Password update error:", error)
+        return { error }
+      }
+      
+      console.log("Auth context: Password updated successfully")
+      return { error: null }
+    } catch (error) {
+      console.error("Auth context: Password update exception:", error)
+      return { error: { message: 'Une erreur inattendue s\'est produite' } }
+    }
+  }
+
   const value = {
     user,
     session,
@@ -128,6 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signOut,
     createProfile,
+    resetPassword,
+    updatePassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

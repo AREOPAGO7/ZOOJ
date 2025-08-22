@@ -2,6 +2,7 @@ import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
+import { useProfileCompletion } from '../hooks/useProfileCompletion';
 import { useAuth } from '../lib/auth';
 
 interface AppLayoutProps {
@@ -12,6 +13,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading } = useAuth();
+  const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const [activeTab, setActiveTab] = useState('accueil');
 
   // Redirect to login if not authenticated
@@ -35,8 +37,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     router.push(`/pages/${tabName}`);
   };
 
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading while checking auth or profile completion
+  if (loading || profileLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2DB6FF" />
@@ -45,8 +47,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  // Don't render if not authenticated
-  if (!user) {
+  // Don't render if not authenticated or profile not completed
+  if (!user || !isProfileComplete) {
     return null;
   }
 

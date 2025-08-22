@@ -3,20 +3,22 @@ import { profileService } from "@/lib/profileService"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import * as Clipboard from 'expo-clipboard'
 import { LinearGradient } from "expo-linear-gradient"
+import * as Linking from 'expo-linking'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from "react"
-import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native"
+import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native"
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from "react-native-gesture-handler"
 import { useAuth } from "../../lib/auth"
+import { supabase } from "../../lib/supabase"
 
 const BRAND_BLUE = "#2DB6FF"
 const BRAND_PINK = "#F47CC6"
 const BRAND_GRAY = "#6C6C6C"
 
 export default function App() {
-  const { user, signUp, signIn, createProfile, loading: authLoading } = useAuth()
+  const { user, signUp, signIn, createProfile, resetPassword, updatePassword, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [screen, setScreen] = useState<"welcome" | "auth" | "signup" | "profile" | "interests" | "inviteCodes">("welcome")
+  const [screen, setScreen] = useState<"welcome" | "auth" | "signup" | "profile" | "interests" | "inviteCodes" | "resetPassword" | "newPassword">("welcome")
   const [isLoading, setIsLoading] = useState(false)
 
   // Auth state
@@ -25,14 +27,29 @@ export default function App() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [isSignUp, setIsSignUp] = useState(false)
+  
+  // Password reset state
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetError, setResetError] = useState("")
+  const [resetSuccess, setResetSuccess] = useState("")
+  const [isResetting, setIsResetting] = useState(false)
+  
+  // New password state
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmNewPassword, setConfirmNewPassword] = useState("")
+  const [newPasswordError, setNewPasswordError] = useState("")
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false)
+  const [recoveryTokens, setRecoveryTokens] = useState<{ access_token: string; refresh_token: string } | null>(null)
 
   // Profile state
   const [name, setName] = useState("")
-  const [birthDate, setBirthDate] = useState("")
+  const [birthDate, setBirthDate] = useState<string>("")
   const [gender, setGender] = useState<"male" | "female" | "other" | null>(null)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
   const [isCountryOpen, setIsCountryOpen] = useState(false)
   const [isGenderOpen, setIsGenderOpen] = useState(false)
+  const [isDateOpen, setIsDateOpen] = useState(false)
   
   // Validation state
   const [nameError, setNameError] = useState("")
@@ -77,6 +94,70 @@ export default function App() {
       checkUserProfile()
     }
   }, [user, authLoading])
+
+  // Handle deep linking for password reset
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      console.log("Deep link received:", url)
+      
+      // Check if this is a password reset link
+      if (url.includes('access_token=') && url.includes('type=recovery')) {
+        console.log("Password reset link detected, navigating to new password screen...")
+        
+        try {
+          // Extract the access token from the URL
+          const urlObj = new URL(url)
+          const accessToken = urlObj.hash.split('access_token=')[1]?.split('&')[0]
+          const refreshToken = urlObj.hash.split('refresh_token=')[1]?.split('&')[0]
+          
+          if (accessToken) {
+            console.log("Access token extracted, storing for later use...")
+            
+            // Store the tokens for later use instead of setting session immediately
+            // This prevents automatic login
+            setRecoveryTokens({
+              access_token: accessToken,
+              refresh_token: refreshToken || ''
+            })
+            
+            // Navigate to new password screen first
+            setIsRecoveryMode(true)
+            setScreen("newPassword")
+          } else {
+            console.error("No access token found in URL")
+            setNewPasswordError("Lien de réinitialisation invalide")
+          }
+        } catch (error) {
+          console.error("Error processing recovery link:", error)
+          setNewPasswordError("Erreur lors du traitement du lien")
+        }
+      }
+    }
+
+    // Handle initial URL if app was opened from deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink(url)
+      }
+    })
+
+    // Listen for incoming links when app is already running
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url)
+    })
+
+    return () => {
+      subscription?.remove()
+    }
+  }, [])
+
+  // Clean up recovery tokens when navigating away from new password screen
+  useEffect(() => {
+    if (screen !== "newPassword") {
+      setRecoveryTokens(null)
+      setIsRecoveryMode(false)
+    }
+  }, [screen])
 
   const checkUserProfile = async () => {
     if (!user) return
@@ -148,6 +229,8 @@ export default function App() {
       else if (screen === "profile") setScreen("signup")
       else if (screen === "interests") setScreen("profile")
       else if (screen === "inviteCodes") setScreen("interests")
+      else if (screen === "resetPassword") setScreen("auth")
+      else if (screen === "newPassword") setScreen("resetPassword")
     }
   }
 
@@ -247,6 +330,7 @@ export default function App() {
 
   const handleProfileCreation = async () => {
     if (!validateProfile()) {
+      console.log("Profile validation failed")
       return
     }
 
@@ -263,6 +347,7 @@ export default function App() {
 
     try {
       const inviteCode = await profileService.generateInviteCode()
+      console.log("Generated invite code:", inviteCode)
       
       const profileData = {
         id: user.id, // Include the user ID
@@ -283,8 +368,7 @@ export default function App() {
         setError(error.message || "Erreur lors de la création du profil")
       } else {
         console.log("Profile created successfully:", data)
-        // Success! Show success message and redirect to welcome
-        // Redirect to interests section
+        // Success! Redirect to interests section
         setScreen("interests")
       }
     } catch (error) {
@@ -357,29 +441,195 @@ export default function App() {
   const handleInterestsComplete = async () => {
     if (!user) return
     
+    console.log("Completing interests for user:", user.id)
+    console.log("Selected interests:", selectedInterests)
+    
     setIsInterestsLoading(true)
     try {
       // Update profile with selected interests but DON'T mark as completed yet
-      await profileService.updateProfile(user.id, { 
+      const { data, error } = await profileService.updateProfile(user.id, { 
         interests: selectedInterests,
         completed: false // Keep as false until couple is formed
       })
       
+      if (error) {
+        console.error("Error updating interests:", error)
+        return
+      }
+      
+      console.log("Interests updated successfully:", data)
+      
       // Get the user's invite code and go to invite codes section
       const { data: profile } = await profileService.getProfile(user.id)
       if (profile) {
+        console.log("Profile retrieved, invite code:", profile.invite_code)
         setMyInviteCode(profile.invite_code || "")
         setScreen("inviteCodes")
+      } else {
+        console.error("Failed to retrieve profile after interests update")
+        // Fallback: try to get invite code from the update result
+        if (data && data.invite_code) {
+          setMyInviteCode(data.invite_code)
+          setScreen("inviteCodes")
+        }
       }
     } catch (error) {
       console.error("Error updating interests:", error)
+      // Fallback: try to get profile again
+      try {
+        const { data: profile } = await profileService.getProfile(user.id)
+        if (profile && profile.invite_code) {
+          setMyInviteCode(profile.invite_code)
+          setScreen("inviteCodes")
+        }
+      } catch (fallbackError) {
+        console.error("Fallback profile retrieval failed:", fallbackError)
+      }
     } finally {
       setIsInterestsLoading(false)
     }
   }
 
   const handleSkipInviteCodes = () => {
-    setScreen("welcome")
+    // Mark profile as completed when skipping invite codes
+    if (user) {
+      profileService.updateProfile(user.id, { completed: true })
+        .then(() => {
+          console.log("Profile marked as completed after skipping invite codes")
+          router.push('/pages/accueil')
+        })
+        .catch(error => {
+          console.error("Error marking profile as completed:", error)
+          // Still redirect even if there's an error
+          router.push('/pages/accueil')
+        })
+    } else {
+      router.push('/pages/accueil')
+    }
+  }
+
+  const handlePasswordReset = async () => {
+    if (!resetEmail.trim()) {
+      setResetError("Veuillez entrer votre email")
+      return
+    }
+
+    setIsResetting(true)
+    setResetError("")
+    setResetSuccess("")
+
+    try {
+      console.log("Sending password reset email to:", resetEmail)
+      
+      const { error } = await resetPassword(resetEmail.trim())
+      
+      if (error) {
+        console.error("Password reset error:", error)
+        setResetError(error.message || "Erreur lors de l'envoi de l'email de réinitialisation")
+        return
+      }
+      
+      setResetSuccess("Un email de réinitialisation a été envoyé à votre adresse email. Cliquez sur le lien dans l'email pour continuer.")
+      
+      // Clear the email field
+      setResetEmail("")
+      
+      // Redirect back to login after success
+      setTimeout(() => {
+        setScreen("auth")
+        setResetSuccess("")
+      }, 4000)
+      
+    } catch (error) {
+      console.error("Password reset exception:", error)
+      setResetError("Une erreur inattendue s'est produite")
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword.trim()) {
+      setNewPasswordError("Veuillez entrer un nouveau mot de passe")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setNewPasswordError("Le mot de passe doit contenir au moins 6 caractères")
+      return
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setNewPasswordError("Les mots de passe ne correspondent pas")
+      return
+    }
+
+    if (!recoveryTokens) {
+      setNewPasswordError("Session de récupération invalide. Veuillez utiliser le lien dans votre email.")
+      return
+    }
+
+    setIsUpdatingPassword(true)
+    setNewPasswordError("")
+
+    try {
+      console.log("Establishing recovery session...")
+      
+      // First, establish the session using the stored recovery tokens
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: recoveryTokens.access_token,
+        refresh_token: recoveryTokens.refresh_token
+      })
+      
+      if (sessionError) {
+        console.error("Error establishing recovery session:", sessionError)
+        setNewPasswordError("Erreur lors de la récupération de la session")
+        return
+      }
+      
+      if (!sessionData.session) {
+        console.error("No session established from recovery tokens")
+        setNewPasswordError("Impossible d'établir la session de récupération")
+        return
+      }
+      
+      console.log("Recovery session established, updating password...")
+      
+      // Now update the password
+      const { error } = await updatePassword(newPassword)
+      
+      if (error) {
+        console.error("Password update error:", error)
+        setNewPasswordError(error.message || "Erreur lors de la mise à jour du mot de passe")
+        return
+      }
+      
+      console.log("Password updated successfully")
+      
+      // Clear password fields and recovery tokens
+      setNewPassword("")
+      setConfirmNewPassword("")
+      setRecoveryTokens(null)
+      setIsRecoveryMode(false)
+      
+      // Show success and redirect to login
+      Alert.alert(
+        "Succès", 
+        "Votre mot de passe a été mis à jour avec succès!",
+        [
+          {
+            text: "OK",
+            onPress: () => setScreen("auth")
+          }
+        ]
+      )
+      
+    } catch (error) {
+      console.error("Password update exception:", error)
+      setNewPasswordError("Une erreur inattendue s'est produite")
+    } finally {
+      setIsUpdatingPassword(false)
+    }
   }
 
   if (authLoading) {
@@ -462,6 +712,12 @@ export default function App() {
               <View style={{ alignItems: "center", marginTop: 12 }}>
                       <Pressable onPress={() => setScreen("signup")}>
                         <Text style={{ color: BRAND_BLUE, fontSize: 12 }}>Créer un compte</Text>
+                </Pressable>
+              </View>
+
+              <View style={{ alignItems: "center", marginTop: 8 }}>
+                <Pressable onPress={() => setScreen("resetPassword")}>
+                  <Text style={{ color: BRAND_BLUE, fontSize: 12 }}>Mot de passe oublié?</Text>
                 </Pressable>
               </View>
 
@@ -584,90 +840,44 @@ export default function App() {
                     </View>
                     {nameError ? <Text style={{ color: "#FF5A5F", fontSize: 12, marginTop: 4, marginLeft: 4 }}>{nameError}</Text> : null}
 
-                    <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
-                      <TextInput
-                            placeholder="Date de naissance (optionnel)"
-                            value={birthDate}
-                            onChangeText={setBirthDate}
-                        style={{ paddingHorizontal: 14, height: 50 }}
-                        placeholderTextColor="#9A9A9A"
-                      />
-                    </View>
+                    <Pressable
+                      onPress={() => setIsDateOpen(true)}
+                      style={{
+                        backgroundColor: "#FFFFFF",
+                        borderColor: "#E5E5E5",
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        paddingHorizontal: 14,
+                        height: 50,
+                        justifyContent: "center"
+                      }}
+                    >
+                      <Text style={{ color: birthDate ? "#000" : "#9A9A9A" }}>
+                        {birthDate ? new Date(birthDate).getFullYear().toString() : "Date de naissance (optionnel)"}
+                      </Text>
+                    </Pressable>
 
-                        <View style={{ position: "relative", zIndex: 1000 }}>
-                          <Pressable
-                            onPress={() => setIsGenderOpen(!isGenderOpen)}
-                            style={{
-                              backgroundColor: "#FFFFFF",
-                              borderColor: genderError ? "#FF5A5F" : "#E5E5E5",
-                              borderWidth: 1,
-                              borderRadius: 12,
-                              paddingHorizontal: 14,
-                              height: 50,
-                              justifyContent: "center",
-                            }}
-                          >
-                            <Text style={{ color: gender ? "#000" : "#9A9A9A" }}>
-                              {gender === "male" ? "Homme" : gender === "female" ? "Femme" : gender === "other" ? "Autre" : "Genre"}
-                            </Text>
-                          </Pressable>
-                          {isGenderOpen && (
-                            <View
-                              style={{
-                                position: "absolute",
-                                top: 54,
-                                left: 0,
-                                right: 0,
-                                backgroundColor: "#FFFFFF",
-                                borderColor: "#E5E5E5",
-                                borderWidth: 1,
-                                borderRadius: 12,
-                                maxHeight: 200,
-                                overflow: "hidden",
-                                zIndex: 1000,
-                              }}
-                            >
-                              <ScrollView>
-                                <Pressable
-                                  onPress={() => {
-                                    setGender("male")
-                                    setIsGenderOpen(false)
-                                    setGenderError("")
-                                  }}
-                                  style={{ paddingHorizontal: 14, paddingVertical: 12 }}
-                                >
-                                  <Text>Homme</Text>
-                                </Pressable>
-                                <Pressable
-                                  onPress={() => {
-                                    setGender("female")
-                                    setIsGenderOpen(false)
-                                    setGenderError("")
-                                  }}
-                                  style={{ paddingHorizontal: 14, paddingVertical: 12 }}
-                                >
-                                  <Text>Femme</Text>
-                                </Pressable>
-                                <Pressable
-                                  onPress={() => {
-                                    setGender("other")
-                                    setIsGenderOpen(false)
-                                    setGenderError("")
-                                  }}
-                                  style={{ paddingHorizontal: 14, paddingVertical: 12 }}
-                                >
-                                  <Text>Autre</Text>
-                                </Pressable>
-                              </ScrollView>
-                            </View>
-                          )}
-                    </View>
+                        <Pressable
+                          onPress={() => setIsGenderOpen(true)}
+                          style={{
+                            backgroundColor: "#FFFFFF",
+                            borderColor: genderError ? "#FF5A5F" : "#E5E5E5",
+                            borderWidth: 1,
+                            borderRadius: 12,
+                            paddingHorizontal: 14,
+                            height: 50,
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Text style={{ color: gender ? "#000" : "#9A9A9A" }}>
+                            {gender === "male" ? "Homme" : gender === "female" ? "Femme" : gender === "other" ? "Autre" : "Genre"}
+                          </Text>
+                        </Pressable>
                         {genderError ? <Text style={{ color: "#FF5A5F", fontSize: 12, marginTop: 4, marginLeft: 4 }}>{genderError}</Text> : null}
                   </View>
 
-                      <View style={{ position: "relative", zIndex: 1000 }}>
                       <Pressable
-                        onPress={() => setIsCountryOpen(!isCountryOpen)}
+                        onPress={() => setIsCountryOpen(true)}
                         style={{
                           backgroundColor: "#FFFFFF",
                             borderColor: countryError ? "#FF5A5F" : "#E5E5E5",
@@ -680,39 +890,6 @@ export default function App() {
                       >
                         <Text style={{ color: selectedCountry ? "#000" : "#9A9A9A" }}>{selectedCountry ?? "Pays"}</Text>
                       </Pressable>
-                      {isCountryOpen && (
-                        <View
-                          style={{
-                            position: "absolute",
-                            top: 54,
-                            left: 0,
-                            right: 0,
-                            backgroundColor: "#FFFFFF",
-                            borderColor: "#E5E5E5",
-                            borderWidth: 1,
-                            borderRadius: 12,
-                            maxHeight: 200,
-                            overflow: "hidden",
-                          }}
-                        >
-                          <ScrollView>
-                            {countries.map((country) => (
-                              <Pressable
-                                key={country}
-                                onPress={() => {
-                                  setSelectedCountry(country)
-                                  setIsCountryOpen(false)
-                                  setCountryError("")
-                                }}
-                                style={{ paddingHorizontal: 14, paddingVertical: 12 }}
-                              >
-                                <Text>{country}</Text>
-                              </Pressable>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
-                    </View>
                     {countryError ? <Text style={{ color: "#FF5A5F", fontSize: 12, marginTop: 4, marginLeft: 4 }}>{countryError}</Text> : null}
                   </View>
 
@@ -894,9 +1071,7 @@ export default function App() {
                         <Text style={{ fontSize: 18, fontWeight: "600", color: "#2D2D2D", textAlign: "center" }}>
                           Rejoindre avec un code
                         </Text>
-                        <Text style={{ fontSize: 14, color: "#7A7A7A", textAlign: "center" }}>
-                          Entrez le code reçu de votre partenaire
-                        </Text>
+                     
                         
                         <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                           <TextInput 
@@ -927,15 +1102,166 @@ export default function App() {
                       </View>
 
                       {/* Skip Option */}
-                      <Pressable
-                        onPress={handleSkipInviteCodes}
-                        style={{ marginTop: 24 }}
-                      >
-                        <Text style={{ color: BRAND_BLUE, fontSize: 16, fontWeight: "500" }}>
-                          Skip
-                        </Text>
-                      </Pressable>
+                      <View style={{ marginTop: 32, alignItems: 'center' }}>
+                       
+                        <Pressable
+                          onPress={handleSkipInviteCodes}
+                          style={{
+                            backgroundColor: "#F3F4F6",
+                            borderColor: "#D1D5DB",
+                            borderWidth: 1,
+                            borderRadius: 12,
+                            paddingVertical: 12,
+                            paddingHorizontal: 24
+                          }}
+                        >
+                          <Text style={{ color: "#374151", fontSize: 16, fontWeight: "600" }}>
+                            Continuer sans code
+                          </Text>
+                        </Pressable>
+                      </View>
                     </View>
+        </>
+      )}
+
+      {screen === "resetPassword" && (
+        <>
+          <HeaderBar variant="title" title="Réinitialiser le mot de passe" onBack={() => setScreen("auth")} />
+
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
+            <View style={{ width: "100%", maxWidth: 400, gap: 24 }}>
+              <View style={{ alignItems: "center" }}>
+                <View style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  backgroundColor: "#F3F4F6",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 16
+                }}>
+                  <MaterialCommunityIcons name="lock-reset" size={40} color={BRAND_BLUE} />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: "600", color: "#2D2D2D", textAlign: "center", marginBottom: 8 }}>
+                  Mot de passe oublié?
+                </Text>
+                <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", lineHeight: 20 }}>
+                  Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+                </Text>
+              </View>
+
+              <View style={{ gap: 16 }}>
+                <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
+                  <TextInput
+                    placeholder="Votre adresse email"
+                    value={resetEmail}
+                    onChangeText={(text) => { setResetEmail(text); setResetError(""); setResetSuccess("") }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={{ paddingHorizontal: 14, height: 50 }}
+                    placeholderTextColor="#9A9A9A"
+                  />
+                </View>
+
+                {resetError ? <Text style={{ color: "#FF5A5F", textAlign: "center", fontSize: 14 }}>{resetError}</Text> : null}
+                {resetSuccess ? <Text style={{ color: "#4CAF50", textAlign: "center", fontSize: 14 }}>{resetSuccess}</Text> : null}
+
+                <Pressable
+                  onPress={handlePasswordReset}
+                  disabled={isResetting}
+                  style={{ borderRadius: 12, overflow: "hidden", opacity: isResetting ? 0.7 : 1 }}
+                >
+                  <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
+                    {isResetting ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Envoyer l'email de réinitialisation</Text>
+                    )}
+                  </LinearGradient>
+                </Pressable>
+              </View>
+
+              <View style={{ alignItems: "center" }}>
+                <Pressable onPress={() => setScreen("auth")}>
+                  <Text style={{ color: BRAND_BLUE, fontSize: 16, fontWeight: "500" }}>
+                    Retour à la connexion
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </>
+      )}
+
+      {screen === "newPassword" && (
+        <>
+          <HeaderBar variant="title" title="Réinitialiser mon mot de passe" onBack={() => setScreen("auth")} />
+
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
+            <View style={{ width: "100%", maxWidth: 400, gap: 24 }}>
+              {!recoveryTokens ? (
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 16, color: "#FF5A5F", textAlign: "center", lineHeight: 20 }}>
+                    Session de récupération invalide. Veuillez utiliser le lien dans votre email.
+                  </Text>
+                  <Pressable
+                    onPress={() => setScreen("auth")}
+                    style={{ marginTop: 16, padding: 12, backgroundColor: BRAND_BLUE, borderRadius: 8 }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>Retour à la connexion</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <>
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ fontSize: 16, color: "#6B7280", textAlign: "center", lineHeight: 20 }}>
+                      Veuillez retaper votre nouveau mot de passe
+                    </Text>
+                  </View>
+
+                  <View style={{ gap: 16, width: "100%" }}>
+                    <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
+                      <TextInput
+                        placeholder="Mot de passe"
+                        value={newPassword}
+                        onChangeText={(text) => { setNewPassword(text); setNewPasswordError("") }}
+                        secureTextEntry
+                        style={{ paddingHorizontal: 14, height: 50 }}
+                        placeholderTextColor="#9A9A9A"
+                      />
+                    </View>
+
+                    <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
+                      <TextInput
+                        placeholder="Mot de passe"
+                        value={confirmNewPassword}
+                        onChangeText={(text) => { setConfirmNewPassword(text); setNewPasswordError("") }}
+                        secureTextEntry
+                        style={{ paddingHorizontal: 14, height: 50 }}
+                        placeholderTextColor="#9A9A9A"
+                      />
+                    </View>
+
+                    {newPasswordError ? <Text style={{ color: "#FF5A5F", textAlign: "center", fontSize: 14 }}>{newPasswordError}</Text> : null}
+
+                    <Pressable
+                      onPress={handleUpdatePassword}
+                      disabled={isUpdatingPassword}
+                      style={{ borderRadius: 12, overflow: "hidden", opacity: isUpdatingPassword ? 0.7 : 1 }}
+                    >
+                      <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
+                        {isUpdatingPassword ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Confirmer</Text>
+                        )}
+                      </LinearGradient>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
         </>
       )}
 
@@ -953,9 +1279,234 @@ export default function App() {
           </View>
         </View>
       </View>
-    </View>
+            </View>
         </PanGestureHandler>
       </GestureHandlerRootView>
+
+      {/* Gender Selection Modal */}
+      <Modal
+        visible={isGenderOpen}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsGenderOpen(false)}
+        statusBarTranslucent={true}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+          zIndex: 999999
+        }}>
+          <View style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 20,
+            padding: 20,
+            width: '100%',
+            maxWidth: 400,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.25,
+            shadowRadius: 20,
+            elevation: 999999,
+            zIndex: 999999
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 20
+            }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>Sélectionner le genre</Text>
+              <Pressable onPress={() => setIsGenderOpen(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
+              </Pressable>
+            </View>
+            
+            {genders.map((g) => (
+              <Pressable
+                key={g}
+                onPress={() => {
+                  setGender(g as "male" | "female" | "other")
+                  setIsGenderOpen(false)
+                  setGenderError("")
+                }}
+                style={{
+                  paddingVertical: 16,
+                  paddingHorizontal: 20,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#F0F0F0',
+                  backgroundColor: gender === g ? '#F8F9FA' : 'transparent'
+                }}
+              >
+                <Text style={{
+                  color: gender === g ? '#2DB6FF' : '#2D2D2D',
+                  fontSize: 16,
+                  fontWeight: gender === g ? '600' : '400'
+                }}>
+                  {g === "male" ? "Homme" : g === "female" ? "Femme" : "Autre"}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Country Selection Modal */}
+      <Modal
+        visible={isCountryOpen}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsCountryOpen(false)}
+        statusBarTranslucent={true}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+          zIndex: 999999
+        }}>
+          <View style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 20,
+            padding: 20,
+            width: '100%',
+            maxWidth: 400,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.25,
+            shadowRadius: 20,
+            elevation: 999999,
+            zIndex: 999999
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 20
+            }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>Sélectionner le pays</Text>
+              <Pressable onPress={() => setIsCountryOpen(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
+              </Pressable>
+            </View>
+            
+            <ScrollView style={{ maxHeight: 300 }}>
+              {countries.map((c) => (
+                <Pressable
+                  key={c}
+                  onPress={() => {
+                    setSelectedCountry(c)
+                    setIsCountryOpen(false)
+                    setCountryError("")
+                  }}
+                  style={{
+                    paddingVertical: 16,
+                    paddingHorizontal: 20,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#F0F0F0',
+                    backgroundColor: selectedCountry === c ? '#F8F9FA' : 'transparent'
+                  }}
+                >
+                  <Text style={{
+                    color: selectedCountry === c ? '#2DB6FF' : '#2D2D2D',
+                    fontSize: 16,
+                    fontWeight: selectedCountry === c ? '600' : '400'
+                  }}>
+                    {c}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Selection Modal */}
+      <Modal
+        visible={isDateOpen}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsDateOpen(false)}
+        statusBarTranslucent={true}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+          zIndex: 999999
+        }}>
+          <View style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 20,
+            padding: 20,
+            width: '100%',
+            maxWidth: 400,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.25,
+            shadowRadius: 20,
+            elevation: 999999,
+            zIndex: 999999
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 20
+            }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>Sélectionner la date</Text>
+              <Pressable onPress={() => setIsDateOpen(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
+              </Pressable>
+            </View>
+            
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, color: '#6B7280', marginBottom: 20, textAlign: 'center' }}>
+                Sélectionnez votre année de naissance
+              </Text>
+              
+                                   <ScrollView style={{ maxHeight: 300, width: '100%' }}>
+                       {Array.from({ length: 50 }, (_, i) => {
+                         const year = new Date().getFullYear() - i - 18
+                         return (
+                           <Pressable
+                             key={year}
+                             onPress={() => {
+                               // Create a proper date string in YYYY-MM-DD format
+                               const dateString = `${year}-01-01`
+                               setBirthDate(dateString)
+                               setIsDateOpen(false)
+                             }}
+                             style={{
+                               paddingVertical: 16,
+                               paddingHorizontal: 20,
+                               borderBottomWidth: 1,
+                               borderBottomColor: '#F0F0F0',
+                               backgroundColor: birthDate === `${year}-01-01` ? '#F8F9FA' : 'transparent',
+                               alignItems: 'center'
+                             }}
+                           >
+                             <Text style={{
+                               color: birthDate === `${year}-01-01` ? '#2DB6FF' : '#2D2D2D',
+                               fontSize: 18,
+                               fontWeight: birthDate === `${year}-01-01` ? '600' : '400'
+                             }}>
+                               {year}
+                             </Text>
+                           </Pressable>
+                         )
+                       })}
+                     </ScrollView>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   )
 }

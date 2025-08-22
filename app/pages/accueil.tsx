@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import AppLayout from '../app-layout';
 
 export default function AccueilPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -15,8 +17,8 @@ export default function AccueilPage() {
     }
   }, [user, loading, router]);
 
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading while checking auth or profile completion
+  if (loading || profileLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2DB6FF" />
@@ -25,8 +27,8 @@ export default function AccueilPage() {
     );
   }
 
-  // Don't render if not authenticated
-  if (!user) {
+  // Don't render if not authenticated or profile not completed
+  if (!user || !isProfileComplete) {
     return null;
   }
 

@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 // import { dailyQuestionScheduler } from '../../lib/dailyQuestionScheduler';
 import { Answer, questionService } from '../../lib/questionService';
@@ -11,6 +12,7 @@ import AppLayout from '../app-layout';
 export default function QuestionsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const [questions, setQuestions] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [couple, setCouple] = useState<any>(null);
@@ -52,10 +54,7 @@ export default function QuestionsPage() {
       const { data: coupleData } = await questionService.getCouple(user!.id);
       setCouple(coupleData);
 
-      // Get global questions (couple_id is NULL) and couple-specific questions
-      const today = new Date().toISOString().split('T')[0];
-      
-      // First, get global questions (couple_id is NULL) for today
+      // Get ALL global questions (couple_id is NULL) - not just today's
       const { data: globalQuestionsData } = await supabase
         .from('daily_questions')
         .select(`
@@ -67,9 +66,9 @@ export default function QuestionsPage() {
           )
         `)
         .is('couple_id', null)
-        .eq('scheduled_for', today);
+        .order('scheduled_for', { ascending: false }); // Most recent first
       
-      // Get couple-specific questions for today
+      // Get ALL couple-specific questions (not just today's) for chat access and history
       const { data: coupleQuestionsData } = await supabase
         .from('daily_questions')
         .select(`
@@ -81,10 +80,10 @@ export default function QuestionsPage() {
           )
         `)
         .eq('couple_id', coupleData.id)
-        .eq('scheduled_for', today);
+        .order('scheduled_for', { ascending: false }); // Most recent first
       
-      console.log('Global questions for today:', globalQuestionsData);
-      console.log('Couple questions for today:', coupleQuestionsData);
+      console.log('All global questions:', globalQuestionsData);
+      console.log('All couple questions:', coupleQuestionsData);
 
       // Get all answers for daily questions to check if both partners answered
       const { data: allAnswers } = await supabase
@@ -97,7 +96,7 @@ export default function QuestionsPage() {
           )
         `);
 
-      // Process couple-specific questions first
+      // Process couple-specific questions first (these are your answered questions and chat history)
       const coupleQuestionsWithStatus = coupleQuestionsData?.map(dailyQuestion => {
         const questionAnswers = allAnswers?.filter((answer: any) => 
           answer.daily_question_id === dailyQuestion.id
@@ -118,7 +117,8 @@ export default function QuestionsPage() {
           answered: userAnswered,
           bothAnswered,
           answerCount: questionAnswers.length,
-          isGlobal: false
+          isGlobal: false,
+          isAnswered: true // Mark as answered since it's a couple-specific question
         };
       }) || [];
 
@@ -154,7 +154,8 @@ export default function QuestionsPage() {
           answered: userAnswered,
           bothAnswered,
           answerCount: questionAnswers.length,
-          isGlobal: true
+          isGlobal: true,
+          isAnswered: false // Mark as unanswered since it's a new global question
         };
       }).filter(Boolean) || [];
 
@@ -175,14 +176,27 @@ export default function QuestionsPage() {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+    
+    const diffTime = Math.abs(today.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (date.toDateString() === today.toDateString()) {
-      return 'Today • 23 min';
+      return 'Aujourd\'hui';
     } else if (date.toDateString() === yesterday.toDateString()) {
       return 'Hier';
+    } else if (diffDays < 7) {
+      return `Il y a ${diffDays} jours`;
+    } else if (diffDays < 14) {
+      return 'Il y a 1 semaine';
+    } else if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `Il y a ${weeks} semaines`;
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return `Il y a ${months} mois`;
     } else {
-      const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-      return days[date.getDay()];
+      const years = Math.floor(diffDays / 365);
+      return `Il y a ${years} an${years > 1 ? 's' : ''}`;
     }
   };
 
@@ -235,7 +249,7 @@ export default function QuestionsPage() {
       let dailyQuestionId = question.daily_question_id;
       
       if (isGlobalQuestion) {
-        // For global questions, we need to create a couple-specific record
+        // For global questions, create a couple-specific record
         console.log('This is a global question, creating couple-specific record');
         
         const today = new Date().toISOString().split('T')[0];
@@ -334,14 +348,12 @@ export default function QuestionsPage() {
       let dailyQuestionId = question.daily_question_id;
       
       if (question.isGlobal) {
-        // Find the couple-specific daily question record
-        const today = new Date().toISOString().split('T')[0];
+        // Find the couple-specific daily question record (should exist since user is trying to chat)
         const { data: coupleDailyQuestion } = await supabase
           .from('daily_questions')
           .select('*')
           .eq('couple_id', coupleData.id)
           .eq('question_id', question.id)
-          .eq('scheduled_for', today)
           .single();
         
         if (!coupleDailyQuestion) {
@@ -419,12 +431,7 @@ export default function QuestionsPage() {
               {formatDate(item.created_at)}
             </Text>
             
-            {/* Today's Question Indicator */}
-            {item.isGlobal && (
-              <Text style={styles.globalIndicator}>
-                📅 Question du jour
-              </Text>
-            )}
+
             
             {/* Answer Status */}
             {item.answerCount === 1 && (
@@ -487,8 +494,8 @@ export default function QuestionsPage() {
     );
   };
 
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading while checking auth or profile completion
+  if (loading || profileLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2DB6FF" />
@@ -497,8 +504,8 @@ export default function QuestionsPage() {
     );
   }
 
-  // Don't render if not authenticated
-  if (!user) {
+  // Don't render if not authenticated or profile not completed
+  if (!user || !isProfileComplete) {
     return null;
   }
 
@@ -618,19 +625,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 6,
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   newQuestionItem: {
     borderColor: '#FFB6C1',
     borderWidth: 2,
+    shadowColor: '#FFB6C1',
+    shadowOpacity: 0.1,
   },
   answeredQuestionItem: {
     borderColor: '#87CEEB',
     borderWidth: 2,
+    shadowColor: '#87CEEB',
+    shadowOpacity: 0.1,
   },
   questionIconContainer: {
     position: 'relative',
@@ -690,21 +706,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    padding: 16,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    padding: 20,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
   answerInput: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     fontSize: 16,
     color: '#2D2D2D',
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   answerActions: {
     flexDirection: 'row',
@@ -713,12 +734,19 @@ const styles = StyleSheet.create({
   },
   submitAnswerButton: {
     backgroundColor: '#87CEEB',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   submitAnswerButtonDisabled: {
     backgroundColor: '#E5E7EB',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitAnswerButtonText: {
     color: '#FFFFFF',
@@ -757,22 +785,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#87CEEB',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 12,
     alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   chatButtonInlineText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    marginLeft: 4,
+    marginLeft: 6,
   },
-  globalIndicator: {
-    fontSize: 12,
-    color: '#2DB6FF',
-    fontWeight: '600',
-    marginTop: 4,
-  },
+
 });
