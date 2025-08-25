@@ -1,14 +1,85 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View
+} from 'react-native';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
+import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
+import { BRAND_BLUE, BRAND_GRAY, BRAND_PINK, calendarStyles } from './calendrier.styles';
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  event_date: string;
+  event_time: string;
+  place: string;
+  description: string;
+  created_at: string;
+}
+
+interface CalendarSouvenir {
+  id: string;
+  title: string;
+  memory_date: string;
+  memory_time: string;
+  place: string;
+  description: string;
+  image_url: string;
+  created_at: string;
+}
+
+interface CalendarTodo {
+  id: string;
+  title: string;
+  description: string;
+  due_date: string;
+  priority: 'urgent' | 'normal' | 'peut_attendre';
+  status: 'a_faire' | 'en_cours' | 'termine';
+  created_at: string;
+}
+
+type CalendarItemType = 'event' | 'souvenir' | 'todo';
 
 export default function CalendrierPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+  
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [souvenirs, setSouvenirs] = useState<CalendarSouvenir[]>([]);
+  const [todos, setTodos] = useState<CalendarTodo[]>([]);
+  const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+  const [showCustomTimePicker, setShowCustomTimePicker] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [formType, setFormType] = useState<'event' | 'souvenir' | 'todo'>('event');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Form states
+  const [formTitle, setFormTitle] = useState('');
+  const [formDate, setFormDate] = useState(new Date());
+  const [formTime, setFormTime] = useState(new Date());
+  const [formPlace, setFormPlace] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formPriority, setFormPriority] = useState<'urgent' | 'normal' | 'peut_attendre'>('normal');
+  const [formStatus, setFormStatus] = useState<'a_faire' | 'en_cours' | 'termine'>('a_faire');
+  const [formImage, setFormImage] = useState<string | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -17,12 +88,520 @@ export default function CalendrierPage() {
     }
   }, [user, loading, router]);
 
+  // Get couple ID when component mounts
+  useEffect(() => {
+    if (user) {
+      getCoupleId();
+    }
+  }, [user]);
+
+  // Load calendar data when couple ID is available
+  useEffect(() => {
+    if (coupleId) {
+      loadCalendarData();
+    }
+  }, [coupleId]);
+
+  const getCoupleId = async () => {
+    try {
+      const { data: couple, error } = await supabase
+        .from('couples')
+        .select('id')
+        .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id}`)
+        .single();
+
+      if (couple) {
+        setCoupleId(couple.id);
+      }
+    } catch (error) {
+      console.error('Error getting couple ID:', error);
+      Alert.alert('Erreur', 'Impossible de récupérer les informations du couple');
+    }
+  };
+
+  const loadCalendarData = async () => {
+    if (!coupleId) return;
+    
+    setIsLoading(true);
+    try {
+      // Load all calendar data in parallel
+      const [eventsResult, souvenirsResult, todosResult] = await Promise.all([
+        supabase
+          .from('calendar_events')
+          .select('*')
+          .eq('couple_id', coupleId)
+          .order('event_date', { ascending: true }),
+        supabase
+          .from('calendar_souvenirs')
+          .select('*')
+          .eq('couple_id', coupleId)
+          .order('memory_date', { ascending: true }),
+        supabase
+          .from('calendar_todos')
+          .select('*')
+          .eq('couple_id', coupleId)
+          .order('due_date', { ascending: true })
+      ]);
+
+      if (eventsResult.error) throw eventsResult.error;
+      if (souvenirsResult.error) throw souvenirsResult.error;
+      if (todosResult.error) throw todosResult.error;
+
+      setEvents(eventsResult.data || []);
+      setSouvenirs(souvenirsResult.data || []);
+      setTodos(todosResult.data || []);
+    } catch (error) {
+      console.error('Error loading calendar data:', error);
+      Alert.alert('Erreur', 'Impossible de charger les données du calendrier');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    const days = [];
+    
+    // Add all days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    
+    return days;
+  };
+
+  const getItemsForDate = (date: Date) => {
+    // Format date consistently
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // Filter events for this specific date
+    const dayEvents = events.filter(event => {
+      const eventDate = event.event_date;
+      return eventDate === dateStr;
+    });
+    
+    const daySouvenirs = souvenirs.filter(souvenir => souvenir.memory_date === dateStr);
+    const dayTodos = todos.filter(todo => todo.due_date === dateStr);
+    
+    // Debug logging for day 26
+    if (date.getDate() === 26) {
+      console.log('Day 26 debug:', {
+        dateStr,
+        dayEvents,
+        allEvents: events.map(e => ({ id: e.id, date: e.event_date })),
+        hasEvents: dayEvents.length > 0
+      });
+    }
+    
+    return { events: dayEvents, souvenirs: daySouvenirs, todos: dayTodos };
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    // Also update the form date and time when selecting a date from calendar
+    setFormDate(date);
+    setFormTime(date);
+  };
+
+  const toggleTodoStatus = async (todo: CalendarTodo) => {
+    try {
+      const newStatus = todo.status === 'termine' ? 'a_faire' : 'termine';
+      
+      const { error } = await supabase
+        .from('calendar_todos')
+        .update({ status: newStatus })
+        .eq('id', todo.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setTodos(prevTodos => 
+        prevTodos.map(t => 
+          t.id === todo.id ? { ...t, status: newStatus } : t
+        )
+      );
+
+      Alert.alert('Succès', 'Statut de la tâche mis à jour');
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de mettre à jour la tâche');
+    }
+  };
+
+
+
+  const openAddModal = () => {
+    setShowAddModal(true);
+    // Initialize form with selected date if one was selected from calendar
+    if (selectedDate) {
+      setFormDate(selectedDate);
+      setFormTime(selectedDate);
+    } else {
+      resetForm();
+    }
+  };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setFormTitle('');
+    setFormDate(new Date());
+    setFormTime(new Date());
+    setFormPlace('');
+    setFormDescription('');
+    setFormPriority('normal');
+    setFormStatus('a_faire');
+    setFormImage(null);
+  };
+
+  const handleItemTypeSelect = (type: CalendarItemType) => {
+    setFormType(type);
+  };
+
+  const pickImage = async (source: 'camera' | 'gallery') => {
+    try {
+      let result;
+      
+      if (source === 'camera') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Permission refusée', 'Permission d\'accès à la caméra refusée');
+          return;
+        }
+        
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+      } else {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Permission refusée', 'Permission d\'accès à la galerie refusée');
+          return;
+        }
+        
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets[0]) {
+        // Here you would upload to Cloudinary
+        // For now, we'll use the local URI
+        setFormImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Erreur', 'Impossible de sélectionner l\'image');
+    }
+  };
+
+  const saveItem = async () => {
+    if (!coupleId || !formTitle.trim()) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let result;
+
+      if (formType === 'event') {
+        const { data, error } = await supabase
+          .from('calendar_events')
+          .insert({
+            couple_id: coupleId,
+            title: formTitle.trim(),
+            event_date: formDate.toISOString().split('T')[0],
+            event_time: formTime.toTimeString().split(' ')[0],
+            place: formPlace.trim(),
+            description: formDescription.trim()
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+        setEvents(prev => [...prev, data]);
+      } else if (formType === 'souvenir') {
+        const { data, error } = await supabase
+          .from('calendar_souvenirs')
+          .insert({
+            couple_id: coupleId,
+            title: formTitle.trim(),
+            memory_date: formDate.toISOString().split('T')[0],
+            memory_time: formTime.toTimeString().split(' ')[0],
+            place: formPlace.trim(),
+            description: formDescription.trim(),
+            image_url: formImage || ''
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+        setSouvenirs(prev => [...prev, data]);
+      } else if (formType === 'todo') {
+        const { data, error } = await supabase
+          .from('calendar_todos')
+          .insert({
+            couple_id: coupleId,
+            title: formTitle.trim(),
+            description: formDescription.trim(),
+            due_date: formDate.toISOString().split('T')[0],
+            priority: formPriority,
+            status: formStatus
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+        setTodos(prev => [...prev, data]);
+      }
+
+      Alert.alert('Succès', 'Élément ajouté avec succès');
+      closeAddModal();
+    } catch (error) {
+      console.error('Error saving item:', error);
+      Alert.alert('Erreur', 'Impossible de sauvegarder l\'élément');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openItemDetails = (item: any, type: CalendarItemType) => {
+    setSelectedItem({ ...item, type });
+    // Navigate to details page instead of opening modal
+    router.push({
+      pathname: '/pages/item-details',
+      params: { 
+        itemType: type,
+        itemId: item.id,
+        itemData: JSON.stringify(item)
+      }
+    });
+  };
+
+
+
+  const updateItemDate = async (item: any, newDate: Date, newTime: Date) => {
+    if (!coupleId) return;
+
+    setIsLoading(true);
+    try {
+      let result;
+
+      if (item.type === 'event') {
+        const { data, error } = await supabase
+          .from('calendar_events')
+          .update({
+            event_date: newDate.toISOString().split('T')[0],
+            event_time: newTime.toTimeString().split(' ')[0]
+          })
+          .eq('id', item.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+        setEvents(prev => prev.map(e => e.id === item.id ? data : e));
+      } else if (item.type === 'souvenir') {
+        const { data, error } = await supabase
+          .from('calendar_souvenirs')
+          .update({
+            memory_date: newDate.toISOString().split('T')[0],
+            memory_time: newTime.toTimeString().split(' ')[0]
+          })
+          .eq('id', item.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+        setSouvenirs(prev => prev.map(s => s.id === item.id ? data : s));
+      }
+
+      Alert.alert('Succès', 'Date mise à jour avec succès');
+      setSelectedItem(null);
+    } catch (error) {
+      console.error('Error updating item:', error);
+      Alert.alert('Erreur', 'Impossible de mettre à jour la date');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteItem = async (item: any) => {
+    Alert.alert(
+      'Confirmation',
+      'Êtes-vous sûr de vouloir supprimer cet élément ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            if (!coupleId) return;
+
+            setIsLoading(true);
+            try {
+              let error;
+
+              if (item.type === 'event') {
+                const { error: deleteError } = await supabase
+                  .from('calendar_events')
+                  .delete()
+                  .eq('id', item.id);
+                error = deleteError;
+                if (!error) {
+                  setEvents(prev => prev.filter(e => e.id !== item.id));
+                }
+              } else if (item.type === 'souvenir') {
+                const { error: deleteError } = await supabase
+                  .from('calendar_souvenirs')
+                  .delete()
+                  .eq('id', item.id);
+                error = deleteError;
+                if (!error) {
+                  setSouvenirs(prev => prev.filter(s => s.id !== item.id));
+                }
+              } else if (item.type === 'todo') {
+                const { error: deleteError } = await supabase
+                  .from('calendar_todos')
+                  .delete()
+                  .eq('id', item.id);
+                error = deleteError;
+                if (!error) {
+                  setTodos(prev => prev.filter(t => t.id !== item.id));
+                }
+              }
+
+              if (error) throw error;
+              Alert.alert('Succès', 'Élément supprimé avec succès');
+              setSelectedItem(null);
+            } catch (error) {
+              console.error('Error deleting item:', error);
+              Alert.alert('Erreur', 'Impossible de supprimer l\'élément');
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const deleteItemDirectly = async (item: any) => {
+    console.log('deleteItemDirectly called with:', { item, coupleId });
+    if (!coupleId) {
+      console.log('No coupleId, cannot delete');
+      Alert.alert('Erreur', 'Impossible de supprimer - ID du couple manquant');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('Starting deletion for item type:', item.type);
+      let error;
+
+      if (item.type === 'event') {
+        console.log('Deleting event with ID:', item.id);
+        const { error: deleteError } = await supabase
+          .from('calendar_events')
+          .delete()
+          .eq('id', item.id);
+        error = deleteError;
+        if (!error) {
+          setEvents(prev => prev.filter(e => e.id !== item.id));
+          console.log('Event deleted successfully');
+        }
+      } else if (item.type === 'souvenir') {
+        console.log('Deleting souvenir with ID:', item.id);
+        const { error: deleteError } = await supabase
+          .from('calendar_souvenirs')
+          .delete()
+          .eq('id', item.id);
+        error = deleteError;
+        if (!error) {
+          setSouvenirs(prev => prev.filter(s => s.id !== item.id));
+          console.log('Souvenir deleted successfully');
+        }
+      } else if (item.type === 'todo') {
+        console.log('Deleting todo with ID:', item.id);
+        const { error: deleteError } = await supabase
+          .from('calendar_todos')
+          .delete()
+          .eq('id', item.id);
+        error = deleteError;
+        if (!error) {
+          setTodos(prev => prev.filter(t => t.id !== item.id));
+          console.log('Todo deleted successfully');
+        }
+      }
+
+      if (error) {
+        console.log('Supabase error:', error);
+        throw error;
+      }
+                    Alert.alert('Succès', 'Élément supprimé avec succès');
+              setSelectedItem(null);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      Alert.alert('Erreur', 'Impossible de supprimer l\'élément');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return '#FF5722';
+      case 'normal': return '#FF9800';
+      case 'peut_attendre': return '#4CAF50';
+      default: return BRAND_GRAY;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'a_faire': return BRAND_PINK;
+      case 'en_cours': return BRAND_BLUE;
+      case 'termine': return '#4CAF50';
+      default: return BRAND_GRAY;
+    }
+  };
+
+  const formatTime = (timeString: string) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    return `${hours}:${minutes}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    return `${date.getDate()} ${months[date.getMonth()]}`;
+  };
+
   // Show loading while checking auth or profile completion
   if (loading || profileLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2DB6FF" />
-        <Text style={styles.loadingText}>Chargement...</Text>
+      <View style={calendarStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={BRAND_BLUE} />
+        <Text style={calendarStyles.loadingText}>Chargement...</Text>
       </View>
     );
   }
@@ -32,43 +611,646 @@ export default function CalendrierPage() {
     return null;
   }
 
+
+  const selectedDateItems = getItemsForDate(selectedDate);
+
   return (
     <AppLayout>
-      <View style={styles.container}>
-        <Text style={styles.title}>Calendrier</Text>
-        <Text style={styles.subtitle}>Gérez vos rendez-vous et événements</Text>
+      <ScrollView style={calendarStyles.container} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={calendarStyles.header}>
+          <View>
+            <Text style={calendarStyles.title}>Calendrier</Text>
+            <Text style={calendarStyles.currentDate}>
+              {new Date().toLocaleDateString('fr-FR', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </Text>
+          </View>
+          <Pressable onPress={openAddModal} style={calendarStyles.addButton}>
+            <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+          </Pressable>
+        </View>
+
+        {/* Calendar */}
+        <View style={calendarStyles.calendarContainer}>
+          {/* Days of Week */}
+          <View style={calendarStyles.daysOfWeek}>
+            {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, index) => (
+              <Text key={index} style={calendarStyles.dayOfWeek}>{day}</Text>
+            ))}
+          </View>
+
+          {/* Calendar Grid */}
+          <View style={calendarStyles.calendarGrid}>
+            {getDaysInMonth(new Date()).map((day, index) => {
+              // Ensure we have a valid day
+              if (!day) {
+                return null;
+              }
+              
+              const isSelected = day.toDateString() === selectedDate.toDateString();
+              const isToday = day.toDateString() === new Date().toDateString();
+              const dayEvents = getItemsForDate(day).events;
+              const hasEvents = dayEvents.length > 0;
+
+              // Debug logging for day 26
+              if (day.getDate() === 26) {
+                console.log('Rendering day 26:', {
+                  day: day.toDateString(),
+                  hasEvents,
+                  dayEvents: dayEvents.length
+                });
+              }
+
+              return (
+                <Pressable
+                  key={index}
+                  style={[
+                    calendarStyles.calendarDay, 
+                    isSelected && calendarStyles.selectedDay,
+                    isToday && calendarStyles.todayDay
+                  ]}
+                  onPress={() => handleDateSelect(day)}
+                >
+                  <Text style={[
+                    calendarStyles.dayNumber, 
+                    isSelected && calendarStyles.selectedDayText,
+                    isToday && calendarStyles.todayDayText
+                  ]}>
+                    {day.getDate()}
+                  </Text>
+                  {hasEvents && <View style={calendarStyles.eventIndicator} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Events Counter */}
+        <View style={calendarStyles.summaryContainer}>
+          <View style={calendarStyles.summaryItem}>
+            <Text style={calendarStyles.summaryNumber}>{events.length}</Text>
+            <Text style={calendarStyles.summaryLabel}>Événements</Text>
+          </View>
+          
+          <View style={calendarStyles.summaryItem}>
+            <Text style={calendarStyles.summaryNumber}>{souvenirs.length}</Text>
+            <Text style={calendarStyles.summaryLabel}>Souvenirs</Text>
+          </View>
+          
+          <View style={calendarStyles.summaryItem}>
+            <Text style={calendarStyles.summaryNumber}>{todos.filter(t => t.status !== 'termine').length}</Text>
+            <Text style={calendarStyles.summaryLabel}>Tâches</Text>
+          </View>
+        </View>
+
+        {/* Souvenirs Section */}
+        <View style={calendarStyles.section}>
+          <Text style={calendarStyles.sectionTitle}>Nos moments précieux</Text>
+          {souvenirs.length > 0 ? (
+            souvenirs
+              .sort((a, b) => new Date(a.memory_date).getTime() - new Date(b.memory_date).getTime())
+              .map((souvenir) => (
+                <Pressable
+                  key={souvenir.id}
+                  style={calendarStyles.itemCard}
+                  onPress={() => openItemDetails(souvenir, 'souvenir')}
+                >
+                  <View style={[calendarStyles.itemDateSquare, { backgroundColor: BRAND_PINK }]}>
+                    <Text style={calendarStyles.itemDateText}>{formatDate(souvenir.memory_date)}</Text>
+                  </View>
+                  <View style={calendarStyles.itemContent}>
+                    <Text style={calendarStyles.itemTitle}>{souvenir.title}</Text>
+                    <Text style={calendarStyles.itemTime}>{formatTime(souvenir.memory_time)}</Text>
+                    <Text style={calendarStyles.itemPlace}>{souvenir.place}</Text>
+                  </View>
+                </Pressable>
+              ))
+          ) : (
+            <Text style={calendarStyles.noItemsText}>Aucun souvenir pour le moment</Text>
+          )}
+        </View>
+
+        {/* Active Todos */}
+        {todos.filter(todo => todo.status !== 'termine').length > 0 && (
+          <View style={calendarStyles.section}>
+            <Text style={calendarStyles.sectionTitle}>Tâches actives</Text>
+            {todos
+              .filter(todo => todo.status !== 'termine')
+              .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+              .map((todo) => (
+                <Pressable
+                  key={todo.id}
+                  style={calendarStyles.todoItem}
+                  onPress={() => openItemDetails(todo, 'todo')}
+                >
+                  <Pressable
+                    style={[calendarStyles.todoCheckbox, { borderColor: getStatusColor(todo.status) }]}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleTodoStatus(todo);
+                    }}
+                  >
+                    {todo.status === 'en_cours' ? (
+                      <MaterialCommunityIcons name="clock" size={16} color={getStatusColor(todo.status)} />
+                    ) : todo.status === 'termine' ? (
+                      <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
+                    ) : (
+                      <MaterialCommunityIcons name="checkbox-blank-circle-outline" size={16} color={getStatusColor(todo.status)} />
+                    )}
+                  </Pressable>
+                  <View style={calendarStyles.todoContent}>
+                    <Text style={calendarStyles.todoTitle}>{todo.title}</Text>
+                    <Text style={calendarStyles.todoDate}>{formatDate(todo.due_date)}</Text>
+                  </View>
+                  <View style={calendarStyles.todoPriority}>
+                    <View style={[calendarStyles.priorityBadge, { backgroundColor: getPriorityColor(todo.priority) }]}>
+                      <Text style={calendarStyles.priorityText}>{todo.priority}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
+          </View>
+        )}
+
+        {/* Completed Todos */}
+        {todos.filter(todo => todo.status === 'termine').length > 0 && (
+          <View style={calendarStyles.section}>
+            <Text style={calendarStyles.sectionTitle}>Tâches terminées</Text>
+            {todos
+              .filter(todo => todo.status === 'termine')
+              .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
+              .map((todo) => (
+                <Pressable
+                  key={todo.id}
+                  style={[calendarStyles.todoItem, calendarStyles.completedTodoItem]}
+                  onPress={() => openItemDetails(todo, 'todo')}
+                >
+                  <Pressable
+                    style={[calendarStyles.todoCheckbox, calendarStyles.todoCheckboxCompleted]}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleTodoStatus(todo);
+                    }}
+                  >
+                    <MaterialCommunityIcons name="checkbox-marked-circle" size={16} color="#FFFFFF" />
+                  </Pressable>
+                  <View style={calendarStyles.todoContent}>
+                    <Text style={[calendarStyles.todoTitle, calendarStyles.todoTitleCompleted]}>{todo.title}</Text>
+                    <Text style={[calendarStyles.todoDate, calendarStyles.pastItemText]}>{formatDate(todo.due_date)}</Text>
+                  </View>
+                  <View style={calendarStyles.todoPriority}>
+                    <View style={[calendarStyles.priorityBadge, { backgroundColor: '#4CAF50' }]}>
+                      <Text style={calendarStyles.priorityText}>Terminé</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
+          </View>
+        )}
+
+        {/* No Items Message */}
+        {events.length === 0 && souvenirs.length === 0 && todos.length === 0 && (
+          <View style={calendarStyles.noItemsContainer}>
+            <MaterialCommunityIcons name="calendar-blank" size={48} color={BRAND_GRAY} />
+            <Text style={calendarStyles.noItemsText}>Aucun événement dans le calendrier</Text>
+          </View>
+        )}
+
+        {/* Add Item Modal */}
+        <Modal
+          visible={showAddModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <View style={calendarStyles.modalContainer}>
+            {/* Modal Header */}
+            <View style={calendarStyles.modalHeader}>
+              <Pressable onPress={closeAddModal} style={calendarStyles.closeButton}>
+                <MaterialCommunityIcons name="chevron-left" size={24} color="#2D2D2D" />
+              </Pressable>
+              <Text style={calendarStyles.modalTitle}>Ajouter au calendrier</Text>
+              <View style={{ width: 24 }} />
+            </View>
+
+            {/* Item Type Selection */}
+            <View style={calendarStyles.typeSelection}>
+              <Pressable
+                style={[calendarStyles.typeButton, formType === 'event' && calendarStyles.typeButtonSelected]}
+                onPress={() => handleItemTypeSelect('event')}
+              >
+                <MaterialCommunityIcons 
+                  name="calendar" 
+                  size={24} 
+                  color={formType === 'event' ? '#FFFFFF' : '#9E9E9E'} 
+                />
+                                  <Text style={[calendarStyles.typeButtonText, formType === 'event' && calendarStyles.typeButtonTextSelected]}>
+                  Évènement
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[calendarStyles.typeButton, formType === 'souvenir' && calendarStyles.typeButtonSelected]}
+                onPress={() => handleItemTypeSelect('souvenir')}
+              >
+                <MaterialCommunityIcons 
+                  name="heart" 
+                  size={24} 
+                  color={formType === 'souvenir' ? '#FFFFFF' : '#9E9E9E'} 
+                />
+                <Text style={[calendarStyles.typeButtonText, formType === 'souvenir' && calendarStyles.typeButtonTextSelected]}>
+                  Souvenir
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[calendarStyles.typeButton, formType === 'todo' && calendarStyles.typeButtonSelected]}
+                onPress={() => handleItemTypeSelect('todo')}
+              >
+                <MaterialCommunityIcons 
+                  name="checkbox-marked-outline" 
+                  size={24} 
+                  color={formType === 'todo' ? '#FFFFFF' : '#9E9E9E'} 
+                />
+                <Text style={[calendarStyles.typeButtonText, formType === 'todo' && calendarStyles.typeButtonTextSelected]}>
+                  Todo
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Form Fields */}
+            <ScrollView style={calendarStyles.formContainer} showsVerticalScrollIndicator={false}>
+              {/* Title */}
+              <View style={calendarStyles.formField}>
+                <Text style={calendarStyles.formLabel}>Titre</Text>
+                <TextInput
+                  style={calendarStyles.textInput}
+                  value={formTitle}
+                  onChangeText={setFormTitle}
+                  placeholder={
+                    formType === 'event' ? "Donnez un nom à votre événement" :
+                    formType === 'souvenir' ? "Donnez un nom à votre moment" :
+                    "Donnez un nom à votre tâche"
+                  }
+                  placeholderTextColor={BRAND_GRAY}
+                />
+              </View>
+
+              {/* Date and Time */}
+              <View style={calendarStyles.formField}>
+                <Text style={calendarStyles.formLabel}>Date et Heure</Text>
+                <View style={calendarStyles.dateTimeContainer}>
+                  <Pressable
+                    style={calendarStyles.dateTimeInput}
+                    onPress={() => setShowCustomDatePicker(true)}
+                  >
+                    <MaterialCommunityIcons name="calendar" size={20} color="#9E9E9E" />
+                    <Text style={calendarStyles.dateTimeText}>
+                      {formDate.toLocaleDateString('fr-FR')}
+                    </Text>
+                    <MaterialCommunityIcons name="chevron-down" size={16} color="#9E9E9E" />
+                  </Pressable>
+
+                  <Pressable
+                    style={calendarStyles.dateTimeInput}
+                    onPress={() => setShowCustomTimePicker(true)}
+                  >
+                    <MaterialCommunityIcons name="clock" size={20} color="#9E9E9E" />
+                    <Text style={calendarStyles.dateTimeText}>
+                      {formTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <MaterialCommunityIcons name="chevron-down" size={16} color="#9E9E9E" />
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Place */}
+              {(formType === 'event' || formType === 'souvenir') && (
+                <View style={calendarStyles.formField}>
+                  <Text style={calendarStyles.formLabel}>Lieu</Text>
+                  <View style={calendarStyles.placeInputContainer}>
+                    <TextInput
+                      style={calendarStyles.textInput}
+                      value={formPlace}
+                      onChangeText={setFormPlace}
+                      placeholder="Ajouter un lieu"
+                      placeholderTextColor={BRAND_GRAY}
+                    />
+                    <MaterialCommunityIcons name="map-marker" size={20} color="#9E9E9E" />
+                  </View>
+                </View>
+              )}
+
+              {/* Priority and Status for Todo */}
+              {formType === 'todo' && (
+                <>
+                  <View style={calendarStyles.formField}>
+                    <Text style={calendarStyles.formLabel}>Priorité</Text>
+                    <View style={calendarStyles.priorityContainer}>
+                      {(['urgent', 'normal', 'peut_attendre'] as const).map((priority) => (
+                        <Pressable
+                          key={priority}
+                          style={[
+                            calendarStyles.priorityButton,
+                            formPriority === priority && calendarStyles.priorityButtonSelected
+                          ]}
+                          onPress={() => setFormPriority(priority)}
+                        >
+                          <Text style={[
+                            calendarStyles.priorityButtonText,
+                            formPriority === priority && calendarStyles.priorityButtonTextSelected
+                          ]}>
+                            {priority === 'urgent' ? 'Urgent' : 
+                             priority === 'normal' ? 'Normal' : 'Peut attendre'}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={calendarStyles.formField}>
+                    <Text style={calendarStyles.formLabel}>Statut</Text>
+                    <View style={calendarStyles.statusContainer}>
+                      {(['a_faire', 'en_cours', 'termine'] as const).map((status) => (
+                        <Pressable
+                          key={status}
+                          style={[
+                            calendarStyles.statusButton,
+                            formStatus === status && calendarStyles.statusButtonSelected
+                          ]}
+                          onPress={() => setFormStatus(status)}
+                        >
+                          <Text style={[
+                            calendarStyles.statusButtonText,
+                            formStatus === status && calendarStyles.statusButtonTextSelected
+                          ]}>
+                            {status === 'a_faire' ? 'À faire' : 
+                             status === 'en_cours' ? 'En cours' : 'Terminé'}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {/* Image Upload for Souvenir */}
+              {formType === 'souvenir' && (
+                <View style={calendarStyles.formField}>
+                  <Text style={calendarStyles.formLabel}>Photos</Text>
+                  <View style={calendarStyles.imageUploadContainer}>
+                    {formImage ? (
+                      <Image source={{ uri: formImage }} style={calendarStyles.uploadedImage} />
+                    ) : (
+                      <>
+                        <MaterialCommunityIcons name="image" size={48} color={BRAND_GRAY} />
+                        <Text style={calendarStyles.imageUploadText}>
+                          Ajouter une image pour ce souvenir
+                        </Text>
+                      </>
+                    )}
+                    <View style={calendarStyles.imageButtonsContainer}>
+                      <Pressable
+                        style={[calendarStyles.imageButton, { backgroundColor: BRAND_PINK }]}
+                        onPress={() => pickImage('camera')}
+                      >
+                        <MaterialCommunityIcons name="camera" size={20} color="#FFFFFF" />
+                        <Text style={calendarStyles.imageButtonText}>Camera</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[calendarStyles.imageButton, { backgroundColor: BRAND_BLUE }]}
+                        onPress={() => pickImage('gallery')}
+                      >
+                        <MaterialCommunityIcons name="image-multiple" size={20} color="#FFFFFF" />
+                        <Text style={calendarStyles.imageButtonText}>Gallery</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Description */}
+              <View style={calendarStyles.formField}>
+                <Text style={calendarStyles.formLabel}>Description</Text>
+                <TextInput
+                  style={[calendarStyles.textInput, calendarStyles.textArea]}
+                  value={formDescription}
+                  onChangeText={setFormDescription}
+                  placeholder="Ajouter une note (facultatif)"
+                  placeholderTextColor={BRAND_GRAY}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+            </ScrollView>
+
+            {/* Save Button */}
+            <View style={calendarStyles.saveButtonContainer}>
+              <Pressable
+                style={calendarStyles.saveButton}
+                onPress={saveItem}
+                disabled={isLoading}
+              >
+                <LinearGradient
+                  colors={[BRAND_BLUE, BRAND_PINK]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={calendarStyles.saveButtonGradient}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={calendarStyles.saveButtonText}>Sauvegarder</Text>
+                  )}
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Custom Date Picker Modal */}
+        <Modal
+          visible={showCustomDatePicker}
+          animationType="slide"
+          transparent={true}
+        >
+          <View style={calendarStyles.customPickerOverlay}>
+            <View style={calendarStyles.customPickerContainer}>
+              <View style={calendarStyles.customPickerHeader}>
+                <Text style={calendarStyles.customPickerTitle}>Sélectionner une date</Text>
+                <Pressable
+                  style={calendarStyles.customPickerCloseButton}
+                  onPress={() => setShowCustomDatePicker(false)}
+                >
+                  <MaterialCommunityIcons name="close" size={24} color="#2D2D2D" />
+                </Pressable>
+              </View>
+              
+              <View style={calendarStyles.customPickerContent}>
+                <View style={calendarStyles.monthSelector}>
+                  <Pressable
+                    style={calendarStyles.monthButton}
+                    onPress={() => {
+                      const newDate = new Date(formDate);
+                      newDate.setMonth(newDate.getMonth() - 1);
+                      setFormDate(newDate);
+                    }}
+                  >
+                    <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_BLUE} />
+                  </Pressable>
+                  
+                  <Text style={calendarStyles.monthText}>
+                    {formDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                  </Text>
+                  
+                  <Pressable
+                    style={calendarStyles.monthButton}
+                    onPress={() => {
+                      const newDate = new Date(formDate);
+                      newDate.setMonth(newDate.getMonth() + 1);
+                      setFormDate(newDate);
+                    }}
+                  >
+                    <MaterialCommunityIcons name="chevron-right" size={24} color={BRAND_BLUE} />
+                  </Pressable>
+                </View>
+                
+                <View style={calendarStyles.customPickerDaysOfWeek}>
+                  {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, index) => (
+                    <Text key={index} style={calendarStyles.customPickerDayOfWeek}>{day}</Text>
+                  ))}
+                </View>
+                
+                <View style={calendarStyles.customPickerGrid}>
+                  {getDaysInMonth(formDate).map((day, index) => {
+                    if (!day) return <View key={index} style={calendarStyles.customPickerEmptyDay} />;
+                    
+                    const isSelected = day.toDateString() === formDate.toDateString();
+                    const isToday = day.toDateString() === new Date().toDateString();
+                    
+                    return (
+                      <Pressable
+                        key={index}
+                        style={[
+                          calendarStyles.customPickerDay,
+                          isSelected && calendarStyles.customPickerSelectedDay,
+                          isToday && calendarStyles.customPickerTodayDay
+                        ]}
+                        onPress={() => {
+                          setFormDate(day);
+                          setShowCustomDatePicker(false);
+                        }}
+                      >
+                        <Text style={[
+                          calendarStyles.customPickerDayNumber,
+                          isSelected && calendarStyles.customPickerSelectedDayText,
+                          isToday && calendarStyles.customPickerTodayDayText
+                        ]}>
+                          {day.getDate()}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Custom Time Picker Modal */}
+        <Modal
+          visible={showCustomTimePicker}
+          animationType="slide"
+          transparent={true}
+        >
+          <View style={calendarStyles.customPickerOverlay}>
+            <View style={calendarStyles.customPickerContainer}>
+              <View style={calendarStyles.customPickerHeader}>
+                <Text style={calendarStyles.customPickerTitle}>Sélectionner une heure</Text>
+                <Pressable
+                  style={calendarStyles.customPickerCloseButton}
+                  onPress={() => setShowCustomTimePicker(false)}
+                >
+                  <MaterialCommunityIcons name="close" size={24} color="#2D2D2D" />
+                </Pressable>
+              </View>
+              
+              <View style={calendarStyles.customPickerContent}>
+                <View style={calendarStyles.timeSelector}>
+                  <View style={calendarStyles.timeColumn}>
+                    <Text style={calendarStyles.timeLabel}>Heures</Text>
+                    <ScrollView style={calendarStyles.timeScrollView} showsVerticalScrollIndicator={false}>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <Pressable
+                          key={i}
+                          style={[
+                            calendarStyles.timeOption,
+                            formTime.getHours() === i && calendarStyles.timeOptionSelected
+                          ]}
+                          onPress={() => {
+                            const newTime = new Date(formTime);
+                            newTime.setHours(i);
+                            setFormTime(newTime);
+                          }}
+                        >
+                          <Text style={[
+                            calendarStyles.timeOptionText,
+                            formTime.getHours() === i && calendarStyles.timeOptionTextSelected
+                          ]}>
+                            {i.toString().padStart(2, '0')}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                  
+                  <View style={calendarStyles.timeColumn}>
+                    <Text style={calendarStyles.timeLabel}>Minutes</Text>
+                    <ScrollView style={calendarStyles.timeScrollView} showsVerticalScrollIndicator={false}>
+                      {Array.from({ length: 60 }, (_, i) => (
+                        <Pressable
+                          key={i}
+                          style={[
+                            calendarStyles.timeOption,
+                            formTime.getMinutes() === i && calendarStyles.timeOptionSelected
+                          ]}
+                          onPress={() => {
+                            const newTime = new Date(formTime);
+                            newTime.setMinutes(i);
+                            setFormTime(newTime);
+                          }}
+                        >
+                          <Text style={[
+                            calendarStyles.timeOptionText,
+                            formTime.getMinutes() === i && calendarStyles.timeOptionTextSelected
+                          ]}>
+                            {i.toString().padStart(2, '0')}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+                
+                <Pressable
+                  style={calendarStyles.timeConfirmButton}
+                  onPress={() => setShowCustomTimePicker(false)}
+                >
+                  <Text style={calendarStyles.timeConfirmButtonText}>Confirmer</Text>
+                </Pressable>
+              </View>
+            </View>
       </View>
+        </Modal>
+      </ScrollView>
     </AppLayout>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: {
-    marginTop: 16,
-    color: '#7A7A7A',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#2D2D2D',
-    marginBottom: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#7A7A7A',
-    textAlign: 'center',
-  },
-});
+
+

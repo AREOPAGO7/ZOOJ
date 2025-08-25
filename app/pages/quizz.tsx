@@ -67,6 +67,7 @@ export default function QuizzPage() {
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [isCheckingResults, setIsCheckingResults] = useState(false);
   const [userNames, setUserNames] = useState<{ user1: string; user2: string } | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState<any>(null);
   
   // Cache for quiz data to reduce REST requests
   const [quizCache, setQuizCache] = useState<Map<string, any>>(new Map());
@@ -155,12 +156,13 @@ export default function QuizzPage() {
           *,
           theme:quiz_themes(id, name, description),
           questions:quiz_questions(count)
-        `);
+        `)
+        .order('title', { ascending: true });
 
       if (error) throw error;
 
       // Transform data to match our interface
-      const transformedQuizzes = data.map(quiz => ({
+      const transformedQuizzes = (data || []).map(quiz => ({
         id: quiz.id,
         title: quiz.title,
         description: quiz.description,
@@ -179,10 +181,11 @@ export default function QuizzPage() {
     try {
       const { data, error } = await supabase
         .from('quiz_themes')
-        .select('*');
+        .select('*')
+        .order('name', { ascending: true });
 
       if (error) throw error;
-      setThemes(data);
+      setThemes(data || []);
     } catch (error) {
       console.error('Error loading themes:', error);
     }
@@ -594,6 +597,14 @@ export default function QuizzPage() {
         return newCache;
       });
     }
+  };
+
+  const selectTheme = (theme: any) => {
+    setSelectedTheme(theme);
+  };
+
+  const resetTheme = () => {
+    setSelectedTheme(null);
   };
 
   const onRefresh = async () => {
@@ -1191,66 +1202,31 @@ export default function QuizzPage() {
     );
   }
 
-  // Main quiz listing screen
-  return (
-    <AppLayout>
-      <ScrollView 
-        style={styles.container} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Header */}
-        <View style={styles.header}>
-        <Text style={styles.title}>Quizz</Text>
-          <Text style={styles.subtitle}>Découvrez votre compatibilité</Text>
-          <Pressable style={styles.searchButton}>
-            <MaterialCommunityIcons name="magnify" size={24} color={BRAND_GRAY} />
-          </Pressable>
-      </View>
-
-        {/* Themes */}
-        <View style={styles.themesSection}>
-          <Text style={styles.sectionTitle}>Thématiques</Text>
-          <View style={styles.themesGrid}>
-            {themes.slice(0, 2).map((theme, index) => (
-              <Pressable
-                key={theme.id}
-                style={styles.themeCard}
-                onPress={() => {
-                  const quiz = quizzes.find(q => q.theme.id === theme.id);
-                  if (quiz) startQuiz(quiz);
-                }}
-              >
-                <LinearGradient
-                  colors={index === 0 ? [BRAND_PINK, '#E91E63'] : [BRAND_BLUE, '#2196F3']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.themeCardGradient}
-                >
-                  <MaterialCommunityIcons
-                    name={index === 0 ? "heart" : "view-grid"}
-                    size={32}
-                    color="#FFFFFF"
-                    style={styles.themeIcon}
-                  />
-                  <Text style={styles.themeTitle}>{theme.name}</Text>
-                </LinearGradient>
-              </Pressable>
-            ))}
+  // Theme-specific view
+  if (selectedTheme) {
+    const themeQuizzes = quizzes.filter(quiz => quiz.theme.id === selectedTheme.id);
+    
+    return (
+      <AppLayout>
+        <View style={styles.themeContainer}>
+          {/* Header */}
+          <View style={styles.themeHeader}>
+            <Pressable onPress={resetTheme} style={styles.backButton}>
+              <MaterialCommunityIcons name="chevron-left" size={24} color="#2D2D2D" />
+            </Pressable>
+            <Text style={styles.themeTitle}>{selectedTheme.name}</Text>
+            <View style={{ width: 24 }} />
           </View>
-        </View>
 
-        {/* Quizzes Grouped by Theme */}
-        {themes.map((theme) => {
-          const themeQuizzes = quizzes.filter(quiz => quiz.theme.id === theme.id);
-          if (themeQuizzes.length === 0) return null;
-          
-          return (
-            <View key={theme.id} style={styles.quizzesSection}>
-              <Text style={styles.sectionTitle}>{theme.name}</Text>
-              {themeQuizzes.map((quiz) => (
+          {/* Theme Description */}
+          <View style={styles.themeDescriptionContainer}>
+            <Text style={styles.themeDescription}>{selectedTheme.description}</Text>
+          </View>
+
+          {/* Quizzes for this theme */}
+          <ScrollView style={styles.themeQuizzesScroll} showsVerticalScrollIndicator={false}>
+            {themeQuizzes.length > 0 ? (
+              themeQuizzes.map((quiz) => (
                 <Pressable
                   key={quiz.id}
                   style={styles.quizCard}
@@ -1277,10 +1253,146 @@ export default function QuizzPage() {
                     />
                   </View>
                 </Pressable>
-              ))}
+              ))
+            ) : (
+              <View style={styles.noQuizzesContainer}>
+                <MaterialCommunityIcons
+                  name="help-circle-outline"
+                  size={48}
+                  color={BRAND_GRAY}
+                />
+                <Text style={styles.noQuizzesText}>Aucun quiz disponible pour cette thématique</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </AppLayout>
+    );
+  }
+
+  // Main quiz listing screen
+  return (
+    <AppLayout>
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+        <Text style={styles.title}>Quizz</Text>
+          <Text style={styles.subtitle}>Découvrez votre compatibilité</Text>
+          <Pressable style={styles.searchButton}>
+            <MaterialCommunityIcons name="magnify" size={24} color={BRAND_GRAY} />
+          </Pressable>
+      </View>
+
+        {/* Themes */}
+        <View style={styles.themesSection}>
+          <Text style={styles.sectionTitle}>Thématiques</Text>
+          {themes.length > 0 ? (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.themesScrollContent}
+              style={styles.themesScroll}
+            >
+              {themes.map((theme, index) => {
+                // Generate different colors for each theme
+                const colors: [string, string][] = [
+                  [BRAND_PINK, '#E91E63'],
+                  [BRAND_BLUE, '#2196F3'],
+                  ['#FF9800', '#F57C00'],
+                  ['#9C27B0', '#7B1FA2'],
+                  ['#4CAF50', '#388E3C'],
+                  ['#FF5722', '#D84315']
+                ];
+                
+                const themeColors = colors[index % colors.length];
+                const iconNames = ['heart', 'view-grid', 'star', 'lightbulb', 'flower', 'music'];
+                const iconName = iconNames[index % iconNames.length];
+                
+                return (
+                  <Pressable
+                    key={theme.id}
+                    style={styles.themeCard}
+                    onPress={() => selectTheme(theme)}
+                  >
+                    <LinearGradient
+                      colors={themeColors}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.themeCardGradient}
+                    >
+                      <MaterialCommunityIcons
+                        name={iconName as any}
+                        size={32}
+                        color="#FFFFFF"
+                        style={styles.themeIcon}
+                      />
+                      <Text style={styles.themeTitle}>{theme.name}</Text>
+                    </LinearGradient>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.noThemesContainer}>
+              <MaterialCommunityIcons
+                name="help-circle-outline"
+                size={48}
+                color={BRAND_GRAY}
+              />
+              <Text style={styles.noThemesText}>Aucune thématique disponible</Text>
             </View>
-          );
-        })}
+          )}
+        </View>
+
+        {/* Quizzes for You Section */}
+        <View style={styles.quizzesSection}>
+          <Text style={styles.sectionTitle}>Quizz pour vous</Text>
+          {quizzes.length > 0 ? (
+            quizzes.map((quiz) => (
+              <Pressable
+                key={quiz.id}
+                style={styles.quizCard}
+                onPress={() => startQuiz(quiz)}
+              >
+                <View style={styles.quizCardContent}>
+                  <View style={styles.quizThumbnail}>
+                    <MaterialCommunityIcons
+                      name="help-circle-outline"
+                      size={40}
+                      color={BRAND_GRAY}
+                    />
+                  </View>
+                  <View style={styles.quizInfo}>
+                    <Text style={styles.quizCardTitle}>{quiz.title}</Text>
+                    <Text style={styles.quizCardDetails}>
+                      {quiz.questions_count} questions • {quiz.estimated_time} min
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={24}
+                    color={BRAND_GRAY}
+                  />
+                </View>
+              </Pressable>
+            ))
+          ) : (
+            <View style={styles.noQuizzesContainer}>
+              <MaterialCommunityIcons
+                name="help-circle-outline"
+                size={48}
+                color={BRAND_GRAY}
+              />
+              <Text style={styles.noQuizzesText}>Aucun quiz disponible</Text>
+            </View>
+          )}
+        </View>
 
         {/* Partner Invitation */}
         <View style={styles.invitationSection}>
@@ -1359,13 +1471,24 @@ const styles = StyleSheet.create({
   },
   themesGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'space-between',
+  },
+  themesScroll: {
+    marginHorizontal: -20, // Negative margin to allow full-width scrolling
+  },
+  themesScrollContent: {
+    paddingHorizontal: 20, // Add padding back to content
+    gap: 12,
+    paddingRight: 32, // Extra padding on the right for better scroll feel
   },
   themeCard: {
-    flex: 1,
+    width: 160, // Fixed width for horizontal scrolling
     height: 120,
     borderRadius: 16,
     overflow: 'hidden',
+    marginRight: 12, // Use marginRight instead of marginBottom for horizontal layout
   },
   themeCardGradient: {
     flex: 1,
@@ -1953,5 +2076,53 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
+  },
+  // Theme-specific view styles
+  themeContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+  },
+  themeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  themeDescriptionContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+  },
+  themeDescription: {
+    fontSize: 16,
+    color: BRAND_GRAY,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  themeQuizzesScroll: {
+    flex: 1,
+  },
+  noQuizzesContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noQuizzesText: {
+    fontSize: 16,
+    color: BRAND_GRAY,
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  noThemesContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noThemesText: {
+    fontSize: 16,
+    color: BRAND_GRAY,
+    textAlign: 'center',
+    marginTop: 16,
   },
 });

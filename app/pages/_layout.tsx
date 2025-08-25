@@ -10,6 +10,7 @@ export default function PagesLayout() {
       <Stack.Screen name="reglages" />
       <Stack.Screen name="answer-question" />
       <Stack.Screen name="question-chat" />
+      <Stack.Screen name="item-details" />
     </Stack>
   );
 }
