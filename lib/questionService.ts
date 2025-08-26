@@ -60,6 +60,23 @@ export const questionService = {
     return { data, error };
   },
 
+  // Get daily question for a specific question and couple (regardless of date)
+  async getDailyQuestionForQuestion(coupleId: string, questionId: string): Promise<{ data: DailyQuestion | null; error: any }> {
+    const { data, error } = await supabase
+      .from('daily_questions')
+      .select(`
+        *,
+        question:questions(*)
+      `)
+      .eq('couple_id', coupleId)
+      .eq('question_id', questionId)
+      .order('scheduled_for', { ascending: false })
+      .limit(1)
+      .single();
+
+    return { data, error };
+  },
+
   // Get all questions for a couple with answers
   async getQuestionsWithAnswers(coupleId: string): Promise<{ data: any[]; error: any }> {
     const { data, error } = await supabase

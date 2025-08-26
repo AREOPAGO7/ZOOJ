@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    // Top padding is now handled globally in app-layout.tsx
   },
   loadingContainer: {
     flex: 1,

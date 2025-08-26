@@ -66,6 +66,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    // Add global top margin for notch safety (5% of screen height)
+    paddingTop: '10%',
   },
   content: {
     flex: 1,
@@ -75,6 +77,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    // Add top margin for loading screen too
+    paddingTop: '5%',
   },
   loadingText: {
     marginTop: 16,

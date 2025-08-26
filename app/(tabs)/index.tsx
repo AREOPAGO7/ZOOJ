@@ -634,7 +634,7 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF", justifyContent: "center", alignItems: "center" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF", justifyContent: "center", alignItems: "center", paddingTop: '5%' }}>
         <ActivityIndicator size="large" color={BRAND_BLUE} />
         <Text style={{ marginTop: 16, color: BRAND_GRAY }}>Chargement...</Text>
       </SafeAreaView>
@@ -646,7 +646,7 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <PanGestureHandler onGestureEvent={handleSwipeRight}>
           <View style={{ flex: 1 }}>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "space-between", paddingVertical: 40 }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "space-between", paddingVertical: 40, paddingTop: '5%' }}>
               {(screen === "welcome" || screen === "auth" || screen === "signup") && (
                 <HeaderBar variant="logo" tagline="L'amour se construit chaque jour" taglineColor={BRAND_GRAY} />
         )}

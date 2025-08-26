@@ -27,6 +27,7 @@ export default function QuestionChatPage() {
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [partnerName, setPartnerName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
+  const [isQuestionCurrent, setIsQuestionCurrent] = useState<boolean>(false);
   const flatListRef = useRef<FlatList>(null);
 
   // Redirect to login if not authenticated
@@ -82,12 +83,12 @@ export default function QuestionChatPage() {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Successfully subscribed to Supabase Realtime');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Realtime channel subscription error');
+          console.log('❌ Realtime channel subscription error');
         } else if (status === 'TIMED_OUT') {
-          console.error('⏰ Realtime subscription timed out');
+          console.log('⏰ Realtime subscription timed out');
         } else if (status === 'CLOSED') {
-          console.error('🔒 Realtime subscription closed');
-        }
+          console.log('🔒 Realtime subscription closed');
+        } 
       });
 
     // Cleanup subscription on unmount
@@ -110,12 +111,10 @@ export default function QuestionChatPage() {
         const { data: coupleData } = await questionService.getCouple(user!.id);
         if (!coupleData) return;
 
-        const { data: dailyQuestionData } = await supabase
-          .from('daily_questions')
-          .select('*')
-          .eq('question_id', questionId)
-          .eq('couple_id', coupleData.id)
-          .single();
+        const { data: dailyQuestionData } = await questionService.getDailyQuestionForQuestion(
+          coupleData.id, 
+          questionId
+        );
 
         if (!dailyQuestionData) return;
 
@@ -176,6 +175,19 @@ export default function QuestionChatPage() {
 
 
 
+  // Check if the question is current (today's question or not expired)
+  const checkIfQuestionIsCurrent = (questionData: any, dailyQuestionData: any) => {
+    if (!questionData || !dailyQuestionData) return false;
+    
+    const today = new Date();
+    const scheduledDate = new Date(dailyQuestionData.scheduled_for);
+    
+    // Check if it's today's question
+    const isToday = today.toDateString() === scheduledDate.toDateString();
+    
+    return isToday;
+  };
+
   const loadChatData = async () => {
     try {
       // Get the question directly
@@ -195,14 +207,8 @@ export default function QuestionChatPage() {
       // Get couple information
       const { data: coupleData } = await questionService.getCouple(user!.id);
       if (!coupleData) {
-        console.error('Couple not found');
         return;
       }
-
-      console.log('Couple data:', coupleData);
-      console.log('Current user ID:', user!.id);
-      console.log('Couple user1_id:', coupleData.user1_id);
-      console.log('Couple user2_id:', coupleData.user2_id);
 
       // Get names directly from couple data (which includes profile joins)
       if (coupleData.user1 && coupleData.user2) {
@@ -215,20 +221,15 @@ export default function QuestionChatPage() {
         }
       }
 
-      console.log('User name from couple data:', coupleData.user1?.name || coupleData.user2?.name);
-      console.log('Partner name from couple data:', coupleData.user1_id === user!.id ? coupleData.user2?.name : coupleData.user1?.name);
-
       // First, get the daily_question entry for this question and couple
-      let { data: dailyQuestionData, error: dailyQuestionError } = await supabase
-        .from('daily_questions')
-        .select('*')
-        .eq('question_id', questionId)
-        .eq('couple_id', coupleData.id)
-        .single();
+      // Try to find any existing daily question for this question/couple combination
+      let { data: dailyQuestionData, error: dailyQuestionError } = await questionService.getDailyQuestionForQuestion(
+        coupleData.id, 
+        questionId
+      );
 
       if (!dailyQuestionData) {
-        console.log('No daily question found, creating one...');
-        // Create daily_question entry
+        // Create daily_question entry for today if none exists
         const today = new Date().toISOString().split('T')[0];
         const { data: newDailyQuestion, error: createError } = await supabase
           .from('daily_questions')
@@ -241,20 +242,22 @@ export default function QuestionChatPage() {
           .single();
 
         if (createError) {
-          console.error('Error creating daily question:', createError);
           return;
         }
 
-              console.log('Created new daily question:', newDailyQuestion);
-      dailyQuestionData = newDailyQuestion;
-    } else if (dailyQuestionError) {
-      console.error('Error getting daily question:', dailyQuestionError);
-      return;
-    }
+        dailyQuestionData = newDailyQuestion;
+      } else if (dailyQuestionError) {
+        return;
+      }
 
-    console.log('Final daily question data:', dailyQuestionData);
+      // Ensure we have a daily question before proceeding
+      if (!dailyQuestionData) {
+        return;
+      }
 
-      console.log('Daily question data:', dailyQuestionData);
+      // Check if the question is current
+      const questionIsCurrent = checkIfQuestionIsCurrent(questionData, dailyQuestionData);
+      setIsQuestionCurrent(questionIsCurrent);
 
       // Get answers for this question
       const { data: answersData } = await supabase
@@ -266,8 +269,7 @@ export default function QuestionChatPage() {
         .eq('daily_question_id', dailyQuestionData.id);
 
       setAnswers(answersData || []);
-      console.log('Answers data:', answersData);
-
+      
       // Check if current user has answered
       const currentUserAnswer = answersData?.find(answer => answer.user_id === user!.id);
       setUserAnswered(!!currentUserAnswer);
@@ -276,29 +278,23 @@ export default function QuestionChatPage() {
       setBothAnswered(!!(answersData && answersData.length >= 2));
 
       // Get or create chat thread using the daily_question_id
-      console.log('Creating/getting chat thread for daily question:', dailyQuestionData.id);
       const { data: thread, error: threadError } = await questionService.getOrCreateChatThread(
         dailyQuestionData.id, 
         coupleData.id
       );
 
       if (threadError) {
-        console.error('Error creating/getting chat thread:', threadError);
         return;
       }
 
       if (thread) {
-        console.log('Chat thread created/found:', thread.id);
         setThreadId(thread.id);
         // Load messages
         const { data: messagesData } = await questionService.getChatMessages(thread.id);
         setMessages(messagesData || []);
-        console.log('Messages loaded:', messagesData?.length || 0);
-      } else {
-        console.error('No chat thread created/found');
       }
     } catch (error) {
-      console.error('Error loading chat:', error);
+      // Silent error handling
     } finally {
       setLoadingChat(false);
     }
@@ -308,7 +304,6 @@ export default function QuestionChatPage() {
     if (!answerText.trim() || !user || !questionId) return;
 
     setSubmittingAnswer(true);
-    console.log('Submitting answer:', answerText);
 
     try {
       // Get couple information
@@ -319,17 +314,15 @@ export default function QuestionChatPage() {
       }
 
       // Get or create daily_question entry
-      const today = new Date().toISOString().split('T')[0];
-      let { data: dailyQuestion } = await supabase
-        .from('daily_questions')
-        .select('*')
-        .eq('couple_id', coupleData.id)
-        .eq('question_id', questionId)
-        .eq('scheduled_for', today)
-        .single();
+      // First try to find any existing daily question for this question/couple combination
+      let { data: dailyQuestion, error: dailyQuestionError } = await questionService.getDailyQuestionForQuestion(
+        coupleData.id, 
+        questionId
+      );
 
       if (!dailyQuestion) {
-        // Create daily_question entry
+        // Create daily_question entry for today if none exists
+        const today = new Date().toISOString().split('T')[0];
         const { data: newDailyQuestion, error: createError } = await supabase
           .from('daily_questions')
           .insert({
@@ -341,11 +334,16 @@ export default function QuestionChatPage() {
           .single();
 
         if (createError) {
-          console.error('Error creating daily question:', createError);
           alert('Erreur lors de la création de la question quotidienne');
           return;
         }
         dailyQuestion = newDailyQuestion;
+      }
+
+      // Ensure we have a daily question before proceeding
+      if (!dailyQuestion) {
+        alert('Erreur: Impossible de créer la question quotidienne');
+        return;
       }
 
       // Submit the answer
@@ -401,17 +399,36 @@ export default function QuestionChatPage() {
         return;
       }
 
-      const today = new Date().toISOString().split('T')[0];
-      const { data: dailyQuestionData } = await supabase
-        .from('daily_questions')
-        .select('*')
-        .eq('couple_id', coupleData.id)
-        .eq('question_id', questionId)
-        .eq('scheduled_for', today)
-        .single();
+      // First try to find any existing daily question for this question/couple combination
+      let { data: dailyQuestionData, error: dailyQuestionError } = await questionService.getDailyQuestionForQuestion(
+        coupleData.id, 
+        questionId
+      );
 
+      // If no daily question exists, create one for today
       if (!dailyQuestionData) {
-        console.error('No daily question found for message sending');
+        console.log('No daily question found, creating one for today...');
+        const today = new Date().toISOString().split('T')[0];
+        const { data: newDailyQuestion, error: createError } = await supabase
+          .from('daily_questions')
+          .insert({
+            couple_id: coupleData.id,
+            question_id: questionId,
+            scheduled_for: today
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating daily question:', createError);
+          return;
+        }
+        dailyQuestionData = newDailyQuestion;
+      }
+
+      // Ensure we have a daily question before proceeding
+      if (!dailyQuestionData) {
+        console.error('Failed to get or create daily question');
         return;
       }
 
@@ -521,8 +538,8 @@ export default function QuestionChatPage() {
           </View>
         )}
 
-        {/* Show answer input if user hasn't answered */}
-        {!userAnswered && (
+        {/* Show answer input if user hasn't answered AND question is current */}
+        {!userAnswered && isQuestionCurrent && (
           <View style={styles.answerInputContainer}>
             <TextInput
               style={styles.answerInput}
@@ -545,6 +562,7 @@ export default function QuestionChatPage() {
             </Pressable>
           </View>
         )}
+
       </View>
     );
   };
@@ -593,6 +611,17 @@ export default function QuestionChatPage() {
                <Text style={styles.questionText}>
                  {question?.content || 'Les couples devraient-ils partager leurs mots de passe ?'}
                </Text>
+               
+               {/* Question Status Indicator */}
+               {!isQuestionCurrent && (
+                 <View style={styles.questionStatusContainer}>
+                   <MaterialCommunityIcons name="clock-outline" size={16} color="#F59E0B" />
+                   <Text style={styles.questionStatusText}>
+                     Question fermée - Discussion terminée
+                   </Text>
+                 </View>
+               )}
+               
                {renderAnswers()}
 
              </View>
@@ -622,39 +651,47 @@ export default function QuestionChatPage() {
 
              
 
-                          {/* Input Bar */}
-             {threadId && (
+                          {/* Input Bar - Only show if question is current */}
+             {threadId && isQuestionCurrent && (
                <View style={styles.inputBar}>
-                 <Pressable style={styles.attachButton}>
-                   <MaterialCommunityIcons name="paperclip" size={24} color="#9CA3AF" />
-                 </Pressable>
-                 
-                 <TextInput
-                   style={styles.messageInput}
-                   placeholder="Message..."
-                   value={newMessage}
-                   onChangeText={setNewMessage}
-                   multiline
-                   placeholderTextColor="#9CA3AF"
-                 />
-                 
-                 <Pressable
-                   style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]}
-                   onPress={handleSendMessage}
-                   disabled={!newMessage.trim() || sending}
-                 >
-                   {sending ? (
-                     <ActivityIndicator size="small" color="#FFFFFF" />
-                   ) : (
-                                     <MaterialCommunityIcons 
-                  name="send" 
-                  size={20} 
-                  color={newMessage.trim() ? "#374151" : "#9CA3AF"} 
-                />
-                   )}
-                 </Pressable>
+                 <View style={styles.inputContainer}>
+                   <Pressable style={styles.attachButton}>
+                     <MaterialCommunityIcons 
+                       name="paperclip" 
+                       size={24} 
+                       color="#9CA3AF"
+                     />
+                   </Pressable>
+                   
+                   <TextInput
+                     style={styles.messageInput}
+                     placeholder="Message..."
+                     value={newMessage}
+                     onChangeText={setNewMessage}
+                     multiline
+                     placeholderTextColor="#9CA3AF"
+                   />
+                   
+                   <Pressable
+                     style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]}
+                     onPress={handleSendMessage}
+                     disabled={!newMessage.trim() || sending}
+                   >
+                     {sending ? (
+                       <ActivityIndicator size="small" color="#FFFFFF" />
+                     ) : (
+                       <MaterialCommunityIcons 
+                         name="send" 
+                         size={20} 
+                         color={newMessage.trim() ? "#374151" : "#9CA3AF"} 
+                       />
+                     )}
+                   </Pressable>
+                 </View>
                </View>
              )}
+
+            
           </>
         )}
       </View>
@@ -924,5 +961,62 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
     fontStyle: 'italic',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  questionStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  questionStatusText: {
+    fontSize: 14,
+    color: '#92400E',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  expiredMessageContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    marginTop: 16,
+  },
+  expiredMessageText: {
+    fontSize: 16,
+    color: '#92400E',
+    textAlign: 'center',
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  expiredChatMessage: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    marginTop: 16,
+    marginHorizontal: 20,
+  },
+  expiredChatMessageText: {
+    fontSize: 16,
+    color: '#92400E',
+    textAlign: 'center',
+    fontWeight: '500',
+    marginTop: 8,
   },
 });
