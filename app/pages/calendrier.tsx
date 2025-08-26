@@ -80,6 +80,15 @@ export default function CalendrierPage() {
   const [formPriority, setFormPriority] = useState<'urgent' | 'normal' | 'peut_attendre'>('normal');
   const [formStatus, setFormStatus] = useState<'a_faire' | 'en_cours' | 'termine'>('a_faire');
   const [formImage, setFormImage] = useState<string | null>(null);
+  
+  // State for place suggestions
+  const [placeSuggestions, setPlaceSuggestions] = useState<Array<{
+    display_name: string;
+    lat: string;
+    lon: string;
+    type: string;
+  }>>([]);
+  const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -596,6 +605,56 @@ export default function CalendrierPage() {
     return `${date.getDate()} ${months[date.getMonth()]}`;
   };
 
+  // Real place search using OpenStreetMap Nominatim API
+  const searchPlaces = async (query: string) => {
+    if (!query.trim() || query.length < 3) {
+      setPlaceSuggestions([]);
+      return;
+    }
+
+    setIsLoadingPlaces(true);
+    try {
+      // Search in Morocco with French language
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?` +
+        `q=${encodeURIComponent(query + ' Morocco')}&` +
+        `format=json&` +
+        `limit=8&` +
+        `addressdetails=1&` +
+        `accept-language=fr&` +
+        `countrycodes=ma&` +
+        `viewbox=-13.0,27.0,-0.5,36.0&` + // Morocco bounding box
+        `bounded=1`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setPlaceSuggestions(data);
+      } else {
+        console.error('Place search failed:', response.status);
+        setPlaceSuggestions([]);
+      }
+    } catch (error) {
+      console.error('Error searching places:', error);
+      setPlaceSuggestions([]);
+    } finally {
+      setIsLoadingPlaces(false);
+    }
+  };
+
+  // Debounced search to avoid too many API calls
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (formPlace.length >= 3) {
+        searchPlaces(formPlace);
+      } else {
+        setPlaceSuggestions([]);
+      }
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [formPlace]);
+
   // Show loading while checking auth or profile completion
   if (loading || profileLoading) {
     return (
@@ -616,7 +675,7 @@ export default function CalendrierPage() {
 
   return (
     <AppLayout>
-      <ScrollView style={calendarStyles.container} showsVerticalScrollIndicator={false}>
+      <View style={calendarStyles.container}>
         {/* Header */}
         <View style={calendarStyles.header}>
           <View>
@@ -630,9 +689,15 @@ export default function CalendrierPage() {
               })}
             </Text>
           </View>
-          <Pressable onPress={openAddModal} style={calendarStyles.addButton}>
-            <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
-          </Pressable>
+          <View style={calendarStyles.headerButtons}>
+            <Pressable onPress={() => router.push('/pages/all-items')} style={calendarStyles.viewAllButton}>
+              <MaterialCommunityIcons name="view-list" size={20} color="#007AFF" />
+              <Text style={calendarStyles.viewAllButtonText}>Voir tout</Text>
+            </Pressable>
+            <Pressable onPress={openAddModal} style={calendarStyles.addButton}>
+              <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+            </Pressable>
+          </View>
         </View>
 
         {/* Calendar */}
@@ -708,9 +773,34 @@ export default function CalendrierPage() {
           </View>
         </View>
 
+        {/* Events Section */}
+        {events.length > 0 && (
+          <View style={calendarStyles.section}>
+            <Text style={calendarStyles.sectionTitle}>📅 Nos événements</Text>
+            {events
+              .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+              .map((event) => (
+                <Pressable
+                  key={event.id}
+                  style={calendarStyles.itemCard}
+                  onPress={() => openItemDetails(event, 'event')}
+                >
+                  <View style={[calendarStyles.itemDateSquare, { backgroundColor: BRAND_BLUE }]}>
+                    <Text style={calendarStyles.itemDateText}>{formatDate(event.event_date)}</Text>
+                  </View>
+                  <View style={calendarStyles.itemContent}>
+                    <Text style={calendarStyles.itemTitle}>{event.title}</Text>
+                    <Text style={calendarStyles.itemTime}>{formatTime(event.event_time)}</Text>
+                    <Text style={calendarStyles.itemPlace}>{event.place}</Text>
+                  </View>
+                </Pressable>
+              ))}
+          </View>
+        )}
+
         {/* Souvenirs Section */}
         <View style={calendarStyles.section}>
-          <Text style={calendarStyles.sectionTitle}>Nos moments précieux</Text>
+          <Text style={calendarStyles.sectionTitle}>📸 Nos moments précieux</Text>
           {souvenirs.length > 0 ? (
             souvenirs
               .sort((a, b) => new Date(a.memory_date).getTime() - new Date(b.memory_date).getTime())
@@ -820,8 +910,9 @@ export default function CalendrierPage() {
             <Text style={calendarStyles.noItemsText}>Aucun événement dans le calendrier</Text>
           </View>
         )}
+      </View>
 
-        {/* Add Item Modal */}
+      {/* Add Item Modal */}
         <Modal
           visible={showAddModal}
           animationType="slide"
@@ -937,11 +1028,55 @@ export default function CalendrierPage() {
                       style={calendarStyles.textInput}
                       value={formPlace}
                       onChangeText={setFormPlace}
-                      placeholder="Ajouter un lieu"
+                      placeholder="Rechercher un lieu (ex: Safi, Cores Safi, Hassan 2 rue...)"
                       placeholderTextColor={BRAND_GRAY}
+                      onFocus={() => {
+                        // Show place suggestions on focus
+                        console.log('Place input focused - you can add place suggestions here');
+                      }}
                     />
                     <MaterialCommunityIcons name="map-marker" size={20} color="#9E9E9E" />
                   </View>
+                  {/* Place suggestions */}
+                  {formPlace.length >= 3 && (
+                    <View style={calendarStyles.placeSuggestions}>
+                      <Text style={calendarStyles.placeSuggestionsTitle}>
+                        {isLoadingPlaces ? 'Recherche en cours...' : 'Lieux trouvés:'}
+                      </Text>
+                      {isLoadingPlaces ? (
+                        <View style={calendarStyles.placeSuggestionsList}>
+                          <View style={calendarStyles.placeSuggestionItem}>
+                            <ActivityIndicator size="small" color={BRAND_BLUE} />
+                            <Text style={calendarStyles.placeSuggestionText}>Recherche...</Text>
+                          </View>
+                        </View>
+                      ) : placeSuggestions.length > 0 ? (
+                        <View style={calendarStyles.placeSuggestionsList}>
+                          {placeSuggestions.map((place, index) => (
+                            <Pressable
+                              key={index}
+                              style={calendarStyles.placeSuggestionItem}
+                              onPress={() => setFormPlace(place.display_name)}
+                            >
+                              <MaterialCommunityIcons name="map-marker" size={16} color={BRAND_BLUE} />
+                              <View style={calendarStyles.placeSuggestionContent}>
+                                <Text style={calendarStyles.placeSuggestionText}>
+                                  {place.display_name.split(',')[0]} {/* Show first part of address */}
+                                </Text>
+                                <Text style={calendarStyles.placeSuggestionSubtext}>
+                                  {place.display_name.split(',').slice(1, 3).join(', ')} {/* Show city/area */}
+                                </Text>
+                              </View>
+                            </Pressable>
+                          ))}
+                        </View>
+                      ) : formPlace.length >= 3 ? (
+                        <View style={calendarStyles.placeSuggestionsList}>
+                          <Text style={calendarStyles.placeSuggestionText}>Aucun lieu trouvé</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -1245,11 +1380,10 @@ export default function CalendrierPage() {
                 </Pressable>
               </View>
             </View>
-      </View>
+          </View>
         </Modal>
-      </ScrollView>
-    </AppLayout>
-  );
+      </AppLayout>
+    );
 }
 
 

@@ -2,11 +2,12 @@ import HeaderBar from "@/components/HeaderBar"
 import { profileService } from "@/lib/profileService"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import * as Clipboard from 'expo-clipboard'
+import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from "expo-linear-gradient"
 import * as Linking from 'expo-linking'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from "react"
-import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native"
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native"
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from "react-native-gesture-handler"
 import { useAuth } from "../../lib/auth"
 import { supabase } from "../../lib/supabase"
@@ -50,6 +51,18 @@ export default function App() {
   const [isCountryOpen, setIsCountryOpen] = useState(false)
   const [isGenderOpen, setIsGenderOpen] = useState(false)
   const [isDateOpen, setIsDateOpen] = useState(false)
+  
+  // Profile picture state
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [isUploadingPicture, setIsUploadingPicture] = useState(false)
+  
+  // Cloudinary configuration (hardcoded for testing)
+  const CLOUDINARY_CONFIG = {
+    cloudName: 'dtivjmfgj',
+    apiKey: '579167569966336',
+    apiSecret: 'MV7tzxkgAr_xBLuLQnpPNrxuhA0',
+    uploadPreset: 'ZOOJAPP'
+  }
   
   // Validation state
   const [nameError, setNameError] = useState("")
@@ -328,6 +341,117 @@ export default function App() {
     return isValid
   }
 
+  const pickImageFromGallery = async () => {
+    console.log('pickImageFromGallery called');
+    try {
+      console.log('Launching image picker...');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      console.log('Image picker result:', result);
+      if (!result.canceled && result.assets[0]) {
+        console.log('Image selected, uploading...');
+        await uploadProfilePicture(result.assets[0].uri);
+      } else {
+        console.log('Image selection cancelled or no assets');
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Erreur', 'Impossible de sélectionner l\'image');
+    }
+  };
+
+  const takePhotoWithCamera = async () => {
+    console.log('takePhotoWithCamera called');
+    try {
+      console.log('Requesting camera permissions...');
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      console.log('Camera permission status:', status);
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission refusée', 'Permission d\'accès à la caméra requise');
+        return;
+      }
+
+      console.log('Launching camera...');
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      console.log('Camera result:', result);
+      if (!result.canceled && result.assets[0]) {
+        console.log('Photo taken, uploading...');
+        await uploadProfilePicture(result.assets[0].uri);
+      } else {
+        console.log('Camera cancelled or no assets');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Erreur', 'Impossible de prendre la photo');
+    }
+  };
+
+  const uploadProfilePicture = async (imageUri: string) => {
+    if (!imageUri) return;
+
+    setIsUploadingPicture(true);
+    try {
+      const formData = new FormData();
+      
+      // Platform-specific file handling
+      if (Platform.OS === 'web') {
+        // For web, fetch the image and create a blob
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        formData.append('file', blob, 'profile.jpg');
+      } else {
+        // For native platforms
+        const fileData = {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: 'profile.jpg',
+        };
+        formData.append('file', fileData as any);
+      }
+
+      formData.append('cloud_name', CLOUDINARY_CONFIG.cloudName);
+      formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Cloudinary response error:', response.status, errorText);
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.secure_url) {
+        setProfilePicture(data.secure_url);
+        console.log('Profile picture uploaded successfully:', data.secure_url);
+      } else {
+        throw new Error('Upload failed - no secure_url in response');
+      }
+    } catch (error) {
+      console.error('Profile picture upload error:', error);
+      Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil');
+    } finally {
+      setIsUploadingPicture(false);
+    }
+  };
+
   const handleProfileCreation = async () => {
     if (!validateProfile()) {
       console.log("Profile validation failed")
@@ -356,6 +480,7 @@ export default function App() {
         gender,
         birth_date: birthDate || null,
         invite_code: inviteCode,
+        profile_picture: profilePicture || null,
         completed: false, // Profile not completed until interests are selected
       }
 
@@ -797,35 +922,86 @@ export default function App() {
                   <View style={{ height: 1, backgroundColor: "#EFEFEF", marginBottom: 8 }} />
 
                   <View style={{ alignItems: "center", marginTop: 8, marginBottom: 8 }}>
-                    <View
-                      style={{
-                        width: 140,
-                        height: 140,
-                        borderRadius: 70,
-                        backgroundColor: "#F2F3F5",
-                        alignItems: "center",
-                        justifyContent: "center",
+                    <Pressable
+                      onPress={() => {
+                        console.log('Profile picture pressed!');
+                        // Show a simple action sheet instead of Alert.alert
+                        const options = ['Appareil photo', 'Galerie', 'Annuler'];
+                        const cancelButtonIndex = 2;
+                        
+                        // For now, let's test with a simple approach
+                        if (confirm('Voulez-vous prendre une photo ou choisir depuis la galerie?')) {
+                          console.log('User confirmed, opening gallery...');
+                          pickImageFromGallery();
+                        }
                       }}
-                    >
-                      <MaterialCommunityIcons name="camera-outline" size={42} color="#8A8D92" />
-                      <View
-                        style={{
-                          position: "absolute",
-                          right: 18,
-                          bottom: 10,
-                          width: 28,
-                          height: 28,
-                          borderRadius: 14,
-                          backgroundColor: BRAND_PINK,
+                      style={({ pressed }) => [
+                        {
+                          width: 140,
+                          height: 140,
+                          borderRadius: 70,
+                          backgroundColor: pressed ? "#E0E0E0" : "#F2F3F5",
                           alignItems: "center",
                           justifyContent: "center",
-                          borderWidth: 3,
-                          borderColor: "#FFFFFF",
-                        }}
-                      >
-                        <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
-                      </View>
-                    </View>
+                          overflow: "hidden",
+                          borderWidth: 2,
+                          borderColor: profilePicture ? BRAND_BLUE : "#E5E5E5",
+                        }
+                      ]}
+                    >
+                      {profilePicture ? (
+                        <Image
+                          source={{ uri: profilePicture }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: 68,
+                          }}
+                        />
+                      ) : (
+                        <MaterialCommunityIcons name="camera-outline" size={42} color="#8A8D92" />
+                      )}
+                      
+                      {isUploadingPicture ? (
+                        <View
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: "rgba(0,0,0,0.5)",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: 68,
+                          }}
+                        >
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        </View>
+                      ) : (
+                        <View
+                          style={{
+                            position: "absolute",
+                            right: 18,
+                            bottom: 10,
+                            width: 28,
+                            height: 28,
+                            borderRadius: 14,
+                            backgroundColor: profilePicture ? BRAND_BLUE : BRAND_PINK,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderWidth: 3,
+                            borderColor: "#FFFFFF",
+                          }}
+                        >
+                          <MaterialCommunityIcons 
+                            name={profilePicture ? "pencil" : "plus"} 
+                            size={16} 
+                            color="#FFFFFF" 
+                          />
+                        </View>
+                      )}
+                    </Pressable>
                   </View>
 
                   <View style={{ gap: 12 }}>
