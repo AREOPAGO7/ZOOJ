@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 // import { dailyQuestionScheduler } from '../../lib/dailyQuestionScheduler';
@@ -19,6 +19,7 @@ export default function QuestionsPage() {
   const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
   const [answerTexts, setAnswerTexts] = useState<{ [key: string]: string }>({});
   const [submittingAnswers, setSubmittingAnswers] = useState<{ [key: string]: boolean }>({});
+  const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'myTurn' | 'theirTurn'>('all');
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -206,6 +207,19 @@ export default function QuestionsPage() {
 
   const bothAnswered = (answers: Answer[]) => {
     return answers?.length === 2;
+  };
+
+  const getFilteredQuestions = () => {
+    switch (activeFilter) {
+      case 'unread':
+        return questions.filter(q => !q.answered);
+      case 'myTurn':
+        return questions.filter(q => !q.answered && q.answerCount === 1);
+      case 'theirTurn':
+        return questions.filter(q => !q.answered && q.answerCount === 0);
+      default:
+        return questions;
+    }
   };
 
   const handleQuestionPress = async (question: any) => {
@@ -520,6 +534,51 @@ export default function QuestionsPage() {
           </Pressable>
         </View>
 
+        {/* Filter Tabs */}
+        <View style={styles.filterContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScrollContent}
+          >
+            <Pressable
+              style={[styles.filterTab, activeFilter === 'all' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('all')}
+            >
+              <Text style={[styles.filterTabText, activeFilter === 'all' && styles.filterTabTextActive]}>
+                Tout
+              </Text>
+            </Pressable>
+            
+            <Pressable
+              style={[styles.filterTab, activeFilter === 'unread' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('unread')}
+            >
+              <Text style={[styles.filterTabText, activeFilter === 'unread' && styles.filterTabTextActive]}>
+                Non lu(s)
+              </Text>
+            </Pressable>
+            
+            <Pressable
+              style={[styles.filterTab, activeFilter === 'myTurn' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('myTurn')}
+            >
+              <Text style={[styles.filterTabText, activeFilter === 'myTurn' && styles.filterTabTextActive]}>
+                A mon tour
+              </Text>
+            </Pressable>
+            
+            <Pressable
+              style={[styles.filterTab, activeFilter === 'theirTurn' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('theirTurn')}
+            >
+              <Text style={[styles.filterTabText, activeFilter === 'theirTurn' && styles.filterTabTextActive]}>
+                A son tour
+              </Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+
         {/* Content */}
         {loadingQuestions ? (
           <View style={styles.loadingContainer}>
@@ -547,7 +606,7 @@ export default function QuestionsPage() {
           </View>
         ) : (
           <FlatList
-            data={questions}
+            data={getFilteredQuestions()}
             renderItem={renderQuestionItem}
             keyExtractor={(item) => item.id}
             style={styles.questionsList}
@@ -801,6 +860,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  filterContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    paddingTop: 10,
+    backgroundColor: '#F8F9FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  filterScrollContent: {
+    alignItems: 'center',
+  },
+  filterTab: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  filterTabActive: {
+    backgroundColor: '#87CEEB',
+    borderColor: '#87CEEB',
+  },
+  filterTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  filterTabTextActive: {
+    color: '#FFFFFF',
   },
 
 });

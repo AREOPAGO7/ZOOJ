@@ -1,87 +1,122 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
-import { profileService } from '../../lib/profileService';
 import AppLayout from '../app-layout';
 
 export default function ReglagesPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/');
-    }
-  }, [user, loading, router]);
-
-  // Load profile data
-  useEffect(() => {
-    if (user && !loading) {
-      loadProfile();
-    }
-  }, [user, loading]);
-
-  const loadProfile = async () => {
-    try {
-      const { data } = await profileService.getProfile(user!.id);
-      setProfile(data);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-
-  // Show loading while checking auth
-  if (loading || profileLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2DB6FF" />
-        <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
-    );
-  }
-
-  // Don't render if not authenticated
-  if (!user) {
+  // Don't render if not authenticated or profile not completed
+  if (loading || profileLoading || !user || !isProfileComplete) {
     return null;
   }
+
+  const settingsOptions = [
+    {
+      id: 'bons-plans',
+      title: 'Bons plans',
+      icon: 'earth',
+      route: '/pages/bons-plans'
+    },
+    {
+      id: 'notre-couple',
+      title: 'Notre couple',
+      icon: 'heart-outline',
+      route: '/pages/notre-couple'
+    },
+    {
+      id: 'notifications',
+      title: 'Notifications',
+      icon: 'bell-outline',
+      route: '/pages/notifications'
+    },
+    {
+      id: 'confidentialite',
+      title: 'Confidentialité',
+      icon: 'lock-outline',
+      route: '/pages/confidentialite'
+    },
+    {
+      id: 'langue',
+      title: 'Langue',
+      icon: 'translate',
+      route: '/pages/langue'
+    },
+    {
+      id: 'themes',
+      title: 'Thèmes',
+      icon: 'weather-night',
+      route: '/pages/themes'
+    },
+    {
+      id: 'jeux',
+      title: 'Jeux',
+      icon: 'account-group',
+      route: '/pages/jeux'
+    },
+    {
+      id: 'mon-profil',
+      title: 'Mon profil',
+      icon: 'account-outline',
+      route: '/pages/mon-profil'
+    },
+    {
+      id: 'help-support',
+      title: 'Help & Support',
+      icon: 'help-circle-outline',
+      route: '/pages/help-support'
+    },
+    {
+      id: 'a-propos',
+      title: 'A propos',
+      icon: 'information-outline',
+      route: '/pages/a-propos'
+    }
+  ];
+
+  const handleSettingPress = (route: string) => {
+    router.push(route);
+  };
 
   return (
     <AppLayout>
       <View style={styles.container}>
-        <Text style={styles.title}>Réglages</Text>
-        
-        {profile && profile.completed ? (
-          <>
-            <Text style={styles.subtitle}>Personnalisez votre expérience</Text>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Profil</Text>
-              <Text style={styles.sectionText}>Nom: {profile.name}</Text>
-              <Text style={styles.sectionText}>Pays: {profile.country}</Text>
-              <Text style={styles.sectionText}>Genre: {profile.gender === 'male' ? 'Homme' : profile.gender === 'female' ? 'Femme' : 'Autre'}</Text>
-            </View>
-          </>
-        ) : (
-          <>
-            <Text style={styles.subtitle}>Complétez votre profil pour accéder à toutes les fonctionnalités</Text>
-            <View style={styles.incompleteSection}>
-              <Text style={styles.incompleteText}>
-                Votre profil n'est pas encore complet. Complétez-le pour accéder aux questions, au quiz et au calendrier.
-              </Text>
-              <Pressable
-                onPress={() => router.replace('/')}
-                style={styles.completeButton}
-              >
-                <Text style={styles.completeButtonText}>Compléter mon profil</Text>
-              </Pressable>
-            </View>
-          </>
-        )}
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Réglages</Text>
+        </View>
+
+        {/* Settings List */}
+        <ScrollView style={styles.settingsList} showsVerticalScrollIndicator={false}>
+          {settingsOptions.map((option) => (
+            <Pressable
+              key={option.id}
+              style={styles.settingItem}
+              onPress={() => handleSettingPress(option.route)}
+            >
+              <View style={styles.settingLeft}>
+                <View style={styles.iconContainer}>
+                  <MaterialCommunityIcons 
+                    name={option.icon as any} 
+                    size={24} 
+                    color="#F47CC6" 
+                  />
+                </View>
+                <Text style={styles.settingTitle}>{option.title}</Text>
+              </View>
+              <MaterialCommunityIcons 
+                name="chevron-right" 
+                size={24} 
+                color="#9CA3AF" 
+              />
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
     </AppLayout>
   );
@@ -91,74 +126,55 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  settingsList: {
+    flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
-  loadingContainer: {
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    marginRight: 16,
   },
-  loadingText: {
-    marginTop: 16,
-    color: '#7A7A7A',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#2D2D2D',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#7A7A7A',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  section: {
-    backgroundColor: '#F8F9FA',
-    padding: 20,
-    borderRadius: 12,
-    marginTop: 20,
-    width: '100%',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    marginBottom: 12,
-  },
-  sectionText: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  incompleteSection: {
-    backgroundColor: '#FEF3C7',
-    padding: 20,
-    borderRadius: 12,
-    marginTop: 20,
-    width: '100%',
-    alignItems: 'center',
-  },
-  incompleteText: {
-    fontSize: 16,
-    color: '#92400E',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 24,
-  },
-  completeButton: {
-    backgroundColor: '#2DB6FF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  completeButtonText: {
-    color: '#FFFFFF',
+  settingTitle: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#374151',
   },
 });

@@ -608,7 +608,7 @@ export default function ItemDetailsPage() {
       setPlaceSuggestions([]);
     } finally {
       setIsLoadingPlaces(false);
-    }
+    } 
   };
 
   // Debounced search to avoid too many API calls

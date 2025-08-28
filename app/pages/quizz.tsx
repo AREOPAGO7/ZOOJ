@@ -8,6 +8,21 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
+/*
+ * SEQUENTIAL COMPATIBILITY SYSTEM:
+ * 
+ * This quiz page now implements a sequential compatibility system where:
+ * 1. First person to answer a quiz = Their answers become the "reference/correct" answers
+ * 2. Second person to answer = Their compatibility is calculated by comparing their answers to the reference
+ * 3. Each quiz contributes to only ONE person's compatibility score (the second one to answer)
+ * 4. This prevents duplicate calculations and gives each person unique compatibility scores
+ * 
+ * Database changes needed:
+ * - quiz_answers table: ADD COLUMN answered_at TIMESTAMP DEFAULT NOW()
+ * 
+ * The "Notre couple" page will use this data to show different compatibility scores for each user.
+ */
+
 const BRAND_BLUE = "#2DB6FF";
 const BRAND_PINK = "#F47CC6";
 const BRAND_GRAY = "#6C6C6C";
@@ -327,13 +342,14 @@ export default function QuizzPage() {
 
       if (deleteError) throw deleteError;
 
-      // Save new answers
+      // Save new answers with timestamp to track who answered first
       const answersToSave = answers.map(answer => ({
         question_id: answer.question_id,
         quiz_id: selectedQuiz.id,
         user_id: user.id,
         couple_id: coupleId,
-        answer_value: answer.answer_value
+        answer_value: answer.answer_value,
+        answered_at: new Date().toISOString() // Add timestamp to track who answered first
       }));
 
       const { error: saveError } = await supabase
@@ -475,13 +491,47 @@ export default function QuizzPage() {
       }
     });
 
-    // Calculate scores
+    // Calculate overall couple compatibility score
     const averageDifference = totalQuestions > 0 ? totalDifference / totalQuestions : 0;
     const compatibilityScore = Math.max(0, 100 - (averageDifference * 50)); // Scale: 0-100 for 3-scale
     
-    // Calculate individual percentages (assuming 3 = 100%, 1 = 0%)
-    const user1Percent = userAnswers.reduce((sum, a) => sum + ((a.answer_value - 1) * 50), 0) / userAnswers.length;
-    const user2Percent = partnerAnswers.reduce((sum, a) => sum + ((a.answer_value - 1) * 50), 0) / partnerAnswers.length;
+    // SEQUENTIAL COMPATIBILITY SYSTEM: Determine who answered first and calculate individual scores
+    // Find the first person to answer by comparing timestamps
+    const userFirstAnswer = userAnswers[0]?.answered_at;
+    const partnerFirstAnswer = partnerAnswers[0]?.answered_at;
+    
+    let user1Percent, user2Percent;
+    
+    if (userFirstAnswer && partnerFirstAnswer) {
+      const userAnsweredFirst = new Date(userFirstAnswer) < new Date(partnerFirstAnswer);
+      
+      if (userAnsweredFirst) {
+        // User answered FIRST - their answers are the reference
+        // User gets 0% compatibility (they are the reference)
+        // Partner gets compatibility score based on how well they match user's reference answers
+        user1Percent = 0; // User is reference, no compatibility score
+        user2Percent = Math.max(0, 100 - (averageDifference * 50)); // Partner's compatibility
+      } else {
+        // Partner answered FIRST - their answers are the reference
+        // Partner gets 0% compatibility (they are the reference)
+        // User gets compatibility score based on how well they match partner's reference answers
+        user1Percent = Math.max(0, 100 - (averageDifference * 50)); // User's compatibility
+        user2Percent = 0; // Partner is reference, no compatibility score
+      }
+    } else {
+      // Fallback if no timestamps - use alternating pattern
+      // This ensures different scores for each user even without timestamps
+      const quizId = userAnswers[0]?.quiz_id || 'unknown';
+      const isEvenQuiz = parseInt(quizId) % 2 === 0;
+      
+      if (isEvenQuiz) {
+        user1Percent = 0; // User is reference
+        user2Percent = Math.max(0, 100 - (averageDifference * 50)); // Partner's compatibility
+      } else {
+        user1Percent = Math.max(0, 100 - (averageDifference * 50)); // User's compatibility
+        user2Percent = 0; // Partner is reference
+      }
+    }
 
     return {
       score: Math.round(compatibilityScore),
