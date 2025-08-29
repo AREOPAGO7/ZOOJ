@@ -2,14 +2,29 @@ import { Session, User } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
+interface Profile {
+  id: string
+  name: string | null
+  interests: string[] | null
+  invite_code: string | null
+  created_at: string
+  completed: boolean
+  profile_picture: string | null
+}
+
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  profile: Profile | null
+  profileLoading: boolean
   signUp: (email: string, password: string) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
   createProfile: (profileData: any) => Promise<{ error: any }>
+  loadProfile: () => Promise<void>
+  updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>
+  updateProfilePicture: (imageUrl: string) => Promise<{ error: any }>
   resetPassword: (email: string) => Promise<{ error: any }>
   updatePassword: (newPassword: string) => Promise<{ error: any }>
 }
@@ -20,6 +35,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+
+  // Load profile data when user changes
+  useEffect(() => {
+    if (user) {
+      loadProfile()
+    } else {
+      setProfile(null)
+    }
+  }, [user])
+
+  const loadProfile = async () => {
+    if (!user) return
+    
+    try {
+      setProfileLoading(true)
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        console.error('Error loading profile:', error)
+        return
+      }
+
+      setProfile(profileData)
+    } catch (error) {
+      console.error('Error loading profile:', error)
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!user) {
+      return { error: { message: 'No user logged in' } }
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
+
+      if (error) {
+        return { error }
+      }
+
+      // Reload profile to get updated data
+      await loadProfile()
+      return { error: null }
+    } catch (error) {
+      return { error: { message: 'Une erreur inattendue s\'est produite' } }
+    }
+  }
+
+  const updateProfilePicture = async (imageUrl: string) => {
+    if (!user) {
+      return { error: { message: 'No user logged in' } }
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ profile_picture: imageUrl })
+        .eq('id', user.id)
+
+      if (error) {
+        return { error }
+      }
+
+      // Reload profile to get updated data
+      await loadProfile()
+      return { error: null }
+    } catch (error) {
+      return { error: { message: 'Une erreur inattendue s\'est produite' } }
+    }
+  }
 
   useEffect(() => {
     // Get initial session
@@ -164,10 +260,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     loading,
+    profile,
+    profileLoading,
     signUp,
     signIn,
     signOut,
     createProfile,
+    loadProfile,
+    updateProfile,
+    updateProfilePicture,
     resetPassword,
     updatePassword,
   }

@@ -8,6 +8,7 @@ export interface Profile {
   country: string | null
   interests: string[] | null
   invite_code: string | null
+  profile_picture: string | null
   completed: boolean 
   created_at: string
 }

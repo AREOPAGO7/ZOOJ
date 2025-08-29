@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -53,20 +53,31 @@ interface CoupleInsights {
   communicationStyle: string;
 }
 
+interface Profile {
+  id: string;
+  name: string | null;
+  first_name?: string | null;
+  profile_picture?: string | null;
+  created_at: string;
+}
+
 export default function NotreCouplePage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [userNames, setUserNames] = useState<{ user1: string; user2: string } | null>(null);
+  const [userProfiles, setUserProfiles] = useState<{ user1: Profile | null; user2: Profile | null } | null>(null);
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
-     const [personalInsights, setPersonalInsights] = useState<PersonalInsights | null>(null);
-   const [coupleInsights, setCoupleInsights] = useState<CoupleInsights | null>(null);
-   const [user2CompatibilityScore, setUser2CompatibilityScore] = useState<number>(0);
-   const [user1QuizCount, setUser1QuizCount] = useState<number>(0);
-   const [user2QuizCount, setUser2QuizCount] = useState<number>(0);
-   const [isLoading, setIsLoading] = useState(true);
-      const [anniversaryDate, setAnniversaryDate] = useState('01/01/1900');
+  const [personalInsights, setPersonalInsights] = useState<PersonalInsights | null>(null);
+  const [coupleInsights, setCoupleInsights] = useState<CoupleInsights | null>(null);
+  const [user2CompatibilityScore, setUser2CompatibilityScore] = useState<number>(0);
+  const [user1QuizCount, setUser1QuizCount] = useState<number>(0);
+  const [user2QuizCount, setUser2QuizCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [anniversaryDate, setAnniversaryDate] = useState('');
+  const [answeredQuestionsCount, setAnsweredQuestionsCount] = useState<number>(0);
+  const [isUpdatingDate, setIsUpdatingDate] = useState(false);
 
   // Function declarations
   const loadCoupleData = async () => {
@@ -77,7 +88,7 @@ export default function NotreCouplePage() {
       // Get couple information
       const { data: couple, error: coupleError } = await supabase
         .from('couples')
-        .select('id, user1_id, user2_id')
+        .select('id, user1_id, user2_id, created_at')
         .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id}`)
         .single();
 
@@ -88,10 +99,25 @@ export default function NotreCouplePage() {
       
       console.log('Found couple:', couple);
       setCoupleId(couple.id);
+      
+      // Set the anniversary date from the couple creation date
+      if (couple.created_at) {
+        const date = new Date(couple.created_at);
+        const formattedDate = date.toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        setAnniversaryDate(formattedDate);
+      }
+      
       await getUserNames(couple.user1_id, couple.user2_id);
       
       // Load all quiz results for this couple
       await loadQuizResults(couple.id);
+      
+      // Load answered questions count
+      await loadAnsweredQuestionsCount(couple.id);
       
     } catch (error) {
       console.error('Error loading couple data:', error);
@@ -120,9 +146,77 @@ export default function NotreCouplePage() {
           user1: user1Name,
           user2: user2Name
         });
+
+        setUserProfiles({
+          user1: user1Profile,
+          user2: user2Profile
+        });
       }
     } catch (error) {
       console.error('Error getting user names:', error);
+    }
+  };
+
+  const loadAnsweredQuestionsCount = async (coupleId: string) => {
+    try {
+      // Get count of questions that both partners have answered
+      const { data: answeredQuestions, error } = await supabase
+        .from('daily_questions')
+        .select(`
+          id,
+          answers!inner(*)
+        `)
+        .eq('couple_id', coupleId);
+
+      if (error) {
+        console.error('Error fetching answered questions:', error);
+        return;
+      }
+
+      // Count questions where both partners answered
+      let count = 0;
+      if (answeredQuestions) {
+        for (const dailyQuestion of answeredQuestions) {
+          if (dailyQuestion.answers && dailyQuestion.answers.length >= 2) {
+            count++;
+          }
+        }
+      }
+
+      setAnsweredQuestionsCount(count);
+      console.log('Answered questions count:', count);
+    } catch (error) {
+      console.error('Error loading answered questions count:', error);
+    }
+  };
+
+  const updateAnniversaryDate = async () => {
+    if (!coupleId || !anniversaryDate) return;
+
+    try {
+      setIsUpdatingDate(true);
+      
+      // Parse the date from DD/MM/YYYY format
+      const [day, month, year] = anniversaryDate.split('/');
+      const isoDate = `${year}-${month}-${day}`;
+      
+      // Update the couple's created_at date
+      const { error } = await supabase
+        .from('couples')
+        .update({ created_at: isoDate })
+        .eq('id', coupleId);
+
+      if (error) {
+        console.error('Error updating anniversary date:', error);
+        Alert.alert('Erreur', 'Impossible de mettre à jour la date d\'anniversaire');
+      } else {
+        Alert.alert('Succès', 'Date d\'anniversaire mise à jour avec succès');
+      }
+    } catch (error) {
+      console.error('Error updating anniversary date:', error);
+      Alert.alert('Erreur', 'Une erreur inattendue s\'est produite');
+    } finally {
+      setIsUpdatingDate(false);
     }
   };
 
@@ -471,24 +565,38 @@ export default function NotreCouplePage() {
           {/* Couple Overview Card */}
           <View style={styles.coupleOverviewCard}>
             {/* Profile Pictures and Hearts */}
-            <View style={styles.profileSection}>
-              <View style={styles.profilePicture}>
-                <View style={styles.profileImagePlaceholder}>
-                  <MaterialCommunityIcons name="account" size={40} color={BRAND_PINK} />
+                          <View style={styles.profileSection}>
+                <View style={styles.profilePicture}>
+                  {userProfiles?.user1?.profile_picture ? (
+                    <Image
+                      source={{ uri: userProfiles.user1.profile_picture }}
+                      style={styles.profileImagePlaceholder}
+                    />
+                  ) : (
+                    <View style={styles.profileImagePlaceholder}>
+                      <MaterialCommunityIcons name="account" size={40} color={BRAND_PINK} />
+                    </View>
+                  )}
+                </View>
+                
+                <View style={styles.heartsContainer}>
+                  <MaterialCommunityIcons name="heart" size={24} color={BRAND_PINK} />
+                  <MaterialCommunityIcons name="heart" size={24} color={BRAND_BLUE} style={styles.overlappingHeart} />
+                </View>
+                
+                <View style={styles.profilePicture}>
+                  {userProfiles?.user2?.profile_picture ? (
+                    <Image
+                      source={{ uri: userProfiles.user2.profile_picture }}
+                      style={styles.profileImagePlaceholder}
+                    />
+                  ) : (
+                    <View style={styles.profileImagePlaceholder}>
+                      <MaterialCommunityIcons name="account" size={40} color={BRAND_BLUE} />
+                    </View>
+                  )}
                 </View>
               </View>
-              
-              <View style={styles.heartsContainer}>
-                <MaterialCommunityIcons name="heart" size={24} color={BRAND_PINK} />
-                <MaterialCommunityIcons name="heart" size={24} color={BRAND_BLUE} style={styles.overlappingHeart} />
-              </View>
-              
-              <View style={styles.profilePicture}>
-                <View style={styles.profileImagePlaceholder}>
-                  <MaterialCommunityIcons name="account" size={40} color={BRAND_BLUE} />
-                </View>
-              </View>
-            </View>
 
             {/* Share Icon */}
             <Pressable style={styles.shareButton}>
@@ -503,12 +611,42 @@ export default function NotreCouplePage() {
             {/* Relationship Duration */}
             <Text style={styles.durationLabel}>Ensemble depuis</Text>
             <View style={styles.durationContainer}>
-              <Text style={styles.durationNumber}>1</Text>
-              <Text style={styles.durationText}>jour</Text>
-              <Text style={styles.durationNumber}>10</Text>
-              <Text style={styles.durationText}>mois</Text>
-              <Text style={styles.durationNumber}>2</Text>
-              <Text style={styles.durationText}>jours</Text>
+              {(() => {
+                if (anniversaryDate) {
+                  const startDate = new Date(anniversaryDate.split('/').reverse().join('-'));
+                  const today = new Date();
+                  const diffTime = Math.abs(today.getTime() - startDate.getTime());
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  const years = Math.floor(diffDays / 365);
+                  const months = Math.floor((diffDays % 365) / 30);
+                  const days = diffDays % 30;
+                  
+                  return (
+                    <>
+                      {years > 0 && (
+                        <>
+                          <Text style={styles.durationNumber}>{years}</Text>
+                          <Text style={styles.durationText}>an{years > 1 ? 's' : ''}</Text>
+                        </>
+                      )}
+                      {months > 0 && (
+                        <>
+                          <Text style={styles.durationNumber}>{months}</Text>
+                          <Text style={styles.durationText}>mois</Text>
+                        </>
+                      )}
+                      <Text style={styles.durationNumber}>{days}</Text>
+                      <Text style={styles.durationText}>jour{days > 1 ? 's' : ''}</Text>
+                    </>
+                  );
+                }
+                return (
+                  <>
+                    <Text style={styles.durationNumber}>0</Text>
+                    <Text style={styles.durationText}>jour</Text>
+                  </>
+                );
+              })()}
             </View>
 
                                       {/* Individual Progress Circles */}
@@ -555,6 +693,9 @@ export default function NotreCouplePage() {
               />
               <MaterialCommunityIcons name="pencil" size={20} color={BRAND_BLUE} />
             </View>
+            <Pressable style={styles.updateDateButton} onPress={updateAnniversaryDate}>
+              <Text style={styles.updateDateButtonText}>{isUpdatingDate ? 'Mise à jour...' : 'Mettre à jour la date'}</Text>
+            </Pressable>
           </View>
 
                      {/* Statistics Grid */}
@@ -562,7 +703,7 @@ export default function NotreCouplePage() {
              <View style={styles.statCard}>
                <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
                <Text style={styles.statNumber}>
-                 {quizResults.length > 0 ? quizResults.reduce((sum, r) => sum + r.total_questions, 0) : 0}
+                 {answeredQuestionsCount}
                </Text>
                <Text style={styles.statLabel}>Questions répondues</Text>
              </View>
@@ -912,6 +1053,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#374151',
     marginHorizontal: 10,
+  },
+  updateDateButton: {
+    backgroundColor: BRAND_BLUE,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  updateDateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 
   // Statistics Grid Styles

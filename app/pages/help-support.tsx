@@ -1,29 +1,118 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useProfileCompletion } from '../../hooks/useProfileCompletion';
-import { useAuth } from '../../lib/auth';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import AppLayout from '../app-layout';
 
-export default function HelpSupportPage() {
-  const { user, loading } = useAuth();
-  const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+const BRAND_PINK = "#F47CC6";
+const BRAND_GRAY = "#6C6C6C";
+const LIGHT_GRAY = "#F3F4F6";
+const DARK_GRAY = "#374151";
 
-  // Don't render if not authenticated or profile not completed
-  if (loading || profileLoading || !user || !isProfileComplete) {
-    return null;
-  }
+export default function HelpSupportPage() {
+  const router = useRouter();
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  const handleEmailContact = () => {
+    // Open email client or copy email to clipboard
+    console.log('Email contact clicked');
+  };
+
+  const handlePhoneContact = () => {
+    // Open phone dialer or copy phone number to clipboard
+    console.log('Phone contact clicked');
+  };
+
+  const handleFAQItem = (faqType: string) => {
+    // Navigate to FAQ details or show answer
+    console.log('FAQ clicked:', faqType);
+  };
 
   return (
     <AppLayout>
       <View style={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
-          <MaterialCommunityIcons name="help-circle-outline" size={32} color="#F47CC6" />
-          <Text style={styles.headerTitle}>Help & Support</Text>
+          <Pressable style={styles.backButton} onPress={handleBack}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Aide & Support</Text>
+          <View style={styles.headerSpacer} />
         </View>
-        
-        <View style={styles.content}>
-          <Text style={styles.placeholderText}>Page en cours de développement</Text>
+
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {/* Contact Us Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Nous Contacter</Text>
+            
+            <Pressable style={styles.contactCard} onPress={handleEmailContact}>
+              <MaterialCommunityIcons name="email-outline" size={24} color={BRAND_PINK} />
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactLabel}>Par e-mail</Text>
+                <Text style={styles.contactDetail}>support@entreprise.com</Text>
+              </View>
+            </Pressable>
+
+            <Pressable style={styles.contactCard} onPress={handlePhoneContact}>
+              <MaterialCommunityIcons name="phone-outline" size={24} color={BRAND_PINK} />
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactLabel}>Par téléphone</Text>
+                <Text style={styles.contactDetail}>01 23 45 67 89</Text>
+              </View>
+            </Pressable>
+          </View>
+
+          {/* FAQ Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Questions fréquentes</Text>
+            
+            <Pressable style={styles.faqCard} onPress={() => handleFAQItem('payments')}>
+              <MaterialCommunityIcons name="help-circle-outline" size={24} color={BRAND_PINK} />
+              <Text style={styles.faqText}>Paiements</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={BRAND_GRAY} />
+            </Pressable>
+
+            <Pressable style={styles.faqCard} onPress={() => handleFAQItem('password')}>
+              <MaterialCommunityIcons name="help-circle-outline" size={24} color={BRAND_PINK} />
+              <Text style={styles.faqText}>Comment modifier mon mot de passe ?</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={BRAND_GRAY} />
+            </Pressable>
+
+            <Pressable style={styles.faqCard} onPress={() => handleFAQItem('delete-account')}>
+              <MaterialCommunityIcons name="help-circle-outline" size={24} color={BRAND_PINK} />
+              <Text style={styles.faqText}>Comment supprimer mon compte ?</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={BRAND_GRAY} />
+            </Pressable>
+          </View>
+
+          {/* Company Address Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notre adresse</Text>
+            
+            <View style={styles.addressCard}>
+              <View style={styles.addressRow}>
+                <MaterialCommunityIcons name="map-marker-outline" size={24} color={BRAND_PINK} />
+                <View style={styles.addressInfo}>
+                  <Text style={styles.addressLabel}>Entreprise SAS</Text>
+                  <Text style={styles.addressDetail}>123 Avenue des Champs-Élysées</Text>
+                  <Text style={styles.addressDetail}>75008 Paris, France</Text>
+                </View>
+              </View>
+              
+              <View style={styles.addressRow}>
+                <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
+                <View style={styles.addressInfo}>
+                  <Text style={styles.addressLabel}>Horaires d'ouverture</Text>
+                  <Text style={styles.addressDetail}>Lundi - Vendredi: 9h00 - 18h00</Text>
+                  <Text style={styles.addressDetail}>Samedi: 10h00 - 16h00</Text>
+                </View>
+              </View>
+            </View>
+          </View>
         </View>
       </View>
     </AppLayout>
@@ -36,27 +125,101 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 20,
-    paddingBottom: 30,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#374151',
-    marginTop: 12,
+    color: DARK_GRAY,
   },
-  content: {
+  headerSpacer: {
+    width: 40,
+  },
+  backButton: {
+    padding: 8,
+  },
+  mainContent: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
-  placeholderText: {
+  section: {
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: DARK_GRAY,
+    marginBottom: 15,
+  },
+  contactCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: LIGHT_GRAY,
+    borderRadius: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  contactInfo: {
+    marginLeft: 15,
+    flex: 1,
+  },
+  contactLabel: {
     fontSize: 16,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    fontWeight: '600',
+    color: DARK_GRAY,
+    marginBottom: 2,
+  },
+  contactDetail: {
+    fontSize: 14,
+    color: BRAND_GRAY,
+  },
+  faqCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: LIGHT_GRAY,
+    borderRadius: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  faqText: {
+    flex: 1,
+    fontSize: 16,
+    color: DARK_GRAY,
+    marginLeft: 15,
+  },
+  addressCard: {
+    backgroundColor: LIGHT_GRAY,
+    borderRadius: 10,
+    padding: 20,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  addressInfo: {
+    marginLeft: 15,
+    flex: 1,
+  },
+  addressLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: DARK_GRAY,
+    marginBottom: 2,
+  },
+  addressDetail: {
+    fontSize: 14,
+    color: BRAND_GRAY,
+    marginBottom: 1,
   },
 });
