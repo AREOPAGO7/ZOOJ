@@ -9,9 +9,9 @@ const { width: screenWidth } = Dimensions.get('window');
 export const calendarStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingTop: 10,
+    // backgroundColor is now dynamic from theme
   },
   header: {
     flexDirection: 'row',
@@ -44,12 +44,12 @@ export const calendarStyles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2D2D2D',
+    // color is now dynamic from theme
   },
   currentDate: {
     fontSize: 14,
-    color: BRAND_GRAY,
     marginTop: 4,
+    // color is now dynamic from theme
   },
   addButton: {
     backgroundColor: BRAND_BLUE,
@@ -62,6 +62,133 @@ export const calendarStyles = StyleSheet.create({
   calendarContainer: {
     marginBottom: 16,
   },
+  // Event notification styles
+  eventNotificationSection: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  eventNotificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  eventNotificationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  eventNotificationStatus: {
+    marginBottom: 12,
+  },
+  eventNotificationStatusText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  eventNotificationTimestamp: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  upcomingEventsInfo: {
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  upcomingEventsText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  nextEventText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  refreshButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  // Toggle styles
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  toggleLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 28,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 14,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleSwitchActive: {
+    backgroundColor: BRAND_PINK,
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  toggleThumbActive: {
+    transform: [{ translateX: 22 }],
+  },
+  toggleDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+  // Event alarmable styles
+  eventAlarmableContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
+    paddingLeft: 8,
+  },
+  alarmableToggle: {
+    marginLeft: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+  },
+  alarmableToggleText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
   daysOfWeek: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -71,9 +198,9 @@ export const calendarStyles = StyleSheet.create({
   dayOfWeek: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#757575',
     width: ((screenWidth - 80) / 7),
     textAlign: 'center',
+    // color is now dynamic from theme
   },
   calendarGrid: {
     flexDirection: 'row',
@@ -100,7 +227,7 @@ export const calendarStyles = StyleSheet.create({
   dayNumber: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#424242',
+    // color is now dynamic from theme
   },
   selectedDayText: {
     color: '#FFFFFF',
@@ -141,12 +268,12 @@ export const calendarStyles = StyleSheet.create({
   summaryNumber: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2D2D2D',
+    // color is now dynamic from theme
   },
   summaryLabel: {
     fontSize: 11,
-    color: '#9E9E9E',
     marginTop: 4,
+    // color is now dynamic from theme
   },
   section: {
     marginBottom: 16,
@@ -154,8 +281,8 @@ export const calendarStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2D2D2D',
     marginBottom: 12,
+    // color is now dynamic from theme
   },
   itemCard: {
     flexDirection: 'row',
@@ -165,7 +292,7 @@ export const calendarStyles = StyleSheet.create({
     marginBottom: 8,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    // borderBottomColor is now dynamic from theme
   },
   itemDateSquare: {
     width: 56,
@@ -188,17 +315,17 @@ export const calendarStyles = StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D2D2D',
     marginBottom: 4,
+    // color is now dynamic from theme
   },
   itemTime: {
     fontSize: 13,
-    color: BRAND_GRAY,
     marginBottom: 3,
+    // color is now dynamic from theme
   },
   itemPlace: {
     fontSize: 13,
-    color: BRAND_GRAY,
+    // color is now dynamic from theme
   },
   todoItem: {
     flexDirection: 'row',
@@ -208,7 +335,7 @@ export const calendarStyles = StyleSheet.create({
     marginBottom: 8,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    // borderBottomColor is now dynamic from theme
   },
   todoCheckbox: {
     width: 28,
@@ -231,8 +358,8 @@ export const calendarStyles = StyleSheet.create({
   todoTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D2D2D',
     marginBottom: 2,
+    // color is now dynamic from theme
   },
   todoTitleCompleted: {
     textDecorationLine: 'line-through',
@@ -240,12 +367,12 @@ export const calendarStyles = StyleSheet.create({
   },
   todoDate: {
     fontSize: 12,
-    color: BRAND_GRAY,
+    // color is now dynamic from theme
   },
   todoDueDate: {
     fontSize: 12,
-    color: BRAND_GRAY,
     marginTop: 4,
+    // color is now dynamic from theme
   },
   todoPriority: {
     marginLeft: 10,
@@ -274,10 +401,10 @@ export const calendarStyles = StyleSheet.create({
   },
   noItemsText: {
     textAlign: 'center',
-    color: BRAND_GRAY,
     fontSize: 16,
     fontStyle: 'italic',
     marginTop: 16,
+    // color is now dynamic from theme
   },
   modalContainer: {
     flex: 1,
@@ -527,8 +654,8 @@ export const calendarStyles = StyleSheet.create({
   },
   imageUploadText: {
     fontSize: 14,
-    color: BRAND_GRAY,
     marginTop: 10,
+    // color is now dynamic from theme
   },
   imageButtonsContainer: {
     flexDirection: 'row',
@@ -655,11 +782,11 @@ export const calendarStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    // backgroundColor is now dynamic from theme
   },
   loadingText: {
     marginTop: 16,
-    color: '#7A7A7A',
+    // color is now dynamic from theme
   },
   saveButtonContainer: {
     paddingHorizontal: 20,

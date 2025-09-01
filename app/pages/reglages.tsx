@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import AppLayout from '../app-layout';
@@ -10,6 +11,7 @@ export default function ReglagesPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+  const { colors } = useTheme();
 
   // Don't render if not authenticated or profile not completed
   if (loading || profileLoading || !user || !isProfileComplete) {
@@ -29,12 +31,7 @@ export default function ReglagesPage() {
       icon: 'heart-outline',
       route: '/pages/notre-couple'
     },
-    {
-      id: 'notifications',
-      title: 'Notifications',
-      icon: 'bell-outline',
-      route: '/pages/notifications'
-    },
+
     {
       id: 'confidentialite',
       title: 'Confidentialité',
@@ -80,15 +77,15 @@ export default function ReglagesPage() {
   ];
 
   const handleSettingPress = (route: string) => {
-    router.push(route);
+    router.push(route as any);
   };
 
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Réglages</Text>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Réglages</Text>
         </View>
 
         {/* Settings List */}
@@ -96,7 +93,7 @@ export default function ReglagesPage() {
           {settingsOptions.map((option) => (
             <Pressable
               key={option.id}
-              style={styles.settingItem}
+              style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => handleSettingPress(option.route)}
             >
               <View style={styles.settingLeft}>
@@ -107,12 +104,12 @@ export default function ReglagesPage() {
                     color="#F47CC6" 
                   />
                 </View>
-                <Text style={styles.settingTitle}>{option.title}</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>{option.title}</Text>
               </View>
               <MaterialCommunityIcons 
                 name="chevron-right" 
                 size={24} 
-                color="#9CA3AF" 
+                color={colors.textSecondary} 
               />
             </Pressable>
           ))}
@@ -125,19 +122,19 @@ export default function ReglagesPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor is now dynamic from theme
   },
   header: {
     alignItems: 'center',
     paddingTop: 20,
     paddingBottom: 30,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    // borderBottomColor is now dynamic from theme
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#374151',
+    // color is now dynamic from theme
   },
   settingsList: {
     flex: 1,
@@ -148,12 +145,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    // backgroundColor is now dynamic from theme
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    // borderColor is now dynamic from theme
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -175,6 +172,6 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    // color is now dynamic from theme
   },
 });

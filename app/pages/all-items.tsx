@@ -2,12 +2,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -176,7 +176,10 @@ export default function AllItemsPage() {
 
   const getFilteredItems = () => {
     if (activeFilter === 'all') return items;
-    return items.filter(item => item.type === activeFilter);
+    if (activeFilter === 'events') return items.filter(item => item.type === 'event');
+    if (activeFilter === 'souvenirs') return items.filter(item => item.type === 'souvenir');
+    if (activeFilter === 'todos') return items.filter(item => item.type === 'todo');
+    return items;
   };
 
   const getItemIcon = (type: CalendarItemType) => {

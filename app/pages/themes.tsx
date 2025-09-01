@@ -1,29 +1,75 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useProfileCompletion } from '../../hooks/useProfileCompletion';
-import { useAuth } from '../../lib/auth';
+import { useRouter } from 'expo-router';
+import React, { useContext } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ThemeContext } from '../../contexts/ThemeContext';
 import AppLayout from '../app-layout';
 
-export default function ThemesPage() {
-  const { user, loading } = useAuth();
-  const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+const BRAND_GRAY = "#6C6C6C";
+const LIGHT_GRAY = "#F3F4F6";
+const DARK_GRAY = "#374151";
 
-  // Don't render if not authenticated or profile not completed
-  if (loading || profileLoading || !user || !isProfileComplete) {
-    return null;
-  }
+export default function ThemesPage() {
+  const router = useRouter();
+  const { theme, setTheme } = useContext(ThemeContext);
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+  };
 
   return (
     <AppLayout>
       <View style={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
-          <MaterialCommunityIcons name="weather-night" size={32} color="#F47CC6" />
-          <Text style={styles.headerTitle}>Thèmes</Text>
+          <Pressable style={styles.backButton} onPress={handleBack}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Thème</Text>
+          <View style={styles.headerSpacer} />
         </View>
-        
-        <View style={styles.content}>
-          <Text style={styles.placeholderText}>Page en cours de développement</Text>
+
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {/* Light Mode Option */}
+          <Pressable 
+            style={styles.themeCard} 
+            onPress={() => handleThemeChange('light')}
+          >
+            <View style={styles.radioContainer}>
+              <View style={[
+                styles.radioButton, 
+                theme === 'light' && styles.radioButtonSelected
+              ]}>
+                {theme === 'light' && (
+                  <View style={styles.radioButtonInner} />
+                )}
+              </View>
+            </View>
+            <Text style={styles.themeText}>Mode clair</Text>
+          </Pressable>
+
+          {/* Dark Mode Option */}
+          <Pressable 
+            style={styles.themeCard} 
+            onPress={() => handleThemeChange('dark')}
+          >
+            <View style={styles.radioContainer}>
+              <View style={[
+                styles.radioButton, 
+                theme === 'dark' && styles.radioButtonSelected
+              ]}>
+                {theme === 'dark' && (
+                  <View style={styles.radioButtonInner} />
+                )}
+              </View>
+            </View>
+            <Text style={styles.themeText}>Mode sombre</Text>
+          </Pressable>
         </View>
       </View>
     </AppLayout>
@@ -36,27 +82,64 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 20,
-    paddingBottom: 30,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#374151',
-    marginTop: 12,
+    color: DARK_GRAY,
   },
-  content: {
+  headerSpacer: {
+    width: 40,
+  },
+  backButton: {
+    padding: 8,
+  },
+  mainContent: {
     flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  themeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: LIGHT_GRAY,
+    borderRadius: 10,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  radioContainer: {
+    marginRight: 15,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: BRAND_GRAY,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
   },
-  placeholderText: {
+  radioButtonSelected: {
+    borderColor: '#2DB6FF',
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2DB6FF',
+  },
+  themeText: {
     fontSize: 16,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    color: DARK_GRAY,
+    fontWeight: '500',
   },
 });

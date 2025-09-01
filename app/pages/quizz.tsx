@@ -3,6 +3,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useNotificationManager } from '../../hooks/useNotificationManager';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -63,6 +65,8 @@ export default function QuizzPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+  const { colors } = useTheme();
+  const { sendQuizInvite } = useNotificationManager();
   
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [themes, setThemes] = useState<any[]>([]);
@@ -86,6 +90,142 @@ export default function QuizzPage() {
   
   // Cache for quiz data to reduce REST requests
   const [quizCache, setQuizCache] = useState<Map<string, any>>(new Map());
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+
+  // Function to check for pending quiz invites
+  const checkPendingInvites = async () => {
+    if (!user || !coupleId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('quiz_invites')
+        .select('*')
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending');
+      
+      if (!error && data) {
+        setPendingInvites(data);
+      }
+    } catch (error) {
+      console.error('Error checking pending invites:', error);
+    }
+  };
+
+  // Function to send quiz invite to partner
+  const handleSendQuizInvite = async (quiz: Quiz) => {
+    if (!user || !coupleId) {
+      Alert.alert('Erreur', 'Impossible d\'envoyer l\'invitation');
+      return;
+    }
+
+    setIsSendingInvite(true);
+    try {
+      console.log('Starting quiz invite process...');
+      console.log('User ID:', user.id);
+      console.log('Couple ID:', coupleId);
+      
+      // Get partner ID
+      const { data: couple, error } = await supabase
+        .from('couples')
+        .select('user1_id, user2_id')
+        .eq('id', coupleId)
+        .single();
+
+      console.log('Couple data:', couple);
+      console.log('Couple error:', error);
+
+      if (error || !couple) {
+        throw new Error('Couple non trouvé');
+      }
+
+      const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id;
+      console.log('Partner ID:', partnerId);
+      
+      // Send quiz invite notification
+      console.log('Sending quiz invite...');
+      const result = await sendQuizInvite(
+        partnerId,
+        quiz.title,
+        `Votre partenaire vous invite à participer au quiz "${quiz.title}" !`,
+        quiz.id
+      );
+
+      console.log('Quiz invite result:', result);
+
+      if (result?.error) {
+        console.error('Quiz invite error:', result.error);
+        Alert.alert('Erreur', 'Impossible d\'envoyer l\'invitation au quiz');
+      } else if ('invite' in result && 'notification' in result && result.invite && result.notification) {
+        Alert.alert(
+          'Invitation envoyée !', 
+          `Votre partenaire a reçu une invitation pour le quiz "${quiz.title}"`
+        );
+        console.log('✅ Quiz invite and notification sent successfully!');
+        console.log('Invite:', result.invite);
+        console.log('Notification:', result.notification);
+      } else if ('invite' in result && result.invite) {
+        console.warn('⚠️ Quiz invite sent but notification failed');
+        console.log('Invite:', result.invite);
+        console.log('Notification:', result.notification);
+        Alert.alert(
+          'Invitation partiellement envoyée', 
+          `L'invitation a été créée mais la notification n'a pas pu être envoyée`
+        );
+      } else {
+        console.warn('⚠️ Unexpected result format');
+        console.log('Result:', result);
+        Alert.alert('Erreur', 'Format de réponse inattendu');
+      }
+    } catch (error) {
+      console.error('Error sending quiz invite:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue lors de l\'envoi de l\'invitation');
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
+  // Function to accept quiz invite
+  const handleAcceptInvite = async (invite: any) => {
+    try {
+      // Update invite status to accepted
+      const { error } = await supabase
+        .from('quiz_invites')
+        .update({ status: 'accepted' })
+        .eq('id', invite.id);
+
+      if (error) throw error;
+
+      // Remove from pending invites
+      setPendingInvites(prev => prev.filter(inv => inv.id !== invite.id));
+
+      Alert.alert('Succès', 'Invitation acceptée ! Vous pouvez maintenant participer au quiz.');
+    } catch (error) {
+      console.error('Error accepting invite:', error);
+      Alert.alert('Erreur', 'Impossible d\'accepter l\'invitation');
+    }
+  };
+
+  // Function to decline quiz invite
+  const handleDeclineInvite = async (invite: any) => {
+    try {
+      // Update invite status to declined
+      const { error } = await supabase
+        .from('quiz_invites')
+        .update({ status: 'declined' })
+        .eq('id', invite.id);
+
+      if (error) throw error;
+
+      // Remove from pending invites
+      setPendingInvites(prev => prev.filter(inv => inv.id !== invite.id));
+
+      Alert.alert('Succès', 'Invitation déclinée');
+    } catch (error) {
+      console.error('Error declining invite:', error);
+      Alert.alert('Erreur', 'Impossible de décliner l\'invitation');
+    }
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -106,6 +246,7 @@ export default function QuizzPage() {
     if (user && isProfileComplete) {
       loadQuizzes();
       loadThemes();
+      checkPendingInvites();
     }
   }, [user, isProfileComplete]);
 
@@ -690,7 +831,15 @@ export default function QuizzPage() {
             <Pressable onPress={resetQuiz} style={styles.backButton}>
               <MaterialCommunityIcons name="chevron-left" size={24} color="#2D2D2D" />
             </Pressable>
-            <Text style={styles.quizTitle}>{selectedQuiz.title}</Text>
+            <View style={styles.quizTitleContainer}>
+              <Text style={styles.quizTitle}>{selectedQuiz.title}</Text>
+              {pendingInvites.length > 0 && (
+                <View style={styles.quizNotificationBadge}>
+                  <MaterialCommunityIcons name="bell" size={16} color="#FFFFFF" />
+                  <Text style={styles.quizNotificationBadgeText}>{pendingInvites.length}</Text>
+                </View>
+              )}
+            </View>
             <View style={{ width: 24 }} />
           </View>
 
@@ -701,6 +850,40 @@ export default function QuizzPage() {
               <View style={styles.congratulationsContainer}>
                 <Text style={styles.congratulationsText}>Félicitations à vous !</Text>
                 <Text style={styles.congratulationsSubtext}>Quiz terminé avec succès</Text>
+              </View>
+
+              {/* Quiz Completion Invite Section */}
+              <View style={styles.completionInviteSection}>
+                <Text style={styles.completionInviteTitle}>Partagez ce quiz !</Text>
+                <Text style={styles.completionInviteDescription}>
+                  Vous avez terminé ce quiz avec succès ! Invitez votre partenaire à le faire aussi pour comparer vos résultats.
+                </Text>
+                
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.completionInviteButton,
+                    pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
+                  ]}
+                  onPress={() => handleSendQuizInvite(selectedQuiz!)}
+                  disabled={isSendingInvite}
+                >
+                  <LinearGradient
+                    colors={[BRAND_BLUE, BRAND_PINK]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.completionInviteButtonGradient}
+                  >
+                    <MaterialCommunityIcons
+                      name="heart"
+                      size={20}
+                      color="#FFFFFF"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.completionInviteButtonText}>
+                      {isSendingInvite ? 'Envoi de l\'invitation...' : 'Inviter votre partenaire'}
+                    </Text>
+                  </LinearGradient>
+                </Pressable>
               </View>
 
               {/* Compatibility Score */}
@@ -855,6 +1038,40 @@ export default function QuizzPage() {
                   Cette page montre dans quelle mesure le sujet "{selectedQuiz?.title}" te convient dans ta relation actuellement.
                 </Text>
               </View>
+
+              {/* Quiz Invite Section */}
+              <View style={styles.quizInviteSection}>
+                <Text style={styles.sectionTitle}>Inviter votre partenaire</Text>
+                <Text style={styles.inviteDescription}>
+                  Votre partenaire n'a pas encore répondu à ce quiz. Envoyez-lui une invitation pour qu'il puisse participer !
+                </Text>
+                
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.invitePartnerButton,
+                    pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
+                  ]}
+                  onPress={() => handleSendQuizInvite(selectedQuiz!)}
+                  disabled={isSendingInvite}
+                >
+                  <LinearGradient
+                    colors={[BRAND_BLUE, BRAND_PINK]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.invitePartnerButtonGradient}
+                  >
+                    <MaterialCommunityIcons
+                      name="heart"
+                      size={20}
+                      color="#FFFFFF"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.invitePartnerButtonText}>
+                      {isSendingInvite ? 'Envoi de l\'invitation...' : 'Inviter votre partenaire'}
+                    </Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
             </ScrollView>
           ) : hasAnsweredQuiz ? (
             // Show previous answers (read-only) - only user has answered
@@ -983,10 +1200,10 @@ export default function QuizzPage() {
             <View style={styles.quizAnswerContainer}>
               {/* Progress Indicator */}
               <View style={styles.progressContainer}>
-                <Text style={styles.progressText}>
+                <Text style={[styles.progressText, { color: colors.textSecondary }]}>
                   {answers.length} / {quizQuestions.length} questions répondues
                 </Text>
-                <View style={styles.progressBar}>
+                <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
                   <View 
                     style={[
                       styles.progressFill, 
@@ -1007,9 +1224,9 @@ export default function QuizzPage() {
                     const questionAnswer = answers.find(a => a.question_id === question.id);
                     
                     return (
-                      <View key={question.id} style={styles.questionItem}>
-                        <Text style={styles.questionNumber}>Question {index + 1}</Text>
-                        <Text style={styles.questionText}>{question.content}</Text>
+                      <View key={question.id} style={[styles.questionItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <Text style={[styles.questionNumber, { color: colors.textSecondary }]}>Question {index + 1}</Text>
+                        <Text style={[styles.questionText, { color: colors.text }]}>{question.content}</Text>
                         
                         {/* Answer Options with Progressive Heart Visibility */}
                         <View style={styles.answerOptions}>
@@ -1040,8 +1257,42 @@ export default function QuizzPage() {
                 </ScrollView>
               </View>
 
+              {/* Quiz Taking Invite Section */}
+              <View style={styles.quizTakingInviteSection}>
+                <Text style={styles.quizTakingInviteTitle}>Inviter votre partenaire</Text>
+                <Text style={styles.quizTakingInviteDescription}>
+                  Pendant que vous répondez aux questions, invitez votre partenaire à participer aussi !
+                </Text>
+                
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.quizTakingInviteButton,
+                    pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
+                  ]}
+                  onPress={() => handleSendQuizInvite(selectedQuiz!)}
+                  disabled={isSendingInvite}
+                >
+                  <LinearGradient
+                    colors={[BRAND_BLUE, BRAND_PINK]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.quizTakingInviteButtonGradient}
+                  >
+                    <MaterialCommunityIcons
+                      name="heart"
+                      size={20}
+                      color="#FFFFFF"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.quizTakingInviteButtonText}>
+                      {isSendingInvite ? 'Envoi de l\'invitation...' : 'Inviter votre partenaire'}
+                    </Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
+
               {/* Submit Button - Fixed at bottom */}
-              <View style={styles.submitButtonContainer}>
+              <View style={[styles.submitButtonContainer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
                 <Pressable
                   onPress={submitQuiz}
                   disabled={!allQuestionsAnswered || isSubmittingQuiz}
@@ -1082,13 +1333,13 @@ export default function QuizzPage() {
   if (quizResult && selectedQuiz) {
     return (
       <AppLayout>
-        <View style={styles.resultsContainer}>
+        <View style={[styles.resultsContainer, { backgroundColor: colors.background }]}>
           {/* Header */}
-          <View style={styles.quizHeader}>
+          <View style={[styles.quizHeader, { borderBottomColor: colors.border }]}>
             <Pressable onPress={resetQuiz} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color="#2D2D2D" />
+              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
             </Pressable>
-            <Text style={styles.quizTitle}>Quizz</Text>
+            <Text style={[styles.quizTitle, { color: colors.text }]}>Quizz</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -1096,8 +1347,8 @@ export default function QuizzPage() {
           <ScrollView style={styles.resultsScroll} showsVerticalScrollIndicator={false}>
             {/* Congratulations */}
             <View style={styles.congratulationsContainer}>
-              <Text style={styles.congratulationsText}>Félicitations à vous !</Text>
-              <Text style={styles.congratulationsSubtext}>Quiz terminé avec succès</Text>
+              <Text style={[styles.congratulationsText, { color: colors.text }]}>Félicitations à vous !</Text>
+              <Text style={[styles.congratulationsSubtext, { color: colors.textSecondary }]}>Quiz terminé avec succès</Text>
             </View>
 
             {/* Compatibility Score */}
@@ -1105,8 +1356,8 @@ export default function QuizzPage() {
               <View style={styles.scoreCircle}>
                 <Text style={styles.scoreText}>{quizResult.score}%</Text>
               </View>
-              <Text style={styles.scoreLabel}>Compatibilité globale</Text>
-              <Text style={styles.scoreSubtext}>
+              <Text style={[styles.scoreLabel, { color: colors.text }]}>Compatibilité globale</Text>
+              <Text style={[styles.scoreSubtext, { color: colors.textSecondary }]}>
                 {quizResult.score >= 80 ? 'Excellent score !' : 
                  quizResult.score >= 60 ? 'Bon score !' : 'À améliorer'}
               </Text>
@@ -1138,52 +1389,51 @@ export default function QuizzPage() {
 
             {/* Your Responses Section */}
             <View style={styles.yourResponsesSection}>
-              <Text style={styles.sectionTitle}>Vos réponses</Text>
-              <Text style={styles.responsesDescription}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Vos réponses</Text>
+              <Text style={[styles.responsesDescription, { color: colors.textSecondary }]}>
                 Les points forts sont en vert, tandis que les points que vous pouvez améliorer dans votre couple sont surlignés en rouge.
               </Text>
             </View>
 
             {/* Detailed Results */}
             <View style={styles.detailedResultsContainer}>
-              <Text style={styles.detailedResultsTitle}>Résultats Détaillés</Text>
+              <Text style={[styles.detailedResultsTitle, { color: colors.text }]}>Résultats Détaillés</Text>
               
               {/* Strengths */}
               {quizResult.strengths.length > 0 && (
                 <View style={styles.resultsSection}>
-                  <Text style={styles.sectionTitle}>Points forts</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Points forts</Text>
                   {quizResult.strengths.map((strength, index) => (
-                    <View key={index} style={styles.resultItem}>
+                    <View key={index} style={[styles.resultItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <View style={styles.strengthBadge}>
                         <Text style={styles.strengthBadgeText}>Point fort</Text>
                       </View>
-                      <Text style={styles.resultQuestion}>{strength.question}</Text>
+                      <Text style={[styles.resultQuestion, { color: colors.text }]}>{strength.question}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
-                          <Text style={styles.partnerName}>{userNames?.user1 || 'Utilisateur 1'}</Text>
+                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user1 || 'Utilisateur 1'}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
                                 key={value}
                                 name="heart"
                                 size={20}
-                                color={strength.user_answer === value ? BRAND_PINK : "#E0E0E0"}
+                                color={strength.user_answer === value ? BRAND_PINK : colors.textSecondary}
                                 style={styles.responseHeart}
                               />
                             ))}
                           </View>
                         </View>
                         <View style={styles.partnerResponse}>
-                          <Text style={styles.partnerName}>{userNames?.user2 || 'Utilisateur 2'}</Text>
+                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user2 || 'Utilisateur 2'}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
-                                                              <MaterialCommunityIcons
-                                  key={value}
-                                  name="heart"
-                                  size={20}
-                                  color={strength.partner_answer === value ? BRAND_PINK : "#E0E0E0"}
-                                  style={styles.responseHeart}
-                                />
+                              <MaterialCommunityIcons
+                                name="heart"
+                                size={20}
+                                color={strength.partner_answer === value ? BRAND_PINK : colors.textSecondary}
+                                style={styles.responseHeart}
+                              />
                             ))}
                           </View>
                         </View>
@@ -1196,37 +1446,35 @@ export default function QuizzPage() {
               {/* Weaknesses */}
               {quizResult.weaknesses.length > 0 && (
                 <View style={styles.resultsSection}>
-                  <Text style={styles.sectionTitle}>À améliorer</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>À améliorer</Text>
                   {quizResult.weaknesses.map((weakness, index) => (
-                    <View key={index} style={styles.resultItem}>
+                    <View key={index} style={[styles.resultItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <View style={styles.weaknessBadge}>
                         <Text style={styles.weaknessBadgeText}>À améliorer</Text>
                       </View>
-                      <Text style={styles.resultQuestion}>{weakness.question}</Text>
+                      <Text style={[styles.resultQuestion, { color: colors.text }]}>{weakness.question}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
-                          <Text style={styles.partnerName}>{userNames?.user1 || 'Utilisateur 1'}</Text>
+                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user1 || 'Utilisateur 1'}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
-                                key={value}
                                 name="heart"
                                 size={20}
-                                color={weakness.user_answer === value ? BRAND_PINK : "#E0E0E0"}
+                                color={weakness.user_answer === value ? BRAND_PINK : colors.textSecondary}
                                 style={styles.responseHeart}
                               />
                             ))}
                           </View>
                         </View>
                         <View style={styles.partnerResponse}>
-                          <Text style={styles.partnerName}>{userNames?.user2 || 'Utilisateur 2'}</Text>
+                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user2 || 'Utilisateur 2'}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
-                                key={value}
                                 name="heart"
                                 size={20}
-                                color={weakness.partner_answer === value ? BRAND_PINK : "#E0E0E0"}
+                                color={weakness.partner_answer === value ? BRAND_PINK : colors.textSecondary}
                                 style={styles.responseHeart}
                               />
                             ))}
@@ -1241,8 +1489,8 @@ export default function QuizzPage() {
 
             {/* Quiz Results Summary */}
             <View style={styles.quizResultsSummary}>
-              <Text style={styles.sectionTitle}>Résultats du quiz</Text>
-              <Text style={styles.summaryText}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Résultats du quiz</Text>
+              <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
                 Cette page montre dans quelle mesure le sujet "{selectedQuiz?.title}" te convient dans ta relation actuellement.
               </Text>
             </View>
@@ -1258,19 +1506,19 @@ export default function QuizzPage() {
     
     return (
       <AppLayout>
-        <View style={styles.themeContainer}>
+        <View style={[styles.themeContainer, { backgroundColor: colors.background }]}>
           {/* Header */}
-          <View style={styles.themeHeader}>
+          <View style={[styles.themeHeader, { borderBottomColor: colors.border }]}>
             <Pressable onPress={resetTheme} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color="#2D2D2D" />
+              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
             </Pressable>
-            <Text style={styles.themeTitle}>{selectedTheme.name}</Text>
+            <Text style={[styles.themeTitle, { color: colors.text }]}>{selectedTheme.name}</Text>
             <View style={{ width: 24 }} />
           </View>
 
           {/* Theme Description */}
-          <View style={styles.themeDescriptionContainer}>
-            <Text style={styles.themeDescription}>{selectedTheme.description}</Text>
+          <View style={[styles.themeDescriptionContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.themeDescription, { color: colors.textSecondary }]}>{selectedTheme.description}</Text>
           </View>
 
           {/* Quizzes for this theme */}
@@ -1279,27 +1527,27 @@ export default function QuizzPage() {
               themeQuizzes.map((quiz) => (
                 <Pressable
                   key={quiz.id}
-                  style={styles.quizCard}
+                  style={[styles.quizCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => startQuiz(quiz)}
                 >
                   <View style={styles.quizCardContent}>
-                    <View style={styles.quizThumbnail}>
+                    <View style={[styles.quizThumbnail, { backgroundColor: colors.surface }]}>
                       <MaterialCommunityIcons
                         name="help-circle-outline"
                         size={40}
-                        color={BRAND_GRAY}
+                        color={colors.textSecondary}
                       />
                     </View>
                     <View style={styles.quizInfo}>
-                      <Text style={styles.quizCardTitle}>{quiz.title}</Text>
-                      <Text style={styles.quizCardDetails}>
+                      <Text style={[styles.quizCardTitle, { color: colors.text }]}>{quiz.title}</Text>
+                      <Text style={[styles.quizCardDetails, { color: colors.textSecondary }]}>
                         {quiz.questions_count} questions • {quiz.estimated_time} min
                       </Text>
                     </View>
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={24}
-                      color={BRAND_GRAY}
+                      color={colors.textSecondary}
                     />
                   </View>
                 </Pressable>
@@ -1309,9 +1557,9 @@ export default function QuizzPage() {
                 <MaterialCommunityIcons
                   name="help-circle-outline"
                   size={48}
-                  color={BRAND_GRAY}
+                  color={colors.textSecondary}
                 />
-                <Text style={styles.noQuizzesText}>Aucun quiz disponible pour cette thématique</Text>
+                <Text style={[styles.noQuizzesText, { color: colors.textSecondary }]}>Aucun quiz disponible pour cette thématique</Text>
               </View>
             )}
           </ScrollView>
@@ -1324,7 +1572,7 @@ export default function QuizzPage() {
   return (
     <AppLayout>
       <ScrollView 
-        style={styles.container} 
+        style={[styles.container, { backgroundColor: colors.background }]} 
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -1332,16 +1580,62 @@ export default function QuizzPage() {
       >
         {/* Header */}
         <View style={styles.header}>
-        <Text style={styles.title}>Quizz</Text>
-          <Text style={styles.subtitle}>Découvrez votre compatibilité</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Quizz</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Découvrez votre compatibilité</Text>
           <Pressable style={styles.searchButton}>
-            <MaterialCommunityIcons name="magnify" size={24} color={BRAND_GRAY} />
+            <MaterialCommunityIcons name="magnify" size={24} color={colors.textSecondary} />
           </Pressable>
       </View>
 
+        {/* Pending Quiz Invites */}
+        {pendingInvites.length > 0 && (
+          <View style={styles.pendingInvitesSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Invitations en attente ({pendingInvites.length})
+            </Text>
+            {pendingInvites.map((invite) => (
+              <View key={invite.id} style={[styles.pendingInviteCard, { backgroundColor: colors.surface }]}>
+                <View style={styles.pendingInviteContent}>
+                  <MaterialCommunityIcons
+                    name="heart"
+                    size={24}
+                    color={colors.primary}
+                  />
+                  <View style={styles.pendingInviteInfo}>
+                    <Text style={[styles.pendingInviteTitle, { color: colors.text }]}>
+                      Invitation au quiz
+                    </Text>
+                    <Text style={[styles.pendingInviteMessage, { color: colors.textSecondary }]}>
+                      {invite.message || 'Votre partenaire vous invite à participer à un quiz'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.pendingInviteActions}>
+                  <Pressable
+                    style={[styles.acceptInviteButton, { backgroundColor: colors.success }]}
+                    onPress={() => handleAcceptInvite(invite)}
+                  >
+                    <Text style={[styles.acceptInviteButtonText, { color: colors.surface }]}>
+                      Accepter
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.declineInviteButton, { backgroundColor: colors.error }]}
+                    onPress={() => handleDeclineInvite(invite)}
+                  >
+                    <Text style={[styles.declineInviteButtonText, { color: colors.surface }]}>
+                      Décliner
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Themes */}
         <View style={styles.themesSection}>
-          <Text style={styles.sectionTitle}>Thématiques</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Thématiques</Text>
           {themes.length > 0 ? (
             <ScrollView 
               horizontal 
@@ -1387,84 +1681,79 @@ export default function QuizzPage() {
                   </Pressable>
                 );
               })}
+
+
+
+              
             </ScrollView>
           ) : (
             <View style={styles.noThemesContainer}>
               <MaterialCommunityIcons
                 name="help-circle-outline"
                 size={48}
-                color={BRAND_GRAY}
+                color={colors.textSecondary}
               />
-              <Text style={styles.noThemesText}>Aucune thématique disponible</Text>
+              <Text style={[styles.noThemesText, { color: colors.textSecondary }]}>Aucune thématique disponible</Text>
             </View>
           )}
         </View>
 
         {/* Quizzes for You Section */}
         <View style={styles.quizzesSection}>
-          <Text style={styles.sectionTitle}>Quizz pour vous</Text>
+          <View style={styles.quizzesHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quizz pour vous</Text>
+            <Text style={[styles.quizzesSubtitle, { color: colors.textSecondary }]}>
+              Cliquez sur un quiz pour le commencer ou invitez votre partenaire
+            </Text>
+          </View>
           {quizzes.length > 0 ? (
             quizzes.map((quiz) => (
-              <Pressable
+              <View
                 key={quiz.id}
-                style={styles.quizCard}
-                onPress={() => startQuiz(quiz)}
+                style={[styles.quizCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
-                <View style={styles.quizCardContent}>
-                  <View style={styles.quizThumbnail}>
+                <Pressable
+                  style={styles.quizCardContent}
+                  onPress={() => startQuiz(quiz)}
+                >
+                  <View style={[styles.quizThumbnail, { backgroundColor: colors.surface }]}>
                     <MaterialCommunityIcons
                       name="help-circle-outline"
                       size={40}
-                      color={BRAND_GRAY}
+                      color={colors.textSecondary}
                     />
                   </View>
                   <View style={styles.quizInfo}>
-                    <Text style={styles.quizCardTitle}>{quiz.title}</Text>
-                    <Text style={styles.quizCardDetails}>
+                    <Text style={[styles.quizCardTitle, { color: colors.text }]}>{quiz.title}</Text>
+                    <Text style={[styles.quizCardDetails, { color: colors.textSecondary }]}>
                       {quiz.questions_count} questions • {quiz.estimated_time} min
                     </Text>
                   </View>
                   <MaterialCommunityIcons
                     name="chevron-right"
                     size={24}
-                    color={BRAND_GRAY}
+                    color={colors.textSecondary}
                   />
-                </View>
-              </Pressable>
+                </Pressable>
+                
+                {/* Quiz Invite Button */}
+              
+              </View>
             ))
           ) : (
             <View style={styles.noQuizzesContainer}>
               <MaterialCommunityIcons
                 name="help-circle-outline"
                 size={48}
-                color={BRAND_GRAY}
+                color={colors.textSecondary}
               />
-              <Text style={styles.noQuizzesText}>Aucun quiz disponible</Text>
+              <Text style={[styles.noQuizzesText, { color: colors.textSecondary }]}>Aucun quiz disponible</Text>
             </View>
           )}
         </View>
 
         {/* Partner Invitation */}
-        <View style={styles.invitationSection}>
-          <Text style={styles.sectionTitle}>Invitation partenaire</Text>
-          <View style={styles.invitationCard}>
-            <MaterialCommunityIcons
-              name="account-group"
-              size={32}
-              color="#FFFFFF"
-              style={styles.invitationIcon}
-            />
-            <View style={styles.invitationContent}>
-              <Text style={styles.invitationTitle}>Partagez l'amour</Text>
-              <Text style={styles.invitationSubtext}>
-                Invitez vos amis et obtenez des récompenses
-              </Text>
-            </View>
-            <Pressable style={styles.invitationButton}>
-              <Text style={styles.invitationButtonText}>Envoyer une invitation</Text>
-            </Pressable>
-          </View>
-      </View>
+      
       </ScrollView>
     </AppLayout>
   );
@@ -2174,5 +2463,233 @@ const styles = StyleSheet.create({
     color: BRAND_GRAY,
     textAlign: 'center',
     marginTop: 16,
+  },
+  // Quiz invite button styles
+  quizActions: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  quizInviteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 8,
+  },
+  quizInviteButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  quizzesHeader: {
+    marginBottom: 20,
+  },
+  quizzesSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  // Pending invites styles
+  pendingInvitesSection: {
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  pendingInviteCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  pendingInviteContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pendingInviteInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  pendingInviteTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  pendingInviteMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  pendingInviteActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  acceptInviteButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  acceptInviteButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  declineInviteButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  declineInviteButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Quiz invite section styles
+  quizInviteSection: {
+    height: 50,
+    marginTop: 26,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  inviteDescription: {
+    fontSize: 13,
+    color: BRAND_GRAY,
+    lineHeight: 18,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  invitePartnerButton: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  invitePartnerButtonGradient: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  invitePartnerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Quiz completion invite styles
+  completionInviteSection: {
+    marginTop: 16,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    alignItems: 'center',
+  },
+  completionInviteTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D2D2D',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  completionInviteDescription: {
+    fontSize: 13,
+    color: BRAND_GRAY,
+    lineHeight: 18,
+    marginBottom: 16,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  completionInviteButton: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  completionInviteButtonGradient: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  completionInviteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Quiz taking invite styles
+  quizTakingInviteSection: {
+    marginTop: 16,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    alignItems: 'center',
+  },
+  quizTakingInviteTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D2D2D',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  quizTakingInviteDescription: {
+    fontSize: 13,
+    color: BRAND_GRAY,
+    lineHeight: 18,
+    marginBottom: 16,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  quizTakingInviteButton: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  quizTakingInviteButtonGradient: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  quizTakingInviteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Quiz notification badge styles
+  quizTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  quizNotificationBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  quizNotificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 2,
   },
 });

@@ -14,8 +14,11 @@ import {
   TextInput,
   View
 } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useEventNotifications } from '../../hooks/useEventNotifications';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
+import { toLocalDateString, toLocalTimeString } from '../../lib/dateUtils';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 import { BRAND_BLUE, BRAND_GRAY, BRAND_PINK, calendarStyles } from './calendrier.styles';
@@ -27,6 +30,7 @@ interface CalendarEvent {
   event_time: string;
   place: string;
   description: string;
+  alarmable: boolean;
   created_at: string;
 }
 
@@ -57,6 +61,19 @@ export default function CalendrierPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+  const { colors } = useTheme();
+  
+  // Event notification system - automatically checks for tomorrow's events
+  const {
+    isChecking,
+    lastCheckResult,
+    upcomingEvents,
+    hasUpcomingEvents,
+    nextEvent,
+    eventsThisWeek,
+    manualCheck,
+    refreshUpcomingEvents
+  } = useEventNotifications();
   
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [souvenirs, setSouvenirs] = useState<CalendarSouvenir[]>([]);
@@ -80,6 +97,7 @@ export default function CalendrierPage() {
   const [formPriority, setFormPriority] = useState<'urgent' | 'normal' | 'peut_attendre'>('normal');
   const [formStatus, setFormStatus] = useState<'a_faire' | 'en_cours' | 'termine'>('a_faire');
   const [formImage, setFormImage] = useState<string | null>(null);
+  const [formAlarmable, setFormAlarmable] = useState(true);
   
   // State for place suggestions
   const [placeSuggestions, setPlaceSuggestions] = useState<Array<{
@@ -268,6 +286,7 @@ export default function CalendrierPage() {
     setFormPriority('normal');
     setFormStatus('a_faire');
     setFormImage(null);
+    setFormAlarmable(true);
   };
 
   const handleItemTypeSelect = (type: CalendarItemType) => {
@@ -333,10 +352,11 @@ export default function CalendrierPage() {
           .insert({
             couple_id: coupleId,
             title: formTitle.trim(),
-            event_date: formDate.toISOString().split('T')[0],
-            event_time: formTime.toTimeString().split(' ')[0],
+            event_date: toLocalDateString(formDate),
+            event_time: toLocalTimeString(formTime),
             place: formPlace.trim(),
-            description: formDescription.trim()
+            description: formDescription.trim(),
+            alarmable: formAlarmable
           })
           .select()
           .single();
@@ -350,8 +370,8 @@ export default function CalendrierPage() {
           .insert({
             couple_id: coupleId,
             title: formTitle.trim(),
-            memory_date: formDate.toISOString().split('T')[0],
-            memory_time: formTime.toTimeString().split(' ')[0],
+            memory_date: toLocalDateString(formDate),
+            memory_time: toLocalTimeString(formTime),
             place: formPlace.trim(),
             description: formDescription.trim(),
             image_url: formImage || ''
@@ -369,7 +389,7 @@ export default function CalendrierPage() {
             couple_id: coupleId,
             title: formTitle.trim(),
             description: formDescription.trim(),
-            due_date: formDate.toISOString().split('T')[0],
+            due_date: toLocalDateString(formDate),
             priority: formPriority,
             status: formStatus
           })
@@ -417,8 +437,8 @@ export default function CalendrierPage() {
         const { data, error } = await supabase
           .from('calendar_events')
           .update({
-            event_date: newDate.toISOString().split('T')[0],
-            event_time: newTime.toTimeString().split(' ')[0]
+            event_date: toLocalDateString(newDate),
+            event_time: toLocalTimeString(newTime)
           })
           .eq('id', item.id)
           .select()
@@ -431,8 +451,8 @@ export default function CalendrierPage() {
         const { data, error } = await supabase
           .from('calendar_souvenirs')
           .update({
-            memory_date: newDate.toISOString().split('T')[0],
-            memory_time: newTime.toTimeString().split(' ')[0]
+            memory_date: toLocalDateString(newDate),
+            memory_time: toLocalTimeString(newTime)
           })
           .eq('id', item.id)
           .select()
@@ -448,6 +468,38 @@ export default function CalendrierPage() {
     } catch (error) {
       console.error('Error updating item:', error);
       Alert.alert('Erreur', 'Impossible de mettre à jour la date');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to update event alarmable status
+  const updateEventAlarmable = async (eventId: string, alarmable: boolean) => {
+    if (!coupleId) return;
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .update({ alarmable })
+        .eq('id', eventId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Update local state
+      setEvents(prev => prev.map(e => e.id === eventId ? data : e));
+      
+      Alert.alert(
+        'Succès', 
+        alarmable 
+          ? 'Les rappels sont maintenant activés pour cet événement'
+          : 'Les rappels sont maintenant désactivés pour cet événement'
+      );
+    } catch (error) {
+      console.error('Error updating event alarmable status:', error);
+      Alert.alert('Erreur', 'Impossible de mettre à jour le statut des rappels');
     } finally {
       setIsLoading(false);
     }
@@ -658,9 +710,9 @@ export default function CalendrierPage() {
   // Show loading while checking auth or profile completion
   if (loading || profileLoading) {
     return (
-      <View style={calendarStyles.loadingContainer}>
+      <View style={[calendarStyles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={BRAND_BLUE} />
-        <Text style={calendarStyles.loadingText}>Chargement...</Text>
+        <Text style={[calendarStyles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
       </View>
     );
   }
@@ -675,12 +727,12 @@ export default function CalendrierPage() {
 
   return (
     <AppLayout>
-      <View style={calendarStyles.container}>
+      <View style={[calendarStyles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={calendarStyles.header}>
           <View>
-            <Text style={calendarStyles.title}>Calendrier</Text>
-            <Text style={calendarStyles.currentDate}>
+            <Text style={[calendarStyles.title, { color: colors.text }]}>Calendrier</Text>
+            <Text style={[calendarStyles.currentDate, { color: colors.textSecondary }]}>
               {new Date().toLocaleDateString('fr-FR', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -700,16 +752,19 @@ export default function CalendrierPage() {
           </View>
         </View>
 
-        {/* Calendar */}
+       
+       
+
+        
         <View style={calendarStyles.calendarContainer}>
-          {/* Days of Week */}
+          
           <View style={calendarStyles.daysOfWeek}>
             {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, index) => (
-              <Text key={index} style={calendarStyles.dayOfWeek}>{day}</Text>
+              <Text key={index} style={[calendarStyles.dayOfWeek, { color: colors.textSecondary }]}>{day}</Text>
             ))}
           </View>
 
-          {/* Calendar Grid */}
+          
           <View style={calendarStyles.calendarGrid}>
             {getDaysInMonth(new Date()).map((day, index) => {
               // Ensure we have a valid day
@@ -743,6 +798,7 @@ export default function CalendrierPage() {
                 >
                   <Text style={[
                     calendarStyles.dayNumber, 
+                    { color: colors.text },
                     isSelected && calendarStyles.selectedDayText,
                     isToday && calendarStyles.todayDayText
                   ]}>
@@ -758,40 +814,62 @@ export default function CalendrierPage() {
         {/* Events Counter */}
         <View style={calendarStyles.summaryContainer}>
           <View style={calendarStyles.summaryItem}>
-            <Text style={calendarStyles.summaryNumber}>{events.length}</Text>
-            <Text style={calendarStyles.summaryLabel}>Événements</Text>
+            <Text style={[calendarStyles.summaryNumber, { color: colors.text }]}>{events.length}</Text>
+            <Text style={[calendarStyles.summaryLabel, { color: colors.textSecondary }]}>Événements</Text>
           </View>
           
           <View style={calendarStyles.summaryItem}>
-            <Text style={calendarStyles.summaryNumber}>{souvenirs.length}</Text>
-            <Text style={calendarStyles.summaryLabel}>Souvenirs</Text>
+            <Text style={[calendarStyles.summaryNumber, { color: colors.text }]}>{souvenirs.length}</Text>
+            <Text style={[calendarStyles.summaryLabel, { color: colors.textSecondary }]}>Souvenirs</Text>
           </View>
           
           <View style={calendarStyles.summaryItem}>
-            <Text style={calendarStyles.summaryNumber}>{todos.filter(t => t.status !== 'termine').length}</Text>
-            <Text style={calendarStyles.summaryLabel}>Tâches</Text>
+            <Text style={[calendarStyles.summaryNumber, { color: colors.text }]}>{todos.filter(t => t.status !== 'termine').length}</Text>
+            <Text style={[calendarStyles.summaryLabel, { color: colors.textSecondary }]}>Tâches</Text>
           </View>
         </View>
 
         {/* Events Section */}
         {events.length > 0 && (
           <View style={calendarStyles.section}>
-            <Text style={calendarStyles.sectionTitle}>📅 Nos événements</Text>
+            <Text style={[calendarStyles.sectionTitle, { color: colors.text }]}>📅 Nos événements</Text>
             {events
               .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
               .map((event) => (
                 <Pressable
                   key={event.id}
-                  style={calendarStyles.itemCard}
+                  style={[calendarStyles.itemCard, { borderBottomColor: colors.border }]}
                   onPress={() => openItemDetails(event, 'event')}
                 >
                   <View style={[calendarStyles.itemDateSquare, { backgroundColor: BRAND_BLUE }]}>
                     <Text style={calendarStyles.itemDateText}>{formatDate(event.event_date)}</Text>
                   </View>
                   <View style={calendarStyles.itemContent}>
-                    <Text style={calendarStyles.itemTitle}>{event.title}</Text>
-                    <Text style={calendarStyles.itemTime}>{formatTime(event.event_time)}</Text>
-                    <Text style={calendarStyles.itemPlace}>{event.place}</Text>
+                    <Text style={[calendarStyles.itemTitle, { color: colors.text }]}>{event.title}</Text>
+                    <Text style={[calendarStyles.itemTime, { color: colors.textSecondary }]}>{formatTime(event.event_time)}</Text>
+                    <Text style={[calendarStyles.itemPlace, { color: colors.textSecondary }]}>{event.place}</Text>
+                  </View>
+                  {/* Alarmable Status Indicator and Toggle */}
+                  <View style={calendarStyles.eventAlarmableContainer}>
+                    <MaterialCommunityIcons 
+                      name={event.alarmable ? "bell-ring" : "bell-off"} 
+                      size={16} 
+                      color={event.alarmable ? BRAND_PINK : BRAND_GRAY} 
+                    />
+                    <Pressable
+                      style={calendarStyles.alarmableToggle}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        updateEventAlarmable(event.id, !event.alarmable);
+                      }}
+                    >
+                      <Text style={[
+                        calendarStyles.alarmableToggleText, 
+                        { color: event.alarmable ? BRAND_PINK : BRAND_GRAY }
+                      ]}>
+                        {event.alarmable ? 'Rappels ON' : 'Rappels OFF'}
+                      </Text>
+                    </Pressable>
                   </View>
                 </Pressable>
               ))}
@@ -800,42 +878,42 @@ export default function CalendrierPage() {
 
         {/* Souvenirs Section */}
         <View style={calendarStyles.section}>
-          <Text style={calendarStyles.sectionTitle}>📸 Nos moments précieux</Text>
+          <Text style={[calendarStyles.sectionTitle, { color: colors.text }]}>📸 Nos moments précieux</Text>
           {souvenirs.length > 0 ? (
             souvenirs
               .sort((a, b) => new Date(a.memory_date).getTime() - new Date(b.memory_date).getTime())
               .map((souvenir) => (
                 <Pressable
                   key={souvenir.id}
-                  style={calendarStyles.itemCard}
+                  style={[calendarStyles.itemCard, { borderBottomColor: colors.border }]}
                   onPress={() => openItemDetails(souvenir, 'souvenir')}
                 >
                   <View style={[calendarStyles.itemDateSquare, { backgroundColor: BRAND_PINK }]}>
                     <Text style={calendarStyles.itemDateText}>{formatDate(souvenir.memory_date)}</Text>
                   </View>
                   <View style={calendarStyles.itemContent}>
-                    <Text style={calendarStyles.itemTitle}>{souvenir.title}</Text>
-                    <Text style={calendarStyles.itemTime}>{formatTime(souvenir.memory_time)}</Text>
-                    <Text style={calendarStyles.itemPlace}>{souvenir.place}</Text>
+                    <Text style={[calendarStyles.itemTitle, { color: colors.text }]}>{souvenir.title}</Text>
+                    <Text style={[calendarStyles.itemTime, { color: colors.textSecondary }]}>{formatTime(souvenir.memory_time)}</Text>
+                    <Text style={[calendarStyles.itemPlace, { color: colors.textSecondary }]}>{souvenir.place}</Text>
                   </View>
                 </Pressable>
               ))
           ) : (
-            <Text style={calendarStyles.noItemsText}>Aucun souvenir pour le moment</Text>
+            <Text style={[calendarStyles.noItemsText, { color: colors.textSecondary }]}>Aucun souvenir pour le moment</Text>
           )}
         </View>
 
         {/* Active Todos */}
         {todos.filter(todo => todo.status !== 'termine').length > 0 && (
           <View style={calendarStyles.section}>
-            <Text style={calendarStyles.sectionTitle}>Tâches actives</Text>
+            <Text style={[calendarStyles.sectionTitle, { color: colors.text }]}>Tâches actives</Text>
             {todos
               .filter(todo => todo.status !== 'termine')
               .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
               .map((todo) => (
                 <Pressable
                   key={todo.id}
-                  style={calendarStyles.todoItem}
+                  style={[calendarStyles.todoItem, { borderBottomColor: colors.border }]}
                   onPress={() => openItemDetails(todo, 'todo')}
                 >
                   <Pressable
@@ -854,8 +932,8 @@ export default function CalendrierPage() {
                     )}
                   </Pressable>
                   <View style={calendarStyles.todoContent}>
-                    <Text style={calendarStyles.todoTitle}>{todo.title}</Text>
-                    <Text style={calendarStyles.todoDate}>{formatDate(todo.due_date)}</Text>
+                    <Text style={[calendarStyles.todoTitle, { color: colors.text }]}>{todo.title}</Text>
+                    <Text style={[calendarStyles.todoDate, { color: colors.textSecondary }]}>{formatDate(todo.due_date)}</Text>
                   </View>
                   <View style={calendarStyles.todoPriority}>
                     <View style={[calendarStyles.priorityBadge, { backgroundColor: getPriorityColor(todo.priority) }]}>
@@ -870,7 +948,7 @@ export default function CalendrierPage() {
         {/* Completed Todos */}
         {todos.filter(todo => todo.status === 'termine').length > 0 && (
           <View style={calendarStyles.section}>
-            <Text style={calendarStyles.sectionTitle}>Tâches terminées</Text>
+            <Text style={[calendarStyles.sectionTitle, { color: colors.text }]}>Tâches terminées</Text>
             {todos
               .filter(todo => todo.status === 'termine')
               .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
@@ -907,7 +985,7 @@ export default function CalendrierPage() {
         {events.length === 0 && souvenirs.length === 0 && todos.length === 0 && (
           <View style={calendarStyles.noItemsContainer}>
             <MaterialCommunityIcons name="calendar-blank" size={48} color={BRAND_GRAY} />
-            <Text style={calendarStyles.noItemsText}>Aucun événement dans le calendrier</Text>
+            <Text style={[calendarStyles.noItemsText, { color: colors.textSecondary }]}>Aucun événement dans le calendrier</Text>
           </View>
         )}
       </View>
@@ -1182,6 +1260,42 @@ export default function CalendrierPage() {
                   textAlignVertical="top"
                 />
               </View>
+
+              {/* Alarmable Toggle for Events */}
+              {formType === 'event' && (
+                <View style={calendarStyles.formField}>
+                  <View style={calendarStyles.toggleContainer}>
+                    <View style={calendarStyles.toggleLabelContainer}>
+                      <MaterialCommunityIcons 
+                        name="bell-ring" 
+                        size={20} 
+                        color={formAlarmable ? BRAND_PINK : BRAND_GRAY} 
+                      />
+                      <Text style={[calendarStyles.formLabel, { marginLeft: 8 }]}>
+                        Activer les rappels
+                      </Text>
+                    </View>
+                    <Pressable
+                      style={[
+                        calendarStyles.toggleSwitch,
+                        formAlarmable && calendarStyles.toggleSwitchActive
+                      ]}
+                      onPress={() => setFormAlarmable(!formAlarmable)}
+                    >
+                      <View style={[
+                        calendarStyles.toggleThumb,
+                        formAlarmable && calendarStyles.toggleThumbActive
+                      ]} />
+                    </Pressable>
+                  </View>
+                  <Text style={[calendarStyles.toggleDescription, { color: colors.textSecondary }]}>
+                    {formAlarmable 
+                      ? 'Vous recevrez des notifications la veille de cet événement'
+                      : 'Aucune notification ne sera envoyée pour cet événement'
+                    }
+                  </Text>
+                </View>
+              )}
             </ScrollView>
 
             {/* Save Button */}

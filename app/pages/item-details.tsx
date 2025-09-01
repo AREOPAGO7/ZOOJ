@@ -3,18 +3,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
@@ -56,6 +57,7 @@ export default function ItemDetailsPage() {
   const router = useRouter();
   const { itemType, itemId, itemData } = useLocalSearchParams();
   const { user } = useAuth();
+  const { colors } = useTheme();
   
   const [item, setItem] = useState<CalendarEvent | CalendarSouvenir | CalendarTodo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -627,9 +629,9 @@ export default function ItemDetailsPage() {
   if (isLoading) {
     return (
       <AppLayout>
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Chargement des détails...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement des détails...</Text>
         </View>
       </AppLayout>
     );
@@ -638,8 +640,8 @@ export default function ItemDetailsPage() {
   if (!item) {
     return (
       <AppLayout>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Élément non trouvé</Text>
+        <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+          <Text style={[styles.errorText, { color: colors.text }]}>Élément non trouvé</Text>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Retour</Text>
           </Pressable>
@@ -650,12 +652,12 @@ export default function ItemDetailsPage() {
 
   return (
     <AppLayout>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
-              <Text style={styles.headerTitle}>Détails</Text>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Détails</Text>
             </View>
             
             {/* Edit Button */}
@@ -671,27 +673,28 @@ export default function ItemDetailsPage() {
           {/* Title */}
           {isEditing ? (
             <View style={styles.editField}>
-              <Text style={styles.editLabel}>Titre:</Text>
+              <Text style={[styles.editLabel, { color: colors.text }]}>Titre:</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={editTitle}
                 onChangeText={setEditTitle}
                 placeholder="Donnez un nom à votre moment"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
           ) : (
             <>
               <View style={styles.formField}>
-                <Text style={styles.formLabel}>Titre</Text>
-                <View style={styles.infoDisplay}>
-                  <Text style={styles.infoText}>{item.title}</Text>
+                <Text style={[styles.formLabel, { color: colors.text }]}>Titre</Text>
+                <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.infoText, { color: colors.text }]}>{item.title}</Text>
                 </View>
               </View>
               
               {/* Image Display - Only for souvenirs in view mode */}
               {'image_url' in item && item.image_url && !isEditing && (
                 <View style={styles.formField}>
-                  <Text style={styles.formLabel}>Photos</Text>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>Photos</Text>
                   <View style={styles.imageDisplayContainer}>
                     <Image 
                       source={{ uri: item.image_url }} 
@@ -707,11 +710,12 @@ export default function ItemDetailsPage() {
            {/* Type Toggle - Only show in edit mode */}
            {isEditing && (
              <View style={styles.typeToggleContainer}>
-               <Text style={styles.typeToggleLabel}>Type du moment partagé</Text>
+               <Text style={[styles.typeToggleLabel, { color: colors.text }]}>Type du moment partagé</Text>
                <View style={styles.typeToggleButtons}>
                  <Pressable
                    style={[
                      styles.typeToggleButton,
+                     { backgroundColor: colors.surface, borderColor: colors.border },
                      editItemType === 'event' && styles.typeToggleButtonSelected
                    ]}
                    onPress={() => setEditItemType('event')}
@@ -719,10 +723,11 @@ export default function ItemDetailsPage() {
                    <MaterialCommunityIcons 
                      name="calendar" 
                      size={20} 
-                     color={editItemType === 'event' ? 'white' : '#2D2D2D'} 
+                     color={editItemType === 'event' ? 'white' : colors.text} 
                    />
                    <Text style={[
                      styles.typeToggleButtonText,
+                     { color: colors.text },
                      editItemType === 'event' && styles.typeToggleButtonTextSelected
                    ]}>
                      Evènement
@@ -732,6 +737,7 @@ export default function ItemDetailsPage() {
                  <Pressable
                    style={[
                      styles.typeToggleButton,
+                     { backgroundColor: colors.surface, borderColor: colors.border },
                      editItemType === 'souvenir' && styles.typeToggleButtonSelected
                    ]}
                    onPress={() => setEditItemType('souvenir')}
@@ -739,10 +745,11 @@ export default function ItemDetailsPage() {
                    <MaterialCommunityIcons 
                      name="heart" 
                      size={20} 
-                     color={editItemType === 'souvenir' ? 'white' : '#2D2D2D'} 
+                     color={editItemType === 'souvenir' ? 'white' : colors.text} 
                    />
                    <Text style={[
                      styles.typeToggleButtonText,
+                     { color: colors.text },
                      editItemType === 'souvenir' && styles.typeToggleButtonTextSelected
                    ]}>
                      Souvenir
@@ -755,15 +762,15 @@ export default function ItemDetailsPage() {
                        {/* Date and Time */}
             {isEditing ? (
               <View style={styles.dateTimeContainer}>
-                <Text style={styles.editLabel}>Date et Heure</Text>
+                <Text style={[styles.editLabel, { color: colors.text }]}>Date et Heure</Text>
                 <View style={styles.dateTimeRow}>
                   <View style={styles.dateTimeField}>
-                    <Text style={styles.dateTimeSubLabel}>Date</Text>
+                    <Text style={[styles.dateTimeSubLabel, { color: colors.textSecondary }]}>Date</Text>
                     <Pressable 
-                      style={styles.dateTimeButton}
+                      style={[styles.dateTimeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                       onPress={() => setShowDatePicker(true)}
                     >
-                      <Text style={styles.dateTimeButtonText}>
+                      <Text style={[styles.dateTimeButtonText, { color: colors.text }]}>
                         {editDate.toLocaleDateString('fr-FR')}
                       </Text>
                       <MaterialCommunityIcons name="calendar" size={20} color="#2DB6FF" />
@@ -771,12 +778,12 @@ export default function ItemDetailsPage() {
                   </View>
                   <View style={styles.dateTimeSpacer} />
                   <View style={styles.dateTimeField}>
-                    <Text style={styles.dateTimeSubLabel}>Heure</Text>
+                    <Text style={[styles.dateTimeSubLabel, { color: colors.textSecondary }]}>Heure</Text>
                     <Pressable 
-                      style={styles.dateTimeButton}
+                      style={[styles.dateTimeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                       onPress={() => setShowTimePicker(true)}
                     >
-                      <Text style={styles.dateTimeButtonText}>
+                      <Text style={[styles.dateTimeButtonText, { color: colors.text }]}>
                         {editTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                       <MaterialCommunityIcons name="clock" size={20} color="#2DB6FF" />
@@ -786,34 +793,34 @@ export default function ItemDetailsPage() {
               </View>
            ) : (
              <View style={styles.formField}>
-               <Text style={styles.formLabel}>Date et Heure</Text>
+               <Text style={[styles.formLabel, { color: colors.text }]}>Date et Heure</Text>
                <View style={styles.dateTimeContainer}>
                  {('event_date' in item && 'event_time' in item) ? (
                    <>
-                     <View style={styles.dateTimeInput}>
-                       <MaterialCommunityIcons name="calendar" size={20} color="#9E9E9E" />
-                       <Text style={styles.dateTimeText}>
+                     <View style={[styles.dateTimeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                       <MaterialCommunityIcons name="calendar" size={20} color={colors.textSecondary} />
+                       <Text style={[styles.dateTimeText, { color: colors.text }]}>
                          {formatDate(item.event_date)}
                        </Text>
                      </View>
-                     <View style={styles.dateTimeInput}>
-                       <MaterialCommunityIcons name="clock" size={20} color="#9E9E9E" />
-                       <Text style={styles.dateTimeText}>
+                     <View style={[styles.dateTimeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                       <MaterialCommunityIcons name="clock" size={20} color={colors.textSecondary} />
+                       <Text style={[styles.dateTimeText, { color: colors.text }]}>
                          {formatTime(item.event_time)}
                        </Text>
                      </View>
                    </>
                  ) : ('memory_date' in item && 'memory_time' in item) ? (
                    <>
-                     <View style={styles.dateTimeInput}>
-                       <MaterialCommunityIcons name="calendar" size={20} color="#9E9E9E" />
-                       <Text style={styles.dateTimeText}>
+                     <View style={[styles.dateTimeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                       <MaterialCommunityIcons name="calendar" size={20} color={colors.textSecondary} />
+                       <Text style={[styles.dateTimeText, { color: colors.text }]}>
                          {formatDate(item.memory_date)}
                        </Text>
                      </View>
-                     <View style={styles.dateTimeInput}>
-                       <MaterialCommunityIcons name="clock" size={20} color="#9E9E9E" />
-                       <Text style={styles.dateTimeText}>
+                     <View style={[styles.dateTimeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                       <MaterialCommunityIcons name="clock" size={20} color={colors.textSecondary} />
+                       <Text style={[styles.dateTimeText, { color: colors.text }]}>
                          {formatTime(item.memory_time)}
                        </Text>
                      </View>
@@ -826,29 +833,29 @@ export default function ItemDetailsPage() {
            {/* Place */}
            {isEditing ? (
              <View style={styles.editField}>
-               <Text style={styles.editLabel}>Lieu:</Text>
+               <Text style={[styles.editLabel, { color: colors.text }]}>Lieu:</Text>
                <View style={styles.placeInputContainer}>
                  <TextInput
-                   style={styles.textInput}
+                   style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                    value={editPlace}
                    onChangeText={setEditPlace}
                    placeholder="Rechercher un lieu (ex: Safi, Cores Safi, Hassan 2 rue...)"
-                   placeholderTextColor="#9E9E9E"
+                   placeholderTextColor={colors.textSecondary}
                  />
-                 <MaterialCommunityIcons name="map-marker" size={20} color="#9E9E9E" />
+                 <MaterialCommunityIcons name="map-marker" size={20} color={colors.textSecondary} />
                </View>
                
                {/* Place suggestions */}
                {editPlace.length >= 3 && (
-                 <View style={styles.placeSuggestions}>
-                   <Text style={styles.placeSuggestionsTitle}>
+                 <View style={[styles.placeSuggestions, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                   <Text style={[styles.placeSuggestionsTitle, { color: colors.text, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
                      {isLoadingPlaces ? 'Recherche en cours...' : 'Lieux trouvés:'}
                    </Text>
                    {isLoadingPlaces ? (
                      <View style={styles.placeSuggestionsList}>
                        <View style={styles.placeSuggestionItem}>
                          <ActivityIndicator size="small" color="#007AFF" />
-                         <Text style={styles.placeSuggestionText}>Recherche...</Text>
+                         <Text style={[styles.placeSuggestionText, { color: colors.text }]}>Recherche...</Text>
                        </View>
                      </View>
                    ) : placeSuggestions.length > 0 ? (
@@ -856,15 +863,15 @@ export default function ItemDetailsPage() {
                        {placeSuggestions.map((place, index) => (
                          <Pressable
                            key={index}
-                           style={styles.placeSuggestionItem}
+                           style={[styles.placeSuggestionItem, { borderBottomColor: colors.border }]}
                            onPress={() => setEditPlace(place.display_name)}
                          >
                            <MaterialCommunityIcons name="map-marker" size={16} color="#007AFF" />
                            <View style={styles.placeSuggestionContent}>
-                             <Text style={styles.placeSuggestionText}>
+                             <Text style={[styles.placeSuggestionText, { color: colors.text }]}>
                                {place.display_name.split(',')[0]} {/* Show first part of address */}
                              </Text>
-                             <Text style={styles.placeSuggestionSubtext}>
+                             <Text style={[styles.placeSuggestionSubtext, { color: colors.textSecondary }]}>
                                {place.display_name.split(',').slice(1, 3).join(', ')} {/* Show city/area */}
                              </Text>
                            </View>
@@ -873,7 +880,7 @@ export default function ItemDetailsPage() {
                      </View>
                    ) : editPlace.length >= 3 ? (
                      <View style={styles.placeSuggestionsList}>
-                       <Text style={styles.placeSuggestionText}>Aucun lieu trouvé</Text>
+                       <Text style={[styles.placeSuggestionText, { color: colors.text }]}>Aucun lieu trouvé</Text>
                      </View>
                    ) : null}
                  </View>
@@ -882,12 +889,12 @@ export default function ItemDetailsPage() {
            ) : (
              'place' in item && (
                <View style={styles.formField}>
-                 <Text style={styles.formLabel}>Lieu</Text>
+                 <Text style={[styles.formLabel, { color: colors.text }]}>Lieu</Text>
                  <View style={styles.placeInputContainer}>
-                   <View style={styles.infoDisplay}>
-                     <Text style={styles.infoText}>{item.place}</Text>
+                   <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                     <Text style={[styles.infoText, { color: colors.text }]}>{item.place}</Text>
                    </View>
-                   <MaterialCommunityIcons name="map-marker" size={20} color="#9E9E9E" />
+                   <MaterialCommunityIcons name="map-marker" size={20} color={colors.textSecondary} />
                  </View>
                </View>
              )
@@ -896,14 +903,14 @@ export default function ItemDetailsPage() {
            {/* Photos - Only show for souvenirs in edit mode */}
            {isEditing && editItemType === 'souvenir' && (
              <View style={styles.editField}>
-               <Text style={styles.editLabel}>Photos</Text>
+               <Text style={[styles.editLabel, { color: colors.text }]}>Photos</Text>
                <View style={styles.imageContainer}>
                  {editImage ? (
                    <Image source={{ uri: editImage }} style={styles.selectedImage} />
                  ) : (
-                   <View style={styles.imagePlaceholder}>
-                     <MaterialCommunityIcons name="image" size={48} color="#ccc" />
-                     <Text style={styles.imagePlaceholderText}>
+                   <View style={[styles.imagePlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                     <MaterialCommunityIcons name="image" size={48} color={colors.textSecondary} />
+                     <Text style={[styles.imagePlaceholderText, { color: colors.textSecondary }]}>
                        Ajouter une image pour ce souvenir
                      </Text>
                    </View>
@@ -925,12 +932,13 @@ export default function ItemDetailsPage() {
            {/* Description */}
            {isEditing ? (
              <View style={styles.editField}>
-               <Text style={styles.editLabel}>Description:</Text>
+               <Text style={[styles.editLabel, { color: colors.text }]}>Description:</Text>
                <TextInput
-                 style={[styles.textInput, styles.textArea]}
+                 style={[styles.textInput, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                  value={editDescription}
                  onChangeText={setEditDescription}
                  placeholder="Description"
+                 placeholderTextColor={colors.textSecondary}
                  multiline
                  numberOfLines={4}
                />
@@ -938,9 +946,9 @@ export default function ItemDetailsPage() {
            ) : (
              'description' in item && (
                <View style={styles.formField}>
-                 <Text style={styles.formLabel}>Description</Text>
-                 <View style={styles.infoDisplay}>
-                   <Text style={styles.infoText}>{item.description}</Text>
+                 <Text style={[styles.formLabel, { color: colors.text }]}>Description</Text>
+                 <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                   <Text style={[styles.infoText, { color: colors.text }]}>{item.description}</Text>
                  </View>
                </View>
              )

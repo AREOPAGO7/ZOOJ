@@ -431,7 +431,7 @@ export default function MonProfilPage() {
             <Text style={styles.logoutButtonText}>Se déconnecter</Text>
           </Pressable>
         </View>
-
+        
         {/* Profile Picture Options Modal */}
         <Modal
           key="profile-picture-modal"
@@ -469,7 +469,7 @@ export default function MonProfilPage() {
               >
                 <Text style={styles.cancelButtonText}>Annuler</Text>
               </Pressable>
-            </View>
+        </View>
           </View>
         </Modal>
       </View>

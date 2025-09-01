@@ -47,7 +47,8 @@ export const questionService = {
   async getTodayQuestion(coupleId: string): Promise<{ data: DailyQuestion | null; error: any }> {
     const today = new Date().toISOString().split('T')[0];
     
-    const { data, error } = await supabase
+    // First, try to get a couple-specific question for today
+    const { data: coupleQuestion, error: coupleError } = await supabase
       .from('daily_questions')
       .select(`
         *,
@@ -55,9 +56,43 @@ export const questionService = {
       `)
       .eq('couple_id', coupleId)
       .eq('scheduled_for', today)
-      .single();
+      .limit(1);
 
-    return { data, error };
+    if (coupleQuestion && coupleQuestion.length > 0) {
+      return { data: coupleQuestion[0], error: null };
+    }
+
+    // If no couple-specific question, try to get a global question for today
+    const { data: globalQuestion, error: globalError } = await supabase
+      .from('daily_questions')
+      .select(`
+        *,
+        question:questions(*)
+      `)
+      .is('couple_id', null)
+      .eq('scheduled_for', today)
+      .limit(1);
+
+    if (globalQuestion && globalQuestion.length > 0) {
+      return { data: globalQuestion[0], error: null };
+    }
+
+    // If no question for today, try to get the most recent global question
+    const { data: recentGlobalQuestion, error: recentError } = await supabase
+      .from('daily_questions')
+      .select(`
+        *,
+        question:questions(*)
+      `)
+      .is('couple_id', null)
+      .order('scheduled_for', { ascending: false })
+      .limit(1);
+
+    if (recentGlobalQuestion && recentGlobalQuestion.length > 0) {
+      return { data: recentGlobalQuestion[0], error: null };
+    }
+
+    return { data: null, error: null };
   },
 
   // Get daily question for a specific question and couple (regardless of date)

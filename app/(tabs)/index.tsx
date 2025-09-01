@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router'
 import { useEffect, useState } from "react"
 import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native"
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from "react-native-gesture-handler"
+import { useTheme } from "../../contexts/ThemeContext"
 import { useAuth } from "../../lib/auth"
 import { supabase } from "../../lib/supabase"
 
@@ -18,6 +19,7 @@ const BRAND_GRAY = "#6C6C6C"
 
 export default function App() {
   const { user, signUp, signIn, createProfile, resetPassword, updatePassword, loading: authLoading } = useAuth()
+  const { colors } = useTheme()
   const router = useRouter()
   const [screen, setScreen] = useState<"welcome" | "auth" | "signup" | "profile" | "interests" | "inviteCodes" | "resetPassword" | "newPassword">("welcome")
   const [isLoading, setIsLoading] = useState(false)
@@ -759,15 +761,15 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF", justifyContent: "center", alignItems: "center", paddingTop: '5%' }}>
-        <ActivityIndicator size="large" color={BRAND_BLUE} />
-        <Text style={{ marginTop: 16, color: BRAND_GRAY }}>Chargement...</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", paddingTop: '5%' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 16, color: colors.textSecondary }}>Chargement...</Text>
       </SafeAreaView>
     )
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <PanGestureHandler onGestureEvent={handleSwipeRight}>
           <View style={{ flex: 1 }}>
@@ -786,11 +788,11 @@ export default function App() {
               </Pressable>
 
               <View style={{ alignItems: "center", marginTop: 16 }}>
-                <Text style={{ color: "#9A9A9A" }}>
-                  Vous avez déjà un compte? <Text style={{ color: BRAND_BLUE }}>Se Connecter</Text>
+                <Text style={{ color: colors.textSecondary }}>
+                  Vous avez déjà un compte? <Text style={{ color: colors.primary }}>Se Connecter</Text>
                 </Text>
-                <Text style={{ color: "#9A9A9A", marginTop: 6 }}>
-                  Vous avez reçu un code? <Text style={{ color: BRAND_BLUE }}>Cliquez ici</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 6 }}>
+                  Vous avez reçu un code? <Text style={{ color: colors.primary }}>Cliquez ici</Text>
                 </Text>
               </View>
             </>
@@ -799,25 +801,25 @@ export default function App() {
           {screen === "auth" && (
             <>
                     <View style={{ gap: 12, marginBottom: 8, marginTop: 16 }}>
-                <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
+                <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
             placeholder="Email"
             value={email}
             onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    style={{ paddingHorizontal: 14, height: 50 }}
-                    placeholderTextColor="#9A9A9A"
+                    style={{ paddingHorizontal: 14, height: 50, color: colors.text }}
+                    placeholderTextColor={colors.textSecondary}
           />
                 </View>
-                <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
+                <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
                     placeholder="Mot de passe"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-                    style={{ paddingHorizontal: 14, height: 50 }}
-                    placeholderTextColor="#9A9A9A"
+                    style={{ paddingHorizontal: 14, height: 50, color: colors.text }}
+                    placeholderTextColor={colors.textSecondary}
                   />
                 </View>
               </View>
@@ -836,13 +838,13 @@ export default function App() {
 
               <View style={{ alignItems: "center", marginTop: 12 }}>
                       <Pressable onPress={() => setScreen("signup")}>
-                        <Text style={{ color: BRAND_BLUE, fontSize: 12 }}>Créer un compte</Text>
+                        <Text style={{ color: colors.primary, fontSize: 12 }}>Créer un compte</Text>
                 </Pressable>
               </View>
 
               <View style={{ alignItems: "center", marginTop: 8 }}>
                 <Pressable onPress={() => setScreen("resetPassword")}>
-                  <Text style={{ color: BRAND_BLUE, fontSize: 12 }}>Mot de passe oublié?</Text>
+                  <Text style={{ color: colors.primary, fontSize: 12 }}>Mot de passe oublié?</Text>
                 </Pressable>
               </View>
 
@@ -904,7 +906,7 @@ export default function App() {
 
                     <View style={{ alignItems: "center", marginTop: 12 }}>
                       <Pressable onPress={() => setScreen("auth")}>
-                        <Text style={{ color: BRAND_BLUE, fontSize: 12 }}>Déjà un compte? Se connecter</Text>
+                        <Text style={{ color: colors.primary, fontSize: 12 }}>Déjà un compte? Se connecter</Text>
                       </Pressable>
               </View>
             </>
@@ -915,11 +917,11 @@ export default function App() {
                 <View style={{ gap: 16 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
                         <Pressable onPress={() => setScreen("signup")}>
-                      <MaterialCommunityIcons name="chevron-left" size={24} color="#1a1a1a" />
+                      <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
                     </Pressable>
-                    <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: "#2D2D2D" }}>Créez votre profil</Text>
+                    <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: colors.text }}>Créez votre profil</Text>
                   </View>
-                  <View style={{ height: 1, backgroundColor: "#EFEFEF", marginBottom: 8 }} />
+                  <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 8 }} />
 
                   <View style={{ alignItems: "center", marginTop: 8, marginBottom: 8 }}>
                     <Pressable
@@ -940,12 +942,12 @@ export default function App() {
                           width: 140,
                           height: 140,
                           borderRadius: 70,
-                          backgroundColor: pressed ? "#E0E0E0" : "#F2F3F5",
+                          backgroundColor: pressed ? colors.border : colors.surface,
                           alignItems: "center",
                           justifyContent: "center",
                           overflow: "hidden",
                           borderWidth: 2,
-                          borderColor: profilePicture ? BRAND_BLUE : "#E5E5E5",
+                          borderColor: profilePicture ? colors.primary : colors.border,
                         }
                       ]}
                     >
@@ -959,7 +961,7 @@ export default function App() {
                           }}
                         />
                       ) : (
-                        <MaterialCommunityIcons name="camera-outline" size={42} color="#8A8D92" />
+                        <MaterialCommunityIcons name="camera-outline" size={42} color={colors.textSecondary} />
                       )}
                       
                       {isUploadingPicture ? (
@@ -979,21 +981,21 @@ export default function App() {
                           <ActivityIndicator size="small" color="#FFFFFF" />
                         </View>
                       ) : (
-                        <View
-                          style={{
-                            position: "absolute",
-                            right: 18,
-                            bottom: 10,
-                            width: 28,
-                            height: 28,
-                            borderRadius: 14,
-                            backgroundColor: profilePicture ? BRAND_BLUE : BRAND_PINK,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            borderWidth: 3,
-                            borderColor: "#FFFFFF",
-                          }}
-                        >
+                                                  <View
+                            style={{
+                              position: "absolute",
+                              right: 18,
+                              bottom: 10,
+                              width: 28,
+                              height: 28,
+                              borderRadius: 14,
+                              backgroundColor: profilePicture ? colors.primary : colors.secondary,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderWidth: 3,
+                              borderColor: "#FFFFFF",
+                            }}
+                          >
                           <MaterialCommunityIcons 
                             name={profilePicture ? "pencil" : "plus"} 
                             size={16} 
@@ -1005,13 +1007,13 @@ export default function App() {
                   </View>
 
                   <View style={{ gap: 12 }}>
-                    <View style={{ backgroundColor: "#FFFFFF", borderColor: nameError ? "#FF5A5F" : "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
+                    <View style={{ backgroundColor: colors.surface, borderColor: nameError ? "#FF5A5F" : colors.border, borderWidth: 1, borderRadius: 12 }}>
                       <TextInput
                             placeholder="Nom complet"
                             value={name}
                             onChangeText={(text) => { setName(text); setNameError("") }}
-                        style={{ paddingHorizontal: 14, height: 50 }}
-                        placeholderTextColor="#9A9A9A"
+                        style={{ paddingHorizontal: 14, height: 50, color: colors.text }}
+                        placeholderTextColor={colors.textSecondary}
                       />
                     </View>
                     {nameError ? <Text style={{ color: "#FF5A5F", fontSize: 12, marginTop: 4, marginLeft: 4 }}>{nameError}</Text> : null}
@@ -1019,8 +1021,8 @@ export default function App() {
                     <Pressable
                       onPress={() => setIsDateOpen(true)}
                       style={{
-                        backgroundColor: "#FFFFFF",
-                        borderColor: "#E5E5E5",
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
                         borderWidth: 1,
                         borderRadius: 12,
                         paddingHorizontal: 14,
@@ -1028,7 +1030,7 @@ export default function App() {
                         justifyContent: "center"
                       }}
                     >
-                      <Text style={{ color: birthDate ? "#000" : "#9A9A9A" }}>
+                      <Text style={{ color: birthDate ? colors.text : colors.textSecondary }}>
                         {birthDate ? new Date(birthDate).getFullYear().toString() : "Date de naissance (optionnel)"}
                       </Text>
                     </Pressable>
@@ -1036,8 +1038,8 @@ export default function App() {
                         <Pressable
                           onPress={() => setIsGenderOpen(true)}
                           style={{
-                            backgroundColor: "#FFFFFF",
-                            borderColor: genderError ? "#FF5A5F" : "#E5E5E5",
+                            backgroundColor: colors.surface,
+                            borderColor: genderError ? "#FF5A5F" : colors.border,
                             borderWidth: 1,
                             borderRadius: 12,
                             paddingHorizontal: 14,
@@ -1045,7 +1047,7 @@ export default function App() {
                             justifyContent: "center",
                           }}
                         >
-                          <Text style={{ color: gender ? "#000" : "#9A9A9A" }}>
+                          <Text style={{ color: gender ? colors.text : colors.textSecondary }}>
                             {gender === "male" ? "Homme" : gender === "female" ? "Femme" : gender === "other" ? "Autre" : "Genre"}
                           </Text>
                         </Pressable>
@@ -1055,8 +1057,8 @@ export default function App() {
                       <Pressable
                         onPress={() => setIsCountryOpen(true)}
                         style={{
-                          backgroundColor: "#FFFFFF",
-                            borderColor: countryError ? "#FF5A5F" : "#E5E5E5",
+                          backgroundColor: colors.surface,
+                            borderColor: countryError ? "#FF5A5F" : colors.border,
                           borderWidth: 1,
                           borderRadius: 12,
                           paddingHorizontal: 14,
@@ -1064,7 +1066,7 @@ export default function App() {
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ color: selectedCountry ? "#000" : "#9A9A9A" }}>{selectedCountry ?? "Pays"}</Text>
+                        <Text style={{ color: selectedCountry ? colors.text : colors.textSecondary }}>{selectedCountry ?? "Pays"}</Text>
                       </Pressable>
                     {countryError ? <Text style={{ color: "#FF5A5F", fontSize: 12, marginTop: 4, marginLeft: 4 }}>{countryError}</Text> : null}
                   </View>
@@ -1100,8 +1102,8 @@ export default function App() {
                       key={interest.id}
                       onPress={() => handleInterestToggle(interest.id)}
                       style={{
-                        backgroundColor: selectedInterests.includes(interest.id) ? BRAND_BLUE : "#F8F9FA",
-                        borderColor: selectedInterests.includes(interest.id) ? BRAND_BLUE : "#E5E5E5",
+                        backgroundColor: selectedInterests.includes(interest.id) ? colors.primary : colors.surface,
+                        borderColor: selectedInterests.includes(interest.id) ? colors.primary : colors.border,
                         borderWidth: 1,
                         borderRadius: 12,
                         paddingHorizontal: 16,
@@ -1114,13 +1116,13 @@ export default function App() {
                       <MaterialCommunityIcons
                         name={interest.icon as any}
                         size={24}
-                        color={selectedInterests.includes(interest.id) ? "#FFFFFF" : "#6C6C6C"}
+                        color={selectedInterests.includes(interest.id) ? "#FFFFFF" : colors.textSecondary}
                       />
                       <Text
                         style={{
                           fontSize: 16,
                           fontWeight: "500",
-                          color: selectedInterests.includes(interest.id) ? "#FFFFFF" : "#2D2D2D",
+                          color: selectedInterests.includes(interest.id) ? "#FFFFFF" : colors.text,
                           flex: 1,
                         }}
                       >

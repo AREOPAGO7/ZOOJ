@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
 import { ChatMessage, questionService } from '../../lib/questionService';
 import { supabase } from '../../lib/supabase';
@@ -12,8 +13,9 @@ const BRAND_PINK = "#F47CC6";
 
 export default function QuestionChatPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const { questionId } = useLocalSearchParams<{ questionId: string }>();
+  const { colors } = useTheme();
   const [question, setQuestion] = useState<any>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -28,6 +30,7 @@ export default function QuestionChatPage() {
   const [partnerName, setPartnerName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [isQuestionCurrent, setIsQuestionCurrent] = useState<boolean>(false);
+  const [partnerProfilePicture, setPartnerProfilePicture] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   // Redirect to login if not authenticated
@@ -215,9 +218,11 @@ export default function QuestionChatPage() {
         if (coupleData.user1_id === user!.id) {
           setUserName(coupleData.user1.name || 'Moi');
           setPartnerName(coupleData.user2.name || 'Mon partenaire');
+          setPartnerProfilePicture(coupleData.user2.profile_picture);
         } else {
           setUserName(coupleData.user2.name || 'Moi');
           setPartnerName(coupleData.user1.name || 'Mon partenaire');
+          setPartnerProfilePicture(coupleData.user1.profile_picture);
         }
       }
 
@@ -474,17 +479,29 @@ export default function QuestionChatPage() {
       ]}>
         {/* Profile Picture - Left for partner, Right for user */}
         {!isOwnMessage && (
-          <View style={styles.messageAvatar}>
-            <Text style={styles.avatarText}>👥</Text>
+          <View style={[styles.messageAvatar, { borderColor: colors.border }]}>
+            {partnerProfilePicture ? (
+              <Image 
+                source={{ uri: partnerProfilePicture }} 
+                style={styles.messageAvatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>👥</Text>
+            )}
           </View>
         )}
         
         <View style={[
           styles.messageBubble,
+          { 
+            borderColor: colors.border,
+            backgroundColor: colors.surface
+          },
           isOwnMessage ? styles.ownBubble : styles.partnerBubble
         ]}>
           <Text style={[
             styles.messageText,
+            { color: colors.text },
             isOwnMessage ? styles.ownMessageText : styles.partnerMessageText
           ]}>
             {item.message_text}
@@ -493,8 +510,15 @@ export default function QuestionChatPage() {
 
         {/* Profile Picture - Right for user */}
         {isOwnMessage && (
-          <View style={styles.messageAvatar}>
-            <Text style={styles.avatarText}>👤</Text>
+          <View style={[styles.messageAvatar, { borderColor: colors.border }]}>
+            {profile?.profile_picture ? (
+              <Image 
+                source={{ uri: profile.profile_picture }} 
+                style={styles.messageAvatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>👤</Text>
+            )}
           </View>
         )}
       </View>
@@ -506,7 +530,7 @@ export default function QuestionChatPage() {
 
     return (
       <View style={styles.answersSection}>
-        <Text style={styles.answersTitle}>Vos réponses :</Text>
+        <Text style={[styles.answersTitle, { color: colors.textSecondary }]}>Vos réponses :</Text>
         
         {/* Show user's own answer if they have answered */}
         {userAnswered && (
@@ -515,8 +539,8 @@ export default function QuestionChatPage() {
               <Text style={styles.avatarText}>👤</Text>
             </View>
             <View style={styles.answerContent}>
-              <Text style={styles.answerLabel}>Moi</Text>
-              <Text style={styles.answerText}>
+              <Text style={[styles.answerLabel, { color: '#000' }]}>Moi</Text>
+              <Text style={[styles.answerText, { color: '#000' }]}>
                 {answers.find(a => a.user_id === user!.id)?.answer_text}
               </Text>
             </View>
@@ -530,8 +554,8 @@ export default function QuestionChatPage() {
               <Text style={styles.avatarText}>👥</Text>
             </View>
             <View style={[styles.answerContent, styles.partnerAnswerContent]}>
-              <Text style={styles.answerLabel}>Mon partenaire</Text>
-              <Text style={styles.answerText}>
+              <Text style={[styles.answerLabel, { color: '#000' }]}>Mon partenaire</Text>
+              <Text style={[styles.answerText, { color: '#000' }]}>
                 {answers.find(a => a.user_id !== user!.id)?.answer_text}
               </Text>
             </View>
@@ -542,22 +566,22 @@ export default function QuestionChatPage() {
         {!userAnswered && isQuestionCurrent && (
           <View style={styles.answerInputContainer}>
             <TextInput
-              style={styles.answerInput}
+              style={[styles.answerInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="Tapez votre réponse..."
               value={answerText}
               onChangeText={setAnswerText}
               multiline
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textSecondary}
             />
             <Pressable
-              style={[styles.submitAnswerButton, !answerText.trim() && styles.submitAnswerButtonDisabled]}
+              style={[styles.submitAnswerButton, { backgroundColor: colors.primary }, !answerText.trim() && styles.submitAnswerButtonDisabled]}
               onPress={handleSubmitAnswer}
               disabled={!answerText.trim() || submittingAnswer}
             >
               {submittingAnswer ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitAnswerButtonText}>Envoyer</Text>
+                <Text style={[styles.submitAnswerButtonText, { color: '#FFFFFF' }]}>Envoyer</Text>
               )}
             </Pressable>
           </View>
@@ -570,9 +594,9 @@ export default function QuestionChatPage() {
   // Show loading while checking auth
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={BRAND_BLUE} />
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
       </View>
     );
   }
@@ -584,31 +608,31 @@ export default function QuestionChatPage() {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
                  {/* Header */}
-         <View style={styles.header}>
+         <View style={[styles.header, { borderBottomColor: colors.border }]}>
            <Pressable onPress={() => router.back()} style={styles.backButton}>
-             <MaterialCommunityIcons name="arrow-left" size={24} color="#2D2D2D" />
+             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
            </Pressable>
            <View style={styles.headerTitleContainer}>
-             <Text style={styles.headerTitle}>Question du jour</Text>
+             <Text style={[styles.headerTitle, { color: colors.text }]}>Question du jour</Text>
            </View>
            <Pressable style={styles.menuButton}>
-             <MaterialCommunityIcons name="dots-vertical" size={24} color="#2D2D2D" />
+             <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.text} />
            </Pressable>
          </View>
 
         {/* Content */}
         {loadingChat ? (
-          <View style={styles.loadingContainer}>
+          <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
             <ActivityIndicator size="large" color={BRAND_BLUE} />
-            <Text style={styles.loadingText}>Chargement...</Text>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
           </View>
         ) : (
           <>
                          {/* Question and Answers */}
-             <View style={styles.questionSection}>
-               <Text style={styles.questionText}>
+             <View style={[styles.questionSection, { borderBottomColor: colors.border }]}>
+               <Text style={[styles.questionText, { color: colors.text }]}>
                  {question?.content || 'Les couples devraient-ils partager leurs mots de passe ?'}
                </Text>
                
@@ -629,7 +653,7 @@ export default function QuestionChatPage() {
                          {/* Chat Messages */}
              {threadId ? (
                <View style={styles.chatSection}>
-                 <Text style={styles.chatTitle}>Discussion</Text>
+                 <Text style={[styles.chatTitle, { color: colors.text }]}>Discussion</Text>
                  <FlatList
                    ref={flatListRef}
                    data={messages}
@@ -642,8 +666,8 @@ export default function QuestionChatPage() {
                </View>
              ) : (
                <View style={styles.chatSection}>
-                 <Text style={styles.chatTitle}>Discussion</Text>
-                 <Text style={styles.noChatText}>
+                 <Text style={[styles.chatTitle, { color: colors.text }]}>Discussion</Text>
+                 <Text style={[styles.noChatText, { color: colors.textSecondary }]}>
                    Répondez d'abord à la question pour commencer la discussion
                  </Text>
                </View>
@@ -653,27 +677,27 @@ export default function QuestionChatPage() {
 
                           {/* Input Bar - Only show if question is current */}
              {threadId && isQuestionCurrent && (
-               <View style={styles.inputBar}>
+               <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
                  <View style={styles.inputContainer}>
                    <Pressable style={styles.attachButton}>
                      <MaterialCommunityIcons 
                        name="paperclip" 
                        size={24} 
-                       color="#9CA3AF"
+                       color={colors.textSecondary}
                      />
                    </Pressable>
                    
                    <TextInput
-                     style={styles.messageInput}
+                     style={[styles.messageInput, { backgroundColor: colors.background, color: colors.text }]}
                      placeholder="Message..."
                      value={newMessage}
                      onChangeText={setNewMessage}
                      multiline
-                     placeholderTextColor="#9CA3AF"
+                     placeholderTextColor={colors.textSecondary}
                    />
                    
                    <Pressable
-                     style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]}
+                     style={[styles.sendButton, { backgroundColor: colors.primary }, !newMessage.trim() && styles.sendButtonDisabled]}
                      onPress={handleSendMessage}
                      disabled={!newMessage.trim() || sending}
                    >
@@ -683,7 +707,7 @@ export default function QuestionChatPage() {
                        <MaterialCommunityIcons 
                          name="send" 
                          size={20} 
-                         color={newMessage.trim() ? "#374151" : "#9CA3AF"} 
+                         color={newMessage.trim() ? "#FFFFFF" : colors.textSecondary} 
                        />
                      )}
                    </Pressable>
@@ -758,7 +782,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   answersSection: {
-    marginTop: 8,
+   
   },
   answersTitle: {
     fontSize: 14,
@@ -802,12 +826,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 20,
+    borderWidth: 1,
   },
   ownBubble: {
     backgroundColor: '#F8E8F0',
+    borderColor: '#F8E8F0',
   },
   partnerBubble: {
     backgroundColor: '#E8F0F8',
+    borderColor: '#E8F0F8',
   },
   messageText: {
     fontSize: 16,
@@ -925,6 +952,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     borderWidth: 2,
     borderColor: '#E5E7EB',
+  },
+  messageAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
   },
   messageSender: {
     fontSize: 12,

@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -64,6 +65,7 @@ interface Profile {
 export default function NotreCouplePage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+  const { colors } = useTheme();
   
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [userNames, setUserNames] = useState<{ user1: string; user2: string } | null>(null);
@@ -542,10 +544,10 @@ export default function NotreCouplePage() {
   if (isLoading) {
     return (
       <AppLayout>
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={BRAND_PINK} />
-            <Text style={styles.loadingText}>Analyse de votre couple...</Text>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Analyse de votre couple...</Text>
           </View>
         </View>
       </AppLayout>
@@ -554,16 +556,16 @@ export default function NotreCouplePage() {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <MaterialCommunityIcons name="heart-outline" size={32} color={BRAND_PINK} />
-          <Text style={styles.headerTitle}>Notre couple</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Notre couple</Text>
         </View>
         
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Couple Overview Card */}
-          <View style={styles.coupleOverviewCard}>
+          <View style={[styles.coupleOverviewCard, { backgroundColor: colors.surface }]}>
             {/* Profile Pictures and Hearts */}
                           <View style={styles.profileSection}>
                 <View style={styles.profilePicture}>
@@ -573,7 +575,7 @@ export default function NotreCouplePage() {
                       style={styles.profileImagePlaceholder}
                     />
                   ) : (
-                    <View style={styles.profileImagePlaceholder}>
+                    <View style={[styles.profileImagePlaceholder, { backgroundColor: colors.border }]}>
                       <MaterialCommunityIcons name="account" size={40} color={BRAND_PINK} />
                     </View>
                   )}
@@ -591,7 +593,7 @@ export default function NotreCouplePage() {
                       style={styles.profileImagePlaceholder}
                     />
                   ) : (
-                    <View style={styles.profileImagePlaceholder}>
+                    <View style={[styles.profileImagePlaceholder, { backgroundColor: colors.border }]}>
                       <MaterialCommunityIcons name="account" size={40} color={BRAND_BLUE} />
                     </View>
                   )}
@@ -604,12 +606,12 @@ export default function NotreCouplePage() {
             </Pressable>
 
             {/* Names */}
-            <Text style={styles.coupleNames}>
+            <Text style={[styles.coupleNames, { color: colors.text }]}>
               {userNames ? `${userNames.user1} & ${userNames.user2}` : 'Lara & Med'}
             </Text>
 
             {/* Relationship Duration */}
-            <Text style={styles.durationLabel}>Ensemble depuis</Text>
+            <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>Ensemble depuis</Text>
             <View style={styles.durationContainer}>
               {(() => {
                 if (anniversaryDate) {
@@ -626,17 +628,17 @@ export default function NotreCouplePage() {
                       {years > 0 && (
                         <>
                           <Text style={styles.durationNumber}>{years}</Text>
-                          <Text style={styles.durationText}>an{years > 1 ? 's' : ''}</Text>
-                        </>
-                      )}
-                      {months > 0 && (
-                        <>
-                          <Text style={styles.durationNumber}>{months}</Text>
-                          <Text style={styles.durationText}>mois</Text>
-                        </>
-                      )}
-                      <Text style={styles.durationNumber}>{days}</Text>
-                      <Text style={styles.durationText}>jour{days > 1 ? 's' : ''}</Text>
+                                                <Text style={[styles.durationText, { color: colors.text }]}>an{years > 1 ? 's' : ''}</Text>
+                    </>
+                  )}
+                  {months > 0 && (
+                    <>
+                      <Text style={styles.durationNumber}>{months}</Text>
+                      <Text style={[styles.durationText, { color: colors.text }]}>mois</Text>
+                    </>
+                  )}
+                  <Text style={styles.durationNumber}>{days}</Text>
+                  <Text style={[styles.durationText, { color: colors.text }]}>jour{days > 1 ? 's' : ''}</Text>
                     </>
                   );
                 }
@@ -657,8 +659,8 @@ export default function NotreCouplePage() {
                       {personalInsights ? `${personalInsights.averageScore}%` : '0%'}
                     </Text>
                   </View>
-                  <Text style={styles.progressName}>{userNames?.user1 || 'Lara'}</Text>
-                  <Text style={styles.progressSubtext}>
+                  <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user1 || 'Lara'}</Text>
+                  <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}>
                     Compatibilité basée sur {user1QuizCount} quiz
                   </Text>
                 </View>
@@ -669,8 +671,8 @@ export default function NotreCouplePage() {
                        {user2CompatibilityScore}%
                      </Text>
                    </View>
-                   <Text style={styles.progressName}>{userNames?.user2 || 'Med'}</Text>
-                                        <Text style={styles.progressSubtext}>
+                   <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user2 || 'Med'}</Text>
+                                        <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}>
                        Compatibilité basée sur {user2QuizCount} quiz
                      </Text>
                  </View>
@@ -681,15 +683,16 @@ export default function NotreCouplePage() {
           <View style={styles.anniversarySection}>
             <View style={styles.anniversaryHeader}>
               <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
-              <Text style={styles.anniversaryTitle}>Anniversaire de couple</Text>
+              <Text style={[styles.anniversaryTitle, { color: colors.text }]}>Anniversaire de couple</Text>
             </View>
-            <View style={styles.dateInputContainer}>
+            <View style={[styles.dateInputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <MaterialCommunityIcons name="calendar" size={20} color={BRAND_GRAY} />
               <TextInput
-                style={styles.dateInput}
+                style={[styles.dateInput, { color: colors.text }]}
                 value={anniversaryDate}
                 onChangeText={setAnniversaryDate}
                 placeholder="01/01/1900"
+                placeholderTextColor={colors.textSecondary}
               />
               <MaterialCommunityIcons name="pencil" size={20} color={BRAND_BLUE} />
             </View>
@@ -700,37 +703,39 @@ export default function NotreCouplePage() {
 
                      {/* Statistics Grid */}
            <View style={styles.statsGrid}>
-             <View style={styles.statCard}>
+             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
-               <Text style={styles.statNumber}>
+               <Text style={[styles.statNumber, { color: colors.text }]}>
                  {answeredQuestionsCount}
                </Text>
-               <Text style={styles.statLabel}>Questions répondues</Text>
+               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Questions répondues</Text>
              </View>
  
-             <View style={styles.statCard}>
+             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                <MaterialCommunityIcons name="heart-outline" size={24} color={BRAND_PINK} />
-               <Text style={styles.statNumber}>0</Text>
-               <Text style={styles.statLabel}>Pulses envoyés</Text>
+               <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
+               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pulses envoyés</Text>
              </View>
  
-             <View style={styles.statCard}>
+             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                <MaterialCommunityIcons name="trophy-outline" size={24} color={BRAND_PINK} />
-               <Text style={styles.statNumber}>{quizResults.length}</Text>
-               <Text style={styles.statLabel}>Quizz complétés</Text>
+               <Text style={[styles.statNumber, { color: colors.text }]}>
+                 {quizResults.length}
+               </Text>
+               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Quizz complétés</Text>
              </View>
  
-             <View style={styles.statCard}>
+             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                <MaterialCommunityIcons name="image-outline" size={24} color={BRAND_PINK} />
-               <Text style={styles.statNumber}>0</Text>
-               <Text style={styles.statLabel}>Souvenirs partagés</Text>
+               <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
+               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Souvenirs partagés</Text>
              </View>
            </View>
 
           {/* Existing Compatibility Dashboard - Moved to Bottom */}
           {coupleInsights && (
             <View style={styles.compatibilitySection}>
-              <Text style={styles.sectionTitle}>Dashboard de Compatibilité</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Dashboard de Compatibilité</Text>
               
               {/* Overall Compatibility Score */}
               <View style={styles.compatibilityCard}>
@@ -752,79 +757,79 @@ export default function NotreCouplePage() {
               </View>
 
               {/* Communication Style */}
-              <View style={styles.insightCard}>
+              <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                 <View style={styles.cardHeader}>
                   <MaterialCommunityIcons name="message-text" size={24} color={BRAND_BLUE} />
-                  <Text style={styles.cardTitle}>Style de Communication</Text>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>Style de Communication</Text>
                 </View>
-                <Text style={styles.insightText}>{coupleInsights.communicationStyle}</Text>
+                <Text style={[styles.insightText, { color: colors.textSecondary }]}>{coupleInsights.communicationStyle}</Text>
               </View>
 
               {/* Strengths and Growth Areas */}
               <View style={styles.insightsGrid}>
                 {/* Strengths */}
-                <View style={styles.insightCard}>
+                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.cardHeader}>
                     <MaterialCommunityIcons name="star" size={24} color="#4CAF50" />
-                    <Text style={styles.cardTitle}>Points Forts</Text>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Points Forts</Text>
                   </View>
                   {coupleInsights.strongestAreas.length > 0 ? (
                     coupleInsights.strongestAreas.map((area, index) => (
-                      <Text key={index} style={styles.insightItem}>• {area}</Text>
+                      <Text key={index} style={[styles.insightItem, { color: colors.textSecondary }]}>• {area}</Text>
                     ))
                   ) : (
-                    <Text style={styles.noDataText}>Continuez à explorer ensemble !</Text>
+                    <Text style={[styles.noDataText, { color: colors.textSecondary }]}>Continuez à explorer ensemble !</Text>
                   )}
                 </View>
 
                 {/* Growth Areas */}
-                <View style={styles.insightCard}>
+                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.cardHeader}>
                     <MaterialCommunityIcons name="trending-up" size={24} color="#FF9800" />
-                    <Text style={styles.cardTitle}>À Améliorer</Text>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>À Améliorer</Text>
                   </View>
                   {coupleInsights.growthAreas.length > 0 ? (
                     coupleInsights.growthAreas.map((area, index) => (
-                      <Text key={index} style={styles.insightItem}>• {area}</Text>
+                      <Text key={index} style={[styles.insightItem, { color: colors.textSecondary }]}>• {area}</Text>
                     ))
                   ) : (
-                    <Text style={styles.noDataText}>Excellent travail !</Text>
+                    <Text style={[styles.noDataText, { color: colors.textSecondary }]}>Excellent travail !</Text>
                   )}
                 </View>
               </View>
 
               {/* Personal Insights */}
               {personalInsights && (
-                <View style={styles.insightCard}>
+                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.cardHeader}>
                     <MaterialCommunityIcons name="account" size={24} color={BRAND_PINK} />
-                    <Text style={styles.cardTitle}>Vos Insights Personnels</Text>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Vos Insights Personnels</Text>
                   </View>
                   
                   <View style={styles.personalInsight}>
-                    <Text style={styles.insightLabel}>Pattern de Réponses:</Text>
-                    <Text style={styles.insightValue}>{personalInsights.responsePatterns}</Text>
+                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>Pattern de Réponses:</Text>
+                    <Text style={[styles.insightValue, { color: colors.text }]}>{personalInsights.responsePatterns}</Text>
                   </View>
 
                   <View style={styles.personalInsight}>
-                    <Text style={styles.insightLabel}>Sujets Préférés:</Text>
+                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>Sujets Préférés:</Text>
                     {personalInsights.favoriteTopics.length > 0 ? (
                       personalInsights.favoriteTopics.map((topic, index) => (
-                        <Text key={index} style={styles.insightValue}>• {topic}</Text>
+                        <Text key={index} style={[styles.insightValue, { color: colors.text }]}>• {topic}</Text>
                       ))
                     ) : (
-                      <Text style={styles.noDataText}>Continuez à explorer !</Text>
+                      <Text style={[styles.noDataText, { color: colors.textSecondary }]}>Continuez à explorer !</Text>
                     )}
                   </View>
 
                   <View style={styles.personalInsight}>
-                    <Text style={styles.insightLabel}>Zones de Croissance:</Text>
+                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>Zones de Croissance:</Text>
                     {personalInsights.growthAreas.length > 0 ? (
                       personalInsights.growthAreas.map((area, index) => (
-                        <Text key={index} style={styles.insightValue}>• {area}</Text>
+                        <Text key={index} style={[styles.insightValue, { color: colors.text }]}>• {area}</Text>
                       ))
                     ) : (
-                      <Text style={styles.noDataText}>Vous êtes sur la bonne voie !</Text>
+                      <Text style={[styles.noDataText, { color: colors.textSecondary }]}>Vous êtes sur la bonne voie !</Text>
                     )}
                   </View>
                 </View>
@@ -832,16 +837,16 @@ export default function NotreCouplePage() {
 
               {/* Detailed Quiz Results */}
               {quizResults.length > 0 && (
-                <View style={styles.insightCard}>
+                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.cardHeader}>
                     <MaterialCommunityIcons name="chart-line" size={24} color={BRAND_BLUE} />
-                    <Text style={styles.cardTitle}>Résultats Détaillés</Text>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Résultats Détaillés</Text>
                   </View>
                   
                   {quizResults.map((result, index) => (
-                    <View key={index} style={styles.quizResultItem}>
+                    <View key={index} style={[styles.quizResultItem, { backgroundColor: colors.border }]}>
                       <View style={styles.quizResultHeader}>
-                        <Text style={styles.quizTitle}>{result.quiz_title}</Text>
+                        <Text style={[styles.quizTitle, { color: colors.text }]}>{result.quiz_title}</Text>
                         <View style={styles.quizScore}>
                           <Text style={[styles.quizScoreText, { color: getScoreColor(result.score) }]}>
                             {result.score}%
@@ -851,12 +856,12 @@ export default function NotreCouplePage() {
                       
                       <View style={styles.quizDetails}>
                         <View style={styles.quizDetail}>
-                          <Text style={styles.detailLabel}>{userNames?.user1 || 'Vous'}:</Text>
-                          <Text style={styles.detailValue}>{result.user1_percent}%</Text>
+                          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{userNames?.user1 || 'Vous'}:</Text>
+                          <Text style={[styles.detailValue, { color: colors.text }]}>{result.user1_percent}%</Text>
                         </View>
                         <View style={styles.quizDetail}>
                           <Text style={styles.detailLabel}>{userNames?.user2 || 'Partenaire'}:</Text>
-                          <Text style={styles.detailValue}>{result.user2_percent}%</Text>
+                          <Text style={[styles.detailValue, { color: colors.text }]}>{result.user2_percent}%</Text>
                         </View>
                       </View>
                     </View>
@@ -868,10 +873,10 @@ export default function NotreCouplePage() {
 
           {/* No Data State */}
           {quizResults.length === 0 && (
-            <View style={styles.noDataCard}>
+            <View style={[styles.noDataCard, { backgroundColor: colors.surface }]}>
               <MaterialCommunityIcons name="heart-outline" size={48} color={BRAND_GRAY} />
-              <Text style={styles.noDataTitle}>Aucun quiz complété</Text>
-              <Text style={styles.noDataText}>
+              <Text style={[styles.noDataTitle, { color: colors.text }]}>Aucun quiz complété</Text>
+              <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
                 Complétez des quiz ensemble pour découvrir votre compatibilité et obtenir des insights personnalisés.
               </Text>
             </View>
@@ -885,19 +890,19 @@ export default function NotreCouplePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor is now dynamic from theme
   },
   header: {
     alignItems: 'center',
     paddingTop: 20,
     paddingBottom: 30,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    // borderBottomColor is now dynamic from theme
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#374151',
+    // color is now dynamic from theme
     marginTop: 12,
   },
   content: {
@@ -914,12 +919,12 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#6B7280',
+    // color is now dynamic from theme
   },
   
   // Couple Overview Card Styles
   coupleOverviewCard: {
-    backgroundColor: '#F9FAFB',
+    // backgroundColor is now dynamic from theme
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
@@ -942,7 +947,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#F3F4F6',
+    // backgroundColor is now dynamic from theme
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -963,13 +968,13 @@ const styles = StyleSheet.create({
   coupleNames: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#374151',
+    // color is now dynamic from theme
     textAlign: 'center',
     marginBottom: 10,
   },
   durationLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    // color is now dynamic from theme
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -987,7 +992,7 @@ const styles = StyleSheet.create({
   },
   durationText: {
     fontSize: 16,
-    color: '#374151',
+    // color is now dynamic from theme
     marginRight: 15,
   },
   progressSection: {
@@ -1015,12 +1020,12 @@ const styles = StyleSheet.create({
   progressName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    // color is now dynamic from theme
     marginBottom: 5,
   },
   progressSubtext: {
     fontSize: 12,
-    color: '#6B7280',
+    // color is now dynamic from theme
   },
 
   // Anniversary Section Styles
@@ -1035,15 +1040,15 @@ const styles = StyleSheet.create({
   anniversaryTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
+    // color is now dynamic from theme
     marginLeft: 10,
   },
   dateInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    // backgroundColor is now dynamic from theme
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    // borderColor is now dynamic from theme
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 12,
@@ -1051,7 +1056,7 @@ const styles = StyleSheet.create({
   dateInput: {
     flex: 1,
     fontSize: 16,
-    color: '#374151',
+    // color is now dynamic from theme
     marginHorizontal: 10,
   },
   updateDateButton: {
@@ -1076,7 +1081,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '48%',
-    backgroundColor: '#F9FAFB',
+    // backgroundColor is now dynamic from theme
     borderRadius: 15,
     padding: 20,
     marginBottom: 15,
@@ -1090,13 +1095,13 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#374151',
+    // color is now dynamic from theme
     marginTop: 10,
     marginBottom: 5,
   },
   statLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    // color is now dynamic from theme
     textAlign: 'center',
   },
 
@@ -1107,7 +1112,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#374151',
+    // color is now dynamic from theme
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -1150,7 +1155,7 @@ const styles = StyleSheet.create({
     color: '#E5E7EB',
   },
   insightCard: {
-    backgroundColor: '#F9FAFB',
+    // backgroundColor is now dynamic from theme
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
@@ -1168,12 +1173,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
+    // color is now dynamic from theme
     marginLeft: 10,
   },
   insightText: {
     fontSize: 16,
-    color: '#4B5563',
+    // color is now dynamic from theme
     lineHeight: 24,
   },
   insightsGrid: {
@@ -1183,12 +1188,12 @@ const styles = StyleSheet.create({
   },
   insightItem: {
     fontSize: 14,
-    color: '#4B5563',
+    // color is now dynamic from theme
     marginBottom: 5,
   },
   noDataText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    // color is now dynamic from theme
     textAlign: 'center',
     marginTop: 10,
   },
@@ -1197,16 +1202,16 @@ const styles = StyleSheet.create({
   },
   insightLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    // color is now dynamic from theme
     marginBottom: 5,
   },
   insightValue: {
     fontSize: 16,
-    color: '#374151',
+    // color is now dynamic from theme
     fontWeight: '500',
   },
   quizResultItem: {
-    backgroundColor: '#F9FAFB',
+    // backgroundColor is now dynamic from theme
     borderRadius: 12,
     padding: 15,
     marginBottom: 10,
@@ -1225,7 +1230,7 @@ const styles = StyleSheet.create({
   quizTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    // color is now dynamic from theme
   },
   quizScore: {
     flexDirection: 'row',
@@ -1245,16 +1250,16 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    // color is now dynamic from theme
     marginRight: 5,
   },
   detailValue: {
     fontSize: 14,
-    color: '#374151',
+    // color is now dynamic from theme
     fontWeight: '500',
   },
   noDataCard: {
-    backgroundColor: '#F9FAFB',
+    // backgroundColor is now dynamic from theme
     borderRadius: 15,
     padding: 30,
     alignItems: 'center',
@@ -1269,7 +1274,7 @@ const styles = StyleSheet.create({
   noDataTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#374151',
+    // color is now dynamic from theme
     marginTop: 15,
   },
 });

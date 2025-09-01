@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 // import { dailyQuestionScheduler } from '../../lib/dailyQuestionScheduler';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Answer, questionService } from '../../lib/questionService';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
@@ -13,6 +14,7 @@ export default function QuestionsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+  const { colors } = useTheme();
   const [questions, setQuestions] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [couple, setCouple] = useState<any>(null);
@@ -413,6 +415,7 @@ export default function QuestionsPage() {
         <Pressable
           style={[
             styles.questionItem,
+            { backgroundColor: colors.surface, borderColor: colors.border },
             !isAnswered && styles.newQuestionItem,
             isAnswered && styles.answeredQuestionItem
           ]}
@@ -438,10 +441,10 @@ export default function QuestionsPage() {
           </View>
           
           <View style={styles.questionContent}>
-            <Text style={styles.questionText} numberOfLines={2}>
+            <Text style={[styles.questionText, { color: colors.text }]} numberOfLines={2}>
               {item.content || 'Question du jour'}
             </Text>
-            <Text style={styles.questionDate}>
+            <Text style={[styles.questionDate, { color: colors.textSecondary }]}>
               {formatDate(item.created_at)}
             </Text>
             
@@ -449,12 +452,12 @@ export default function QuestionsPage() {
             
             {/* Answer Status */}
             {item.answerCount === 1 && (
-              <Text style={styles.answerStatus}>
+              <Text style={[styles.answerStatus, { color: colors.primary }]}>
                 💬 Votre partenaire a répondu
               </Text>
             )}
             {item.answerCount === 2 && (
-              <Text style={styles.answerStatus}>
+              <Text style={[styles.answerStatus, { color: colors.primary }]}>
                 ✨ Vous pouvez maintenant discuter !
               </Text>
             )}
@@ -474,7 +477,7 @@ export default function QuestionsPage() {
           <MaterialCommunityIcons 
             name={isExpanded ? "chevron-up" : "chevron-right"} 
             size={20} 
-            color="#9CA3AF" 
+            color={colors.textSecondary} 
           />
         </Pressable>
 
@@ -482,12 +485,12 @@ export default function QuestionsPage() {
         {isExpanded && !isAnswered && (
           <View style={styles.answerInputContainer}>
             <TextInput
-              style={styles.answerInput}
+              style={[styles.answerInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="Tapez votre réponse..."
               value={answerTexts[item.id] || ''}
               onChangeText={(text) => setAnswerTexts(prev => ({ ...prev, [item.id]: text }))}
               multiline
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textSecondary}
             />
             <View style={styles.answerActions}>
               <Pressable
@@ -511,9 +514,9 @@ export default function QuestionsPage() {
   // Show loading while checking auth or profile completion
   if (loading || profileLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#2DB6FF" />
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
       </View>
     );
   }
@@ -525,54 +528,54 @@ export default function QuestionsPage() {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Questions & Réponses</Text>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Questions & Réponses</Text>
           <Pressable style={styles.searchButton}>
-            <MaterialCommunityIcons name="magnify" size={24} color="#2D2D2D" />
+            <MaterialCommunityIcons name="magnify" size={24} color={colors.text} />
           </Pressable>
         </View>
 
         {/* Filter Tabs */}
-        <View style={styles.filterContainer}>
+        <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterScrollContent}
           >
             <Pressable
-              style={[styles.filterTab, activeFilter === 'all' && styles.filterTabActive]}
+              style={[styles.filterTab, { backgroundColor: colors.surface, borderColor: colors.border }, activeFilter === 'all' && styles.filterTabActive]}
               onPress={() => setActiveFilter('all')}
             >
-              <Text style={[styles.filterTabText, activeFilter === 'all' && styles.filterTabTextActive]}>
+              <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'all' && styles.filterTabTextActive]}>
                 Tout
               </Text>
             </Pressable>
             
             <Pressable
-              style={[styles.filterTab, activeFilter === 'unread' && styles.filterTabActive]}
+              style={[styles.filterTab, { backgroundColor: colors.surface, borderColor: colors.border }, activeFilter === 'unread' && styles.filterTabActive]}
               onPress={() => setActiveFilter('unread')}
             >
-              <Text style={[styles.filterTabText, activeFilter === 'unread' && styles.filterTabTextActive]}>
+              <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'unread' && styles.filterTabTextActive]}>
                 Non lu(s)
               </Text>
             </Pressable>
             
             <Pressable
-              style={[styles.filterTab, activeFilter === 'myTurn' && styles.filterTabActive]}
+              style={[styles.filterTab, { backgroundColor: colors.surface, borderColor: colors.border }, activeFilter === 'myTurn' && styles.filterTabActive]}
               onPress={() => setActiveFilter('myTurn')}
             >
-              <Text style={[styles.filterTabText, activeFilter === 'myTurn' && styles.filterTabTextActive]}>
+              <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'myTurn' && styles.filterTabTextActive]}>
                 A mon tour
               </Text>
             </Pressable>
             
             <Pressable
-              style={[styles.filterTab, activeFilter === 'theirTurn' && styles.filterTabActive]}
+              style={[styles.filterTab, { backgroundColor: colors.surface, borderColor: colors.border }, activeFilter === 'theirTurn' && styles.filterTabActive]}
               onPress={() => setActiveFilter('theirTurn')}
             >
-              <Text style={[styles.filterTabText, activeFilter === 'theirTurn' && styles.filterTabTextActive]}>
+              <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'theirTurn' && styles.filterTabTextActive]}>
                 A son tour
               </Text>
             </Pressable>
@@ -581,9 +584,9 @@ export default function QuestionsPage() {
 
         {/* Content */}
         {loadingQuestions ? (
-          <View style={styles.loadingContainer}>
+          <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
             <ActivityIndicator size="large" color="#2DB6FF" />
-            <Text style={styles.loadingText}>Chargement...</Text>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
           </View>
         ) : questions.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -602,7 +605,7 @@ export default function QuestionsPage() {
                 style={styles.heartEmptyIcon} 
               />
             </View>
-            <Text style={styles.emptyText}>Aucun élément dans la liste</Text>
+            <Text style={[styles.emptyText, { color: colors.text }]}>Aucun élément dans la liste</Text>
           </View>
         ) : (
           <FlatList
@@ -683,12 +686,10 @@ const styles = StyleSheet.create({
   questionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,

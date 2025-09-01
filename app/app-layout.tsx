@@ -2,6 +2,7 @@ import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
+import { useTheme } from '../contexts/ThemeContext';
 import { useProfileCompletion } from '../hooks/useProfileCompletion';
 import { useAuth } from '../lib/auth';
 
@@ -14,6 +15,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
+  const { colors } = useTheme();
   const [activeTab, setActiveTab] = useState('accueil');
 
   // Redirect to login if not authenticated
@@ -40,9 +42,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Show loading while checking auth or profile completion
   if (loading || profileLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2DB6FF" />
-        <Text style={styles.loadingText}>Chargement...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
       </View>
     );
   }
@@ -53,7 +55,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         {children}
       </View>
@@ -65,7 +67,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor: '#FFFFFF', // Removed - now dynamic
     // Add global top margin for notch safety (5% of screen height)
     paddingTop: '10%',
   },
@@ -76,12 +78,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    // backgroundColor: '#FFFFFF', // Removed - now dynamic
     // Add top margin for loading screen too
     paddingTop: '5%',
   },
   loadingText: {
     marginTop: 16,
-    color: '#7A7A7A',
+    // color: '#7A7A7A', // Removed - now dynamic
   },
 });
