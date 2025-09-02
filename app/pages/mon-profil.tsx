@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import AppLayout from '../app-layout';
 
@@ -21,6 +22,7 @@ const CLOUDINARY_CONFIG = {
 export default function MonProfilPage() {
   const router = useRouter();
   const { user, profile, profileLoading, updateProfile, updatePassword } = useAuth();
+  const { t } = useLanguage();
   
   const [fullName, setFullName] = useState(profile?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -64,7 +66,7 @@ export default function MonProfilPage() {
 
   const handleSaveName = async () => {
     if (!tempName.trim()) {
-      Alert.alert('Erreur', 'Le nom ne peut pas être vide');
+      Alert.alert(t('profile.error'), t('profile.nameCannotBeEmpty'));
       return;
     }
 
@@ -72,15 +74,15 @@ export default function MonProfilPage() {
       const { error } = await updateProfile({ name: tempName.trim() });
       
       if (error) {
-        Alert.alert('Erreur', error.message || 'Impossible de mettre à jour le nom');
+        Alert.alert(t('profile.error'), error.message || t('profile.cannotUpdateName'));
         return;
       }
 
       setFullName(tempName.trim());
       setIsEditingName(false);
-      Alert.alert('Succès', 'Nom mis à jour avec succès');
+      Alert.alert(t('profile.success'), t('profile.nameUpdated'));
     } catch (error) {
-      Alert.alert('Erreur', 'Une erreur inattendue s\'est produite');
+      Alert.alert(t('profile.error'), t('profile.unexpectedError'));
     }
   };
 
@@ -97,7 +99,7 @@ export default function MonProfilPage() {
 
   const handleSavePassword = async () => {
     if (tempPassword.length < 6) {
-      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
+      Alert.alert(t('profile.error'), t('profile.passwordMinLength'));
       return;
     }
 
@@ -106,16 +108,16 @@ export default function MonProfilPage() {
       const { error } = await updatePassword(tempPassword);
       
       if (error) {
-        Alert.alert('Erreur', error.message || 'Impossible de mettre à jour le mot de passe');
+        Alert.alert(t('profile.error'), error.message || t('profile.cannotUpdatePassword'));
         return;
       }
 
       setPassword('........');
       setIsEditingPassword(false);
       setTempPassword('');
-      Alert.alert('Succès', 'Mot de passe mis à jour avec succès');
+      Alert.alert(t('profile.success'), t('profile.passwordUpdated'));
     } catch (error) {
-      Alert.alert('Erreur', 'Une erreur inattendue s\'est produite');
+      Alert.alert(t('profile.error'), t('profile.unexpectedError'));
     }
   };
 
@@ -177,7 +179,7 @@ export default function MonProfilPage() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Erreur', 'Impossible de sélectionner l\'image');
+      Alert.alert(t('profile.error'), t('profile.cannotSelectImage'));
     }
   };
 
@@ -187,7 +189,7 @@ export default function MonProfilPage() {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'Permission d\'accès à la caméra requise');
+        Alert.alert(t('profile.permissionDenied'), t('profile.cameraPermissionRequired'));
         return;
       }
 
@@ -202,7 +204,7 @@ export default function MonProfilPage() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Erreur', 'Impossible de prendre la photo');
+      Alert.alert(t('profile.error'), t('profile.cannotTakePhoto'));
     }
   };
 
@@ -259,16 +261,16 @@ export default function MonProfilPage() {
         // Update profile with new picture URL
         const { error } = await updateProfile({ profile_picture: cleanUrl });
         if (error) {
-          Alert.alert('Erreur', 'Impossible de mettre à jour la photo de profil');
+          Alert.alert(t('profile.error'), t('profile.cannotUpdateProfilePicture'));
         } else {
-          Alert.alert('Succès', 'Photo de profil mise à jour');
+          Alert.alert(t('profile.success'), t('profile.profilePictureUpdated'));
         }
       } else {
         throw new Error('Upload failed - no secure_url in response');
       }
     } catch (error) {
       console.error('Profile picture upload error:', error);
-      Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil');
+      Alert.alert(t('profile.error'), t('profile.cannotUploadImage'));
     } finally {
       setIsUploadingPicture(false);
     }
@@ -279,12 +281,12 @@ export default function MonProfilPage() {
     try {
       const { error } = await updateProfile({ profile_picture: null });
       if (error) {
-        Alert.alert('Erreur', 'Impossible de supprimer la photo');
+        Alert.alert(t('profile.error'), t('profile.cannotDeletePhoto'));
       } else {
-        Alert.alert('Succès', 'Photo supprimée');
+        Alert.alert(t('profile.success'), t('profile.photoDeleted'));
       }
     } catch (error) {
-      Alert.alert('Erreur', 'Erreur lors de la suppression');
+      Alert.alert(t('profile.error'), t('profile.deletionError'));
     }
   };
 
@@ -298,7 +300,7 @@ export default function MonProfilPage() {
       <AppLayout>
         <View style={styles.container}>
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Chargement du profil...</Text>
+            <Text style={styles.loadingText}>{t('profile.loading')}</Text>
           </View>
         </View>
       </AppLayout>
@@ -313,7 +315,7 @@ export default function MonProfilPage() {
           <Pressable style={styles.backButton} onPress={handleBack}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
           </Pressable>
-          <Text style={styles.headerTitle}>Mon profil</Text>
+          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -350,7 +352,7 @@ export default function MonProfilPage() {
             </Pressable>
           </View>
           <Text style={styles.profilePictureLabel}>
-            {isUploadingPicture ? 'Téléchargement en cours...' : 'Appuyez sur l\'icône caméra pour changer'}
+            {isUploadingPicture ? t('profile.uploading') : t('profile.changePhotoInstruction')}
           </Text>
         </View>
 
@@ -358,7 +360,7 @@ export default function MonProfilPage() {
         <View style={styles.formSection}>
           {/* Full Name Field */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Nom complet</Text>
+            <Text style={styles.inputLabel}>{t('profile.fullName')}</Text>
             <View style={styles.inputContainer}>
               <MaterialCommunityIcons name="account" size={20} color={BRAND_GRAY} style={styles.inputIcon} />
               {isEditingName ? (
@@ -366,11 +368,11 @@ export default function MonProfilPage() {
                   style={styles.textInput}
                   value={tempName}
                   onChangeText={setTempName}
-                  placeholder="Entrez votre nom complet"
+                  placeholder={t('profile.enterFullName')}
                   autoFocus
                 />
               ) : (
-                <Text style={styles.inputText}>{fullName || 'Non défini'}</Text>
+                <Text style={styles.inputText}>{fullName || t('profile.notDefined')}</Text>
               )}
               <Pressable style={styles.editButton} onPress={handleEditName}>
                 <MaterialCommunityIcons 
@@ -384,17 +386,17 @@ export default function MonProfilPage() {
 
           {/* Email Field */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Adresse e-mail</Text>
+            <Text style={styles.inputLabel}>{t('profile.email')}</Text>
             <View style={styles.inputContainer}>
               <MaterialCommunityIcons name="email" size={20} color={BRAND_GRAY} style={styles.inputIcon} />
-              <Text style={styles.inputText}>{email || 'Non défini'}</Text>
+              <Text style={styles.inputText}>{email || t('profile.notDefined')}</Text>
               {/* No edit button for email as it's read-only */}
             </View>
           </View>
 
           {/* Password Field */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Mot de passe</Text>
+            <Text style={styles.inputLabel}>{t('profile.password')}</Text>
             <View style={styles.inputContainer}>
               <MaterialCommunityIcons name="lock" size={20} color={BRAND_GRAY} style={styles.inputIcon} />
               {isEditingPassword ? (
@@ -402,7 +404,7 @@ export default function MonProfilPage() {
                   style={styles.textInput}
                   value={tempPassword}
                   onChangeText={setTempPassword}
-                  placeholder="Entrez votre nouveau mot de passe"
+                  placeholder={t('profile.enterNewPassword')}
                   secureTextEntry
                   autoFocus
                 />
@@ -423,12 +425,12 @@ export default function MonProfilPage() {
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <Pressable style={styles.saveButton} onPress={handleSaveChanges}>
-            <Text style={styles.saveButtonText}>Sauvegarder les modifications</Text>
+            <Text style={styles.saveButtonText}>{t('profile.saveChanges')}</Text>
           </Pressable>
 
           <Pressable style={styles.logoutButton} onPress={handleLogout}>
             <MaterialCommunityIcons name="logout" size={20} color={BRAND_PINK} style={styles.logoutIcon} />
-            <Text style={styles.logoutButtonText}>Se déconnecter</Text>
+            <Text style={styles.logoutButtonText}>{t('profile.logout')}</Text>
           </Pressable>
         </View>
         
@@ -442,23 +444,23 @@ export default function MonProfilPage() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Changer la photo de profil</Text>
-              <Text style={styles.modalSubtitle}>Choisissez une option pour votre photo de profil</Text>
+              <Text style={styles.modalTitle}>{t('profile.changeProfilePhoto')}</Text>
+              <Text style={styles.modalSubtitle}>{t('profile.chooseOption')}</Text>
               
               <Pressable key="take-photo-option" style={styles.modalOption} onPress={takePhotoWithCamera}>
                 <MaterialCommunityIcons name="camera" size={24} color={BRAND_BLUE} />
-                <Text style={styles.modalOptionText}>Prendre une photo</Text>
+                <Text style={styles.modalOptionText}>{t('profile.takePhoto')}</Text>
               </Pressable>
               
               <Pressable key="gallery-option" style={styles.modalOption} onPress={pickImageFromGallery}>
                 <MaterialCommunityIcons name="image" size={24} color={BRAND_BLUE} />
-                <Text style={styles.modalOptionText}>Choisir depuis la galerie</Text>
+                <Text style={styles.modalOptionText}>{t('profile.chooseFromGallery')}</Text>
               </Pressable>
               
               {profile?.profile_picture && (
                 <Pressable key="delete-option" style={[styles.modalOption, styles.deleteOption]} onPress={handleDeleteProfilePicture}>
                   <MaterialCommunityIcons name="delete" size={24} color="#EF4444" />
-                  <Text style={[styles.modalOptionText, styles.deleteOptionText]}>Supprimer la photo</Text>
+                  <Text style={[styles.modalOptionText, styles.deleteOptionText]}>{t('profile.deletePhoto')}</Text>
                 </Pressable>
               )}
               
@@ -467,7 +469,7 @@ export default function MonProfilPage() {
                 style={styles.cancelButton} 
                 onPress={() => setShowProfilePictureModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Annuler</Text>
+                <Text style={styles.cancelButtonText}>{t('profile.cancel')}</Text>
               </Pressable>
         </View>
           </View>

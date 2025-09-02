@@ -3,18 +3,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -58,6 +59,7 @@ export default function ItemDetailsPage() {
   const { itemType, itemId, itemData } = useLocalSearchParams();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   
   const [item, setItem] = useState<CalendarEvent | CalendarSouvenir | CalendarTodo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -128,7 +130,7 @@ export default function ItemDetailsPage() {
       setCoupleId(data.id);
     } catch (error) {
       console.error('Error getting couple ID:', error);
-      Alert.alert('Erreur', 'Impossible de récupérer l\'ID du couple');
+      Alert.alert(t('calendar.error'), 'Impossible de récupérer l\'ID du couple');
     }
   };
 
@@ -166,7 +168,7 @@ export default function ItemDetailsPage() {
       setItem(data);
     } catch (error) {
       console.error('Error loading item data:', error);
-      Alert.alert('Erreur', 'Impossible de charger les détails de l\'élément');
+      Alert.alert(t('calendar.error'), 'Impossible de charger les détails de l\'élément');
     } finally {
       setIsLoading(false);
     }
@@ -245,7 +247,7 @@ export default function ItemDetailsPage() {
           finalImageUrl = cloudinaryUrl;
           console.log('Image uploaded successfully:', cloudinaryUrl);
         } else {
-          Alert.alert('Erreur', 'Impossible de télécharger l\'image. Veuillez réessayer.');
+          Alert.alert(t('calendar.error'), 'Impossible de télécharger l\'image. Veuillez réessayer.');
           setIsSaving(false);
           return;
         }
@@ -304,7 +306,7 @@ export default function ItemDetailsPage() {
 
         setItem(newItem);
         setIsEditing(false);
-        Alert.alert('Succès', 'Élément converti et sauvegardé');
+        Alert.alert(t('calendar.success'), 'Élément converti et sauvegardé');
         return;
       }
 
@@ -348,10 +350,10 @@ export default function ItemDetailsPage() {
       
       setItem(data);
       setIsEditing(false);
-      Alert.alert('Succès', 'Modifications sauvegardées');
+      Alert.alert(t('calendar.success'), 'Modifications sauvegardées');
     } catch (error) {
       console.error('Error updating item:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder les modifications');
+      Alert.alert(t('calendar.error'), 'Impossible de sauvegarder les modifications');
     } finally {
       setIsSaving(false);
     }
@@ -476,7 +478,7 @@ export default function ItemDetailsPage() {
   const takePhotoWithCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Permission d\'accès à la caméra refusée');
+      Alert.alert(t('calendar.error'), 'Permission d\'accès à la caméra refusée');
       return;
     }
 
@@ -571,7 +573,7 @@ export default function ItemDetailsPage() {
       }
     } catch (error) {
       console.error('Cloudinary upload error:', error);
-      Alert.alert('Erreur', 'Impossible de télécharger l\'image sur Cloudinary. Vérifiez votre configuration.');
+      Alert.alert(t('calendar.error'), 'Impossible de télécharger l\'image sur Cloudinary. Vérifiez votre configuration.');
       return null;
     }
   };
@@ -631,7 +633,7 @@ export default function ItemDetailsPage() {
       <AppLayout>
         <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement des détails...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('calendar.loading')}</Text>
         </View>
       </AppLayout>
     );
@@ -663,7 +665,7 @@ export default function ItemDetailsPage() {
             {/* Edit Button */}
             <Pressable style={styles.editButton} onPress={startEditing}>
               <MaterialCommunityIcons name="pencil" size={20} color="white" />
-              <Text style={styles.editButtonText}>Modifier</Text>
+              <Text style={styles.editButtonText}>{t('common.edit')}</Text>
             </Pressable>
           </View>
         </View>
@@ -673,7 +675,7 @@ export default function ItemDetailsPage() {
           {/* Title */}
           {isEditing ? (
             <View style={styles.editField}>
-              <Text style={[styles.editLabel, { color: colors.text }]}>Titre:</Text>
+              <Text style={[styles.editLabel, { color: colors.text }]}>{t('calendar.titleField')}:</Text>
               <TextInput
                 style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={editTitle}
@@ -685,7 +687,7 @@ export default function ItemDetailsPage() {
           ) : (
             <>
               <View style={styles.formField}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>Titre</Text>
+                <Text style={[styles.formLabel, { color: colors.text }]}>{t('calendar.titleField')}</Text>
                 <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <Text style={[styles.infoText, { color: colors.text }]}>{item.title}</Text>
                 </View>
@@ -762,10 +764,10 @@ export default function ItemDetailsPage() {
                        {/* Date and Time */}
             {isEditing ? (
               <View style={styles.dateTimeContainer}>
-                <Text style={[styles.editLabel, { color: colors.text }]}>Date et Heure</Text>
+                <Text style={[styles.editLabel, { color: colors.text }]}>{t('calendar.dateTime')}</Text>
                 <View style={styles.dateTimeRow}>
                   <View style={styles.dateTimeField}>
-                    <Text style={[styles.dateTimeSubLabel, { color: colors.textSecondary }]}>Date</Text>
+                    <Text style={[styles.dateTimeSubLabel, { color: colors.textSecondary }]}>{t('calendar.dateTime')}</Text>
                     <Pressable 
                       style={[styles.dateTimeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                       onPress={() => setShowDatePicker(true)}
@@ -793,7 +795,7 @@ export default function ItemDetailsPage() {
               </View>
            ) : (
              <View style={styles.formField}>
-               <Text style={[styles.formLabel, { color: colors.text }]}>Date et Heure</Text>
+               <Text style={[styles.formLabel, { color: colors.text }]}>{t('calendar.dateTime')}</Text>
                <View style={styles.dateTimeContainer}>
                  {('event_date' in item && 'event_time' in item) ? (
                    <>
@@ -833,7 +835,7 @@ export default function ItemDetailsPage() {
            {/* Place */}
            {isEditing ? (
              <View style={styles.editField}>
-               <Text style={[styles.editLabel, { color: colors.text }]}>Lieu:</Text>
+               <Text style={[styles.editLabel, { color: colors.text }]}>{t('calendar.place')}:</Text>
                <View style={styles.placeInputContainer}>
                  <TextInput
                    style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
@@ -849,7 +851,7 @@ export default function ItemDetailsPage() {
                {editPlace.length >= 3 && (
                  <View style={[styles.placeSuggestions, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                    <Text style={[styles.placeSuggestionsTitle, { color: colors.text, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-                     {isLoadingPlaces ? 'Recherche en cours...' : 'Lieux trouvés:'}
+                     {isLoadingPlaces ? t('calendar.searching') : t('calendar.placesFound')}
                    </Text>
                    {isLoadingPlaces ? (
                      <View style={styles.placeSuggestionsList}>
@@ -889,7 +891,7 @@ export default function ItemDetailsPage() {
            ) : (
              'place' in item && (
                <View style={styles.formField}>
-                 <Text style={[styles.formLabel, { color: colors.text }]}>Lieu</Text>
+                 <Text style={[styles.formLabel, { color: colors.text }]}>{t('calendar.place')}</Text>
                  <View style={styles.placeInputContainer}>
                    <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                      <Text style={[styles.infoText, { color: colors.text }]}>{item.place}</Text>
@@ -932,12 +934,12 @@ export default function ItemDetailsPage() {
            {/* Description */}
            {isEditing ? (
              <View style={styles.editField}>
-               <Text style={[styles.editLabel, { color: colors.text }]}>Description:</Text>
+               <Text style={[styles.editLabel, { color: colors.text }]}>{t('calendar.description')}:</Text>
                <TextInput
                  style={[styles.textInput, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                  value={editDescription}
                  onChangeText={setEditDescription}
-                 placeholder="Description"
+                 placeholder={t('calendar.description')}
                  placeholderTextColor={colors.textSecondary}
                  multiline
                  numberOfLines={4}
@@ -946,7 +948,7 @@ export default function ItemDetailsPage() {
            ) : (
              'description' in item && (
                <View style={styles.formField}>
-                 <Text style={[styles.formLabel, { color: colors.text }]}>Description</Text>
+                 <Text style={[styles.formLabel, { color: colors.text }]}>{t('calendar.description')}</Text>
                  <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                    <Text style={[styles.infoText, { color: colors.text }]}>{item.description}</Text>
                  </View>
@@ -961,7 +963,7 @@ export default function ItemDetailsPage() {
         {isEditing && (
           <View style={styles.editActions}>
             <Pressable style={styles.cancelButton} onPress={cancelEditing}>
-              <Text style={styles.cancelButtonText}>Annuler</Text>
+              <Text style={styles.cancelButtonText}>{t('calendar.cancel')}</Text>
             </Pressable>
                          <Pressable 
                style={[styles.saveButtonGradient, isSaving && styles.saveButtonDisabled]} 
@@ -971,10 +973,10 @@ export default function ItemDetailsPage() {
                {isSaving ? (
                  <View style={styles.saveButtonLoading}>
                    <ActivityIndicator size="small" color="white" />
-                   <Text style={styles.saveButtonText}>Sauvegarde...</Text>
+                   <Text style={styles.saveButtonText}>{t('calendar.save')}...</Text>
                  </View>
                ) : (
-                 <Text style={styles.saveButtonText}>Sauvegarder</Text>
+                 <Text style={styles.saveButtonText}>{t('calendar.save')}</Text>
                )}
              </Pressable>
           </View>

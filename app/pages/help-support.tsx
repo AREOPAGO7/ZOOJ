@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import AppLayout from '../app-layout';
 
 const BRAND_PINK = "#F47CC6";
@@ -11,6 +12,7 @@ const DARK_GRAY = "#374151";
 
 export default function HelpSupportPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleBack = () => {
     router.back();
@@ -39,7 +41,7 @@ export default function HelpSupportPage() {
           <Pressable style={styles.backButton} onPress={handleBack}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
           </Pressable>
-          <Text style={styles.headerTitle}>Aide & Support</Text>
+          <Text style={styles.headerTitle}>{t('helpSupport.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -47,68 +49,68 @@ export default function HelpSupportPage() {
         <View style={styles.mainContent}>
           {/* Contact Us Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Nous Contacter</Text>
+            <Text style={styles.sectionTitle}>{t('helpSupport.contactUs')}</Text>
             
             <Pressable style={styles.contactCard} onPress={handleEmailContact}>
               <MaterialCommunityIcons name="email-outline" size={24} color={BRAND_PINK} />
               <View style={styles.contactInfo}>
-                <Text style={styles.contactLabel}>Par e-mail</Text>
-                <Text style={styles.contactDetail}>support@entreprise.com</Text>
+                <Text style={styles.contactLabel}>{t('helpSupport.byEmail')}</Text>
+                <Text style={styles.contactDetail}>{t('helpSupport.emailAddress')}</Text>
               </View>
             </Pressable>
 
             <Pressable style={styles.contactCard} onPress={handlePhoneContact}>
               <MaterialCommunityIcons name="phone-outline" size={24} color={BRAND_PINK} />
               <View style={styles.contactInfo}>
-                <Text style={styles.contactLabel}>Par téléphone</Text>
-                <Text style={styles.contactDetail}>01 23 45 67 89</Text>
+                <Text style={styles.contactLabel}>{t('helpSupport.byPhone')}</Text>
+                <Text style={styles.contactDetail}>{t('helpSupport.phoneNumber')}</Text>
               </View>
             </Pressable>
           </View>
 
           {/* FAQ Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Questions fréquentes</Text>
+            <Text style={styles.sectionTitle}>{t('helpSupport.faq')}</Text>
             
             <Pressable style={styles.faqCard} onPress={() => handleFAQItem('payments')}>
               <MaterialCommunityIcons name="help-circle-outline" size={24} color={BRAND_PINK} />
-              <Text style={styles.faqText}>Paiements</Text>
+              <Text style={styles.faqText}>{t('helpSupport.payments')}</Text>
               <MaterialCommunityIcons name="chevron-right" size={20} color={BRAND_GRAY} />
             </Pressable>
 
             <Pressable style={styles.faqCard} onPress={() => handleFAQItem('password')}>
               <MaterialCommunityIcons name="help-circle-outline" size={24} color={BRAND_PINK} />
-              <Text style={styles.faqText}>Comment modifier mon mot de passe ?</Text>
+              <Text style={styles.faqText}>{t('helpSupport.changePassword')}</Text>
               <MaterialCommunityIcons name="chevron-right" size={20} color={BRAND_GRAY} />
             </Pressable>
 
             <Pressable style={styles.faqCard} onPress={() => handleFAQItem('delete-account')}>
               <MaterialCommunityIcons name="help-circle-outline" size={24} color={BRAND_PINK} />
-              <Text style={styles.faqText}>Comment supprimer mon compte ?</Text>
+              <Text style={styles.faqText}>{t('helpSupport.deleteAccount')}</Text>
               <MaterialCommunityIcons name="chevron-right" size={20} color={BRAND_GRAY} />
             </Pressable>
           </View>
 
           {/* Company Address Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notre adresse</Text>
+            <Text style={styles.sectionTitle}>{t('helpSupport.ourAddress')}</Text>
             
             <View style={styles.addressCard}>
               <View style={styles.addressRow}>
                 <MaterialCommunityIcons name="map-marker-outline" size={24} color={BRAND_PINK} />
                 <View style={styles.addressInfo}>
-                  <Text style={styles.addressLabel}>Entreprise SAS</Text>
-                  <Text style={styles.addressDetail}>123 Avenue des Champs-Élysées</Text>
-                  <Text style={styles.addressDetail}>75008 Paris, France</Text>
+                  <Text style={styles.addressLabel}>{t('helpSupport.companyName')}</Text>
+                  <Text style={styles.addressDetail}>{t('helpSupport.streetAddress')}</Text>
+                  <Text style={styles.addressDetail}>{t('helpSupport.cityAddress')}</Text>
                 </View>
               </View>
               
               <View style={styles.addressRow}>
                 <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
                 <View style={styles.addressInfo}>
-                  <Text style={styles.addressLabel}>Horaires d'ouverture</Text>
-                  <Text style={styles.addressDetail}>Lundi - Vendredi: 9h00 - 18h00</Text>
-                  <Text style={styles.addressDetail}>Samedi: 10h00 - 16h00</Text>
+                  <Text style={styles.addressLabel}>{t('helpSupport.openingHours')}</Text>
+                  <Text style={styles.addressDetail}>{t('helpSupport.weekdayHours')}</Text>
+                  <Text style={styles.addressDetail}>{t('helpSupport.saturdayHours')}</Text>
                 </View>
               </View>
             </View>

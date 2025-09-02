@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import AppLayout from '../app-layout';
 
@@ -12,6 +13,7 @@ const BRAND_GRAY = "#6C6C6C";
 export default function ConfidentialitePage() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const [expandedCards, setExpandedCards] = React.useState<{
     [key: string]: boolean;
   }>({});
@@ -35,16 +37,16 @@ export default function ConfidentialitePage() {
           <Pressable style={styles.backButton} onPress={handleBack}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Confidentialité</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('privacy.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Conditions d'utilisation Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Conditions d'utilisation</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('privacy.termsOfUse')}</Text>
             <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-              En utilisant notre application, vous acceptez les conditions suivantes. Ces conditions sont essentielles pour assurer une utilisation appropriée et sécurisée de nos services.
+              {t('privacy.termsDescription')}
             </Text>
             
             <View style={styles.conditionsList}>
@@ -53,8 +55,8 @@ export default function ConfidentialitePage() {
                   <MaterialCommunityIcons name="shield-check" size={24} color={BRAND_BLUE} />
                 </View>
                 <View style={styles.conditionContent}>
-                  <Text style={[styles.conditionTitle, { color: colors.text }]}>Respect des droits d'auteur</Text>
-                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>Protection de la propriété intellectuelle</Text>
+                  <Text style={[styles.conditionTitle, { color: colors.text }]}>{t('privacy.copyrightRespect')}</Text>
+                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>{t('privacy.copyrightSubtitle')}</Text>
                 </View>
               </View>
 
@@ -63,8 +65,8 @@ export default function ConfidentialitePage() {
                   <MaterialCommunityIcons name="file-document-outline" size={24} color={BRAND_BLUE} />
                 </View>
                 <View style={styles.conditionContent}>
-                  <Text style={[styles.conditionTitle, { color: colors.text }]}>Utilisation appropriée des services</Text>
-                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>Règles d'utilisation et comportement</Text>
+                  <Text style={[styles.conditionTitle, { color: colors.text }]}>{t('privacy.appropriateUse')}</Text>
+                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>{t('privacy.appropriateUseSubtitle')}</Text>
                 </View>
               </View>
 
@@ -73,8 +75,8 @@ export default function ConfidentialitePage() {
                   <MaterialCommunityIcons name="lock" size={24} color={BRAND_BLUE} />
                 </View>
                 <View style={styles.conditionContent}>
-                  <Text style={[styles.conditionTitle, { color: colors.text }]}>Protection des données personnelles</Text>
-                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>Sécurité et confidentialité</Text>
+                  <Text style={[styles.conditionTitle, { color: colors.text }]}>{t('privacy.dataProtection')}</Text>
+                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>{t('privacy.dataProtectionSubtitle')}</Text>
                 </View>
               </View>
             </View>
@@ -82,14 +84,14 @@ export default function ConfidentialitePage() {
 
           {/* Informations Légales Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Informations Légales</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('privacy.legalInformation')}</Text>
             
             <View style={styles.legalCards}>
               <Pressable style={[styles.legalCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => toggleCard('privacy')}>
                 <View style={styles.legalCardContent}>
                   <View style={styles.legalCardText}>
-                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>Politique de confidentialité</Text>
-                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>Comment nous protégeons vos données</Text>
+                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>{t('privacy.privacyPolicy')}</Text>
+                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>{t('privacy.privacyPolicySubtitle')}</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={expandedCards['privacy'] ? "chevron-up" : "chevron-down"} 
@@ -100,7 +102,7 @@ export default function ConfidentialitePage() {
                 {expandedCards['privacy'] && (
                   <View style={styles.legalCardContent}>
                     <Text style={[styles.legalCardBody, { color: colors.textSecondary }]}>
-                      Nous nous engageons à protéger vos données personnelles. Toutes les informations que vous nous confiez sont stockées de manière sécurisée et ne sont jamais partagées avec des tiers sans votre consentement explicite. Nous utilisons des protocoles de chiffrement avancés et respectons strictement les normes RGPD.
+                      {t('privacy.privacyPolicyContent')}
                     </Text>
                   </View>
                 )}
@@ -109,8 +111,8 @@ export default function ConfidentialitePage() {
               <Pressable style={[styles.legalCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => toggleCard('gdpr')}>
                 <View style={styles.legalCardContent}>
                   <View style={styles.legalCardText}>
-                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>RGPD</Text>
-                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>Vos droits sur vos données</Text>
+                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>{t('privacy.gdpr')}</Text>
+                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>{t('privacy.gdprSubtitle')}</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={expandedCards['gdpr'] ? "chevron-up" : "chevron-down"} 
@@ -121,7 +123,7 @@ export default function ConfidentialitePage() {
                 {expandedCards['gdpr'] && (
                   <View style={styles.legalCardContent}>
                     <Text style={[styles.legalCardBody, { color: colors.textSecondary }]}>
-                      Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez des droits suivants : accès à vos données, rectification, effacement, limitation du traitement, portabilité des données et opposition au traitement. Vous pouvez exercer ces droits en nous contactant.
+                      {t('privacy.gdprContent')}
                     </Text>
                   </View>
                 )}
@@ -130,8 +132,8 @@ export default function ConfidentialitePage() {
               <Pressable style={[styles.legalCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => toggleCard('cookies')}>
                 <View style={styles.legalCardContent}>
                   <View style={styles.legalCardText}>
-                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>Cookies</Text>
-                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>Gestion des cookies et traceurs</Text>
+                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>{t('privacy.cookies')}</Text>
+                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>{t('privacy.cookiesSubtitle')}</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={expandedCards['cookies'] ? "chevron-up" : "chevron-down"} 
@@ -142,7 +144,7 @@ export default function ConfidentialitePage() {
                 {expandedCards['cookies'] && (
                   <View style={styles.legalCardContent}>
                     <Text style={[styles.legalCardBody, { color: colors.textSecondary }]}>
-                      Notre application utilise des cookies essentiels pour son bon fonctionnement. Ces cookies ne collectent aucune information personnelle et sont nécessaires pour vous offrir une expérience utilisateur optimale. Vous pouvez gérer vos préférences de cookies dans les paramètres de votre appareil.
+                      {t('privacy.cookiesContent')}
                     </Text>
                   </View>
                 )}

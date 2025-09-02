@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import AppLayout from '../app-layout';
 
 const BRAND_GRAY = "#6C6C6C";
@@ -10,6 +11,7 @@ const DARK_GRAY = "#374151";
 
 export default function AProposPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleBack = () => {
     router.back();
@@ -33,7 +35,7 @@ export default function AProposPage() {
           <Pressable style={styles.backButton} onPress={handleBack}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
           </Pressable>
-          <Text style={styles.headerTitle}>A propos</Text>
+          <Text style={styles.headerTitle}>{t('about.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -45,18 +47,18 @@ export default function AProposPage() {
           </View>
 
           {/* Current Version */}
-          <Text style={styles.currentVersion}>Version 2.1.0</Text>
+          <Text style={styles.currentVersion}>{t('about.currentVersion')}</Text>
 
           {/* Version Information Card */}
           <Pressable style={styles.infoCard} onPress={handleVersionInfo}>
             <MaterialCommunityIcons name="cellphone" size={24} color={DARK_GRAY} />
-            <Text style={styles.cardText}>Version 2.0.1</Text>
+            <Text style={styles.cardText}>{t('about.versionInfo')}</Text>
           </Pressable>
 
           {/* Technical Information Card */}
           <Pressable style={styles.infoCard} onPress={handleTechnicalInfo}>
             <MaterialCommunityIcons name="file-document" size={24} color={DARK_GRAY} />
-            <Text style={styles.cardText}>Informations techniques</Text>
+            <Text style={styles.cardText}>{t('about.technicalInfo')}</Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color={BRAND_GRAY} />
           </Pressable>
         </View>

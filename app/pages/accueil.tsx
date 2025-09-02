@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOp
 import { CoupleMoodDisplay } from '../../components/CoupleMoodDisplay';
 import { MoodSelector } from '../../components/MoodSelector';
 import { ReceivedPulse } from '../../components/ReceivedPulse';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
@@ -20,6 +21,7 @@ export default function AccueilPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   
   const [quizResultsCount, setQuizResultsCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,18 +36,18 @@ export default function AccueilPage() {
 
   // Pulse options data - exactement comme dans l'image
   const pulseOptions = [
-    { emoji: '🌸', label: 'Fleur' },
-    { emoji: '💘', label: 'Cœur' },
-    { emoji: '😄', label: 'Joyeux' },
-    { emoji: '😈', label: 'Coquin' },
-    { emoji: '💨', label: 'Nuage' },
+    { emoji: '🌸', label: t('home.pulseOptions.flower') },
+    { emoji: '💘', label: t('home.pulseOptions.heart') },
+    { emoji: '😄', label: t('home.pulseOptions.happy') },
+    { emoji: '😈', label: t('home.pulseOptions.naughty') },
+    { emoji: '💨', label: t('home.pulseOptions.cloud') },
   ];
 
   // Quiz categories data
   const quizCategories = [
-    { emoji: '📚', title: 'Lecture', color: '#4A90E2' },
-    { emoji: '💪', title: 'Fitness', color: '#50C878' },
-    { emoji: '🌿', title: 'Nature', color: '#228B22' },
+    { emoji: '📚', title: t('home.quizCategories.reading'), color: '#4A90E2' },
+    { emoji: '💪', title: t('home.quizCategories.fitness'), color: '#50C878' },
+    { emoji: '🌿', title: t('home.quizCategories.nature'), color: '#228B22' },
   ];
 
   // Fetch today's question
@@ -279,7 +281,7 @@ export default function AccueilPage() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('home.loading')}</Text>
       </View>
     );
   }
@@ -296,7 +298,7 @@ export default function AccueilPage() {
         {/* Header Section - Compatibility & Profile Pictures */}
         <View style={styles.headerSection}>
           <View style={styles.headerTop}>
-            <Text style={styles.compatibilityTitle}>Compatibilité</Text>
+            <Text style={styles.compatibilityTitle}>{t('home.compatibility')}</Text>
             <TouchableOpacity 
               style={styles.notificationButton}
               onPress={() => router.push('/pages/notifications')}
@@ -332,7 +334,7 @@ export default function AccueilPage() {
 
         {/* Votre humeur aujourd'hui Section */}
         <View style={styles.moodSection}>
-          <Text style={styles.sectionTitle}>Votre humeur aujourd'hui</Text>
+          <Text style={styles.sectionTitle}>{t('home.yourMoodToday')}</Text>
           <Pressable 
             style={styles.moodCard}
             onPress={() => setIsMoodSelectorVisible(true)}
@@ -344,15 +346,15 @@ export default function AccueilPage() {
                 </Text>
                 <View style={styles.moodTextContainer}>
                   <Text style={styles.moodText}>
-                    {currentUserMood ? moodService.getMoodInfo(currentUserMood).label + '!' : 'Définir votre humeur'}
+                    {currentUserMood ? moodService.getMoodInfo(currentUserMood).label + '!' : t('home.setYourMood')}
                   </Text>
                   <Text style={styles.moodDescription}>
-                    {currentUserMood === 'joyeux' ? 'Vous rayonnez de bonheur' : 
-                     currentUserMood === 'content' ? 'Vous êtes serein' :
-                     currentUserMood === 'neutre' ? 'Vous êtes calme' :
-                     currentUserMood === 'triste' ? 'Vous avez besoin de réconfort' :
-                     currentUserMood === 'enerve' ? 'Vous êtes tendu' :
-                     'Comment vous sentez-vous aujourd\'hui ?'}
+                    {currentUserMood === 'joyeux' ? t('home.moodDescriptions.joyeux') : 
+                     currentUserMood === 'content' ? t('home.moodDescriptions.content') :
+                     currentUserMood === 'neutre' ? t('home.moodDescriptions.neutre') :
+                     currentUserMood === 'triste' ? t('home.moodDescriptions.triste') :
+                     currentUserMood === 'enerve' ? t('home.moodDescriptions.enerve') :
+                     t('home.howDoYouFeel')}
                   </Text>
                 </View>
               </View>
@@ -365,9 +367,9 @@ export default function AccueilPage() {
 
         {/* Envoyez un pulse à votre moitié Section */}
         <View style={styles.pulseSection}>
-          <Text style={styles.sectionTitle}>Envoyez un pulse à votre moitié</Text>
+          <Text style={styles.sectionTitle}>{t('home.sendPulse')}</Text>
           <Text style={styles.pulseDescription}>
-            Avec un petit geste fun ou tendre à partager avec votre partenaire en un seul clic. À vous de jouer !
+            {t('home.pulseDescription')}
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pulseScrollView}>
             {pulseOptions.map((option, index) => (
@@ -387,7 +389,7 @@ export default function AccueilPage() {
 
         {/* Thématiques des Quizz Section */}
         <View style={styles.quizSection}>
-          <Text style={styles.sectionTitle}>Thématiques des Quizz</Text>
+          <Text style={styles.sectionTitle}>{t('home.quizThemes')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quizScrollView}>
             {quizCategories.map((category, index) => (
               <Pressable key={index} style={styles.quizCard}>
@@ -402,12 +404,12 @@ export default function AccueilPage() {
 
         {/* Question du jour Section */}
         <View style={styles.dailyQuestionSection}>
-          <Text style={styles.sectionTitle}>Question du jour</Text>
+          <Text style={styles.sectionTitle}>{t('home.dailyQuestion')}</Text>
           <View style={styles.questionCard}>
             {isLoadingQuestion ? (
               <View style={styles.questionLoadingContainer}>
                 <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.questionLoadingText}>Chargement de la question...</Text>
+                <Text style={styles.questionLoadingText}>{t('home.loadingQuestion')}</Text>
               </View>
             ) : todayQuestion?.question ? (
               <>
@@ -421,13 +423,13 @@ export default function AccueilPage() {
                   style={styles.answerButton}
                   onPress={() => router.push('/pages/questions')}
                 >
-                  <Text style={styles.answerButtonText}>Répondre</Text>
+                  <Text style={styles.answerButtonText}>{t('home.answer')}</Text>
                 </Pressable>
               </>
             ) : (
               <>
                 <Text style={styles.questionText}>
-                  "Aucune question du jour disponible"
+                  "{t('home.noQuestionAvailable')}"
                 </Text>
                 <Text style={styles.questionDebug}>
                   Debug: Vérifiez la console pour plus d'informations
@@ -436,7 +438,7 @@ export default function AccueilPage() {
                   style={styles.answerButton}
                   onPress={() => router.push('/pages/questions')}
                 >
-                  <Text style={styles.answerButtonText}>Voir les questions</Text>
+                  <Text style={styles.answerButtonText}>{t('home.seeQuestions')}</Text>
                 </Pressable>
               </>
             )}

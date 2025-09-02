@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { ThemeContext } from '../../contexts/ThemeContext';
 import AppLayout from '../app-layout';
 
@@ -12,6 +13,7 @@ const DARK_GRAY = "#374151";
 export default function ThemesPage() {
   const router = useRouter();
   const { theme, setTheme } = useContext(ThemeContext);
+  const { t } = useLanguage();
 
   const handleBack = () => {
     router.back();
@@ -29,7 +31,7 @@ export default function ThemesPage() {
           <Pressable style={styles.backButton} onPress={handleBack}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
           </Pressable>
-          <Text style={styles.headerTitle}>Thème</Text>
+          <Text style={styles.headerTitle}>{t('themes.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -50,7 +52,7 @@ export default function ThemesPage() {
                 )}
               </View>
             </View>
-            <Text style={styles.themeText}>Mode clair</Text>
+            <Text style={styles.themeText}>{t('themes.lightMode')}</Text>
           </Pressable>
 
           {/* Dark Mode Option */}
@@ -68,7 +70,7 @@ export default function ThemesPage() {
                 )}
               </View>
             </View>
-            <Text style={styles.themeText}>Mode sombre</Text>
+            <Text style={styles.themeText}>{t('themes.darkMode')}</Text>
           </Pressable>
         </View>
       </View>

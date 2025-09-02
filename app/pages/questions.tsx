@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 // import { dailyQuestionScheduler } from '../../lib/dailyQuestionScheduler';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Answer, questionService } from '../../lib/questionService';
 import { supabase } from '../../lib/supabase';
@@ -15,6 +16,7 @@ export default function QuestionsPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const [questions, setQuestions] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [couple, setCouple] = useState<any>(null);
@@ -184,22 +186,22 @@ export default function QuestionsPage() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (date.toDateString() === today.toDateString()) {
-      return 'Aujourd\'hui';
+      return t('questions.today');
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Hier';
+      return t('questions.yesterday');
     } else if (diffDays < 7) {
-      return `Il y a ${diffDays} jours`;
+      return `${diffDays} ${t('questions.daysAgo')}`;
     } else if (diffDays < 14) {
-      return 'Il y a 1 semaine';
+      return t('questions.weekAgo');
     } else if (diffDays < 30) {
       const weeks = Math.floor(diffDays / 7);
-      return `Il y a ${weeks} semaines`;
+      return `${weeks} ${t('questions.weeksAgo')}`;
     } else if (diffDays < 365) {
       const months = Math.floor(diffDays / 30);
-      return `Il y a ${months} mois`;
+      return `${months} ${t('questions.monthAgo')}`;
     } else {
       const years = Math.floor(diffDays / 365);
-      return `Il y a ${years} an${years > 1 ? 's' : ''}`;
+      return years > 1 ? `${years} ${t('questions.yearsAgo')}` : `${years} ${t('questions.yearAgo')}`;
     }
   };
 
@@ -246,7 +248,7 @@ export default function QuestionsPage() {
       // Get couple information
       const { data: coupleData } = await questionService.getCouple(user!.id);
       if (!coupleData) {
-        alert('Erreur: Couple non trouvé');
+        alert(t('questions.coupleNotFound'));
         return;
       }
 
@@ -256,7 +258,7 @@ export default function QuestionsPage() {
       // Validate question ID
       if (!question.id || typeof question.id !== 'string') {
         console.error('Invalid question ID:', question.id);
-        alert('Erreur: ID de question invalide');
+        alert(t('questions.invalidQuestionId'));
         return;
       }
 
@@ -283,7 +285,7 @@ export default function QuestionsPage() {
         
         if (createError) {
           console.error('Error creating couple-specific daily question:', createError);
-          alert('Erreur lors de la création de la question quotidienne');
+          alert(t('questions.errorCreatingQuestion'));
           return;
         }
         
@@ -293,7 +295,7 @@ export default function QuestionsPage() {
         // For couple-specific questions, use the existing daily_question_id
         if (!dailyQuestionId) {
           console.error('No daily question ID found for question:', question);
-          alert('Erreur: Question quotidienne non trouvée');
+          alert(t('questions.dailyQuestionNotFound'));
           return;
         }
       }
@@ -309,7 +311,7 @@ export default function QuestionsPage() {
         .single();
 
       if (existingAnswer) {
-        alert('Vous avez déjà répondu à cette question aujourd\'hui');
+        alert(t('questions.alreadyAnswered'));
         setExpandedQuestionId(null);
         return;
       }
@@ -329,7 +331,7 @@ export default function QuestionsPage() {
 
       if (answerError) {
         console.error('Error submitting answer:', answerError);
-        alert('Erreur lors de la soumission de la réponse');
+        alert(t('questions.errorSubmittingAnswer'));
         return;
       }
 
@@ -344,7 +346,7 @@ export default function QuestionsPage() {
 
     } catch (error) {
       console.error('Error submitting answer:', error);
-      alert('Erreur lors de la soumission de la réponse');
+      alert(t('questions.errorSubmittingAnswer'));
     } finally {
       setSubmittingAnswers(prev => ({ ...prev, [question.id]: false }));
     }
@@ -356,7 +358,7 @@ export default function QuestionsPage() {
       const { data: coupleData } = await questionService.getCouple(user!.id);
       
       if (!coupleData) {
-        alert('Erreur: Couple non trouvé');
+        alert(t('questions.coupleNotFound'));
         return;
       }
 
@@ -373,7 +375,7 @@ export default function QuestionsPage() {
           .single();
         
         if (!coupleDailyQuestion) {
-          alert('Question non trouvée pour ce couple');
+          alert(t('questions.questionNotFound'));
           return;
         }
         
@@ -381,7 +383,7 @@ export default function QuestionsPage() {
       } else {
         if (!dailyQuestionId) {
           console.error('No daily question ID found for question:', question);
-          alert('Erreur: Question quotidienne non trouvée');
+          alert(t('questions.dailyQuestionNotFound'));
           return;
         }
       }
@@ -397,11 +399,11 @@ export default function QuestionsPage() {
         // Both answered, go to chat
         router.push(`/pages/question-chat?questionId=${question.id}`);
       } else {
-        alert('Attendez que votre partenaire réponde aussi à cette question');
+        alert(t('questions.waitForPartner'));
       }
     } catch (error) {
       console.error('Error checking answers:', error);
-      alert('Erreur lors de la vérification des réponses');
+      alert(t('questions.errorCheckingAnswers'));
     }
   };
 
@@ -442,7 +444,7 @@ export default function QuestionsPage() {
           
           <View style={styles.questionContent}>
             <Text style={[styles.questionText, { color: colors.text }]} numberOfLines={2}>
-              {item.content || 'Question du jour'}
+              {item.content || t('questions.questionOfDay')}
             </Text>
             <Text style={[styles.questionDate, { color: colors.textSecondary }]}>
               {formatDate(item.created_at)}
@@ -453,12 +455,12 @@ export default function QuestionsPage() {
             {/* Answer Status */}
             {item.answerCount === 1 && (
               <Text style={[styles.answerStatus, { color: colors.primary }]}>
-                💬 Votre partenaire a répondu
+                {t('questions.partnerAnswered')}
               </Text>
             )}
             {item.answerCount === 2 && (
               <Text style={[styles.answerStatus, { color: colors.primary }]}>
-                ✨ Vous pouvez maintenant discuter !
+                {t('questions.canDiscuss')}
               </Text>
             )}
             
@@ -469,7 +471,7 @@ export default function QuestionsPage() {
                 onPress={() => handleChatPress(item)}
               >
                 <MaterialCommunityIcons name="chat" size={16} color="#FFFFFF" />
-                <Text style={styles.chatButtonInlineText}>Discuter</Text>
+                <Text style={styles.chatButtonInlineText}>{t('questions.discuss')}</Text>
               </Pressable>
             )}
           </View>
@@ -486,7 +488,7 @@ export default function QuestionsPage() {
           <View style={styles.answerInputContainer}>
             <TextInput
               style={[styles.answerInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder="Tapez votre réponse..."
+              placeholder={t('questions.typeAnswer')}
               value={answerTexts[item.id] || ''}
               onChangeText={(text) => setAnswerTexts(prev => ({ ...prev, [item.id]: text }))}
               multiline
@@ -501,7 +503,7 @@ export default function QuestionsPage() {
                 {submittingAnswers[item.id] ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.submitAnswerButtonText}>Envoyer</Text>
+                  <Text style={styles.submitAnswerButtonText}>{t('questions.send')}</Text>
                 )}
               </Pressable>
             </View>
@@ -516,7 +518,7 @@ export default function QuestionsPage() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#2DB6FF" />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('questions.loading')}</Text>
       </View>
     );
   }
@@ -531,7 +533,7 @@ export default function QuestionsPage() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Questions & Réponses</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('questions.title')}</Text>
           <Pressable style={styles.searchButton}>
             <MaterialCommunityIcons name="magnify" size={24} color={colors.text} />
           </Pressable>
@@ -549,7 +551,7 @@ export default function QuestionsPage() {
               onPress={() => setActiveFilter('all')}
             >
               <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'all' && styles.filterTabTextActive]}>
-                Tout
+                {t('questions.all')}
               </Text>
             </Pressable>
             
@@ -558,7 +560,7 @@ export default function QuestionsPage() {
               onPress={() => setActiveFilter('unread')}
             >
               <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'unread' && styles.filterTabTextActive]}>
-                Non lu(s)
+                {t('questions.unread')}
               </Text>
             </Pressable>
             
@@ -567,7 +569,7 @@ export default function QuestionsPage() {
               onPress={() => setActiveFilter('myTurn')}
             >
               <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'myTurn' && styles.filterTabTextActive]}>
-                A mon tour
+                {t('questions.myTurn')}
               </Text>
             </Pressable>
             
@@ -576,7 +578,7 @@ export default function QuestionsPage() {
               onPress={() => setActiveFilter('theirTurn')}
             >
               <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'theirTurn' && styles.filterTabTextActive]}>
-                A son tour
+                {t('questions.theirTurn')}
               </Text>
             </Pressable>
           </ScrollView>
@@ -586,7 +588,7 @@ export default function QuestionsPage() {
         {loadingQuestions ? (
           <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
             <ActivityIndicator size="large" color="#2DB6FF" />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('questions.loading')}</Text>
           </View>
         ) : questions.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -605,7 +607,7 @@ export default function QuestionsPage() {
                 style={styles.heartEmptyIcon} 
               />
             </View>
-            <Text style={[styles.emptyText, { color: colors.text }]}>Aucun élément dans la liste</Text>
+            <Text style={[styles.emptyText, { color: colors.text }]}>{t('questions.noItems')}</Text>
           </View>
         ) : (
           <FlatList

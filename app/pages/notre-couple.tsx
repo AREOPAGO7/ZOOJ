@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
@@ -66,6 +67,7 @@ export default function NotreCouplePage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [userNames, setUserNames] = useState<{ user1: string; user2: string } | null>(null);
@@ -141,8 +143,8 @@ export default function NotreCouplePage() {
         const user1Profile = profiles.find(p => p.id === user1Id);
         const user2Profile = profiles.find(p => p.id === user2Id);
         
-        const user1Name = user1Profile?.first_name || user1Profile?.name || user1Profile?.username || 'Utilisateur 1';
-        const user2Name = user2Profile?.first_name || user2Profile?.name || user2Profile?.username || 'Utilisateur 2';
+        const user1Name = user1Profile?.first_name || user1Profile?.name || user1Profile?.username || t('ourCouple.user1');
+        const user2Name = user2Profile?.first_name || user2Profile?.name || user2Profile?.username || t('ourCouple.user2');
         
         setUserNames({
           user1: user1Name,
@@ -210,13 +212,13 @@ export default function NotreCouplePage() {
 
       if (error) {
         console.error('Error updating anniversary date:', error);
-        Alert.alert('Erreur', 'Impossible de mettre à jour la date d\'anniversaire');
+        Alert.alert(t('ourCouple.error'), t('ourCouple.errorUpdatingAnniversary'));
       } else {
-        Alert.alert('Succès', 'Date d\'anniversaire mise à jour avec succès');
+        Alert.alert(t('ourCouple.success'), t('ourCouple.anniversaryUpdated'));
       }
     } catch (error) {
       console.error('Error updating anniversary date:', error);
-      Alert.alert('Erreur', 'Une erreur inattendue s\'est produite');
+      Alert.alert(t('ourCouple.error'), t('ourCouple.unexpectedError'));
     } finally {
       setIsUpdatingDate(false);
     }
@@ -483,11 +485,11 @@ export default function NotreCouplePage() {
       r.quiz_title.toLowerCase().includes('communication')
     );
 
-    if (!communicationQuiz) return "Style de communication à découvrir";
+    if (!communicationQuiz) return t('ourCouple.communicationStyle1');
 
-    if (communicationQuiz.score >= 80) return "Communication excellente et ouverte";
-    if (communicationQuiz.score >= 60) return "Communication bonne avec quelques améliorations possibles";
-    return "Communication à améliorer - opportunité de croissance";
+    if (communicationQuiz.score >= 80) return t('ourCouple.communicationStyle2');
+    if (communicationQuiz.score >= 60) return t('ourCouple.communicationStyle3');
+    return t('ourCouple.communicationStyle4');
   };
 
   const getUserResponsePatterns = (results: QuizResult[], isUser1: boolean): string => {
@@ -495,13 +497,13 @@ export default function NotreCouplePage() {
       isUser1 ? r.user1_percent > r.user2_percent : r.user2_percent > r.user1_percent
     );
 
-    if (userResults.length === 0) return "Patterns de réponse à découvrir";
+    if (userResults.length === 0) return t('ourCouple.responsePattern1');
 
     const averageScore = userResults.reduce((sum, r) => sum + (isUser1 ? r.user1_percent : r.user2_percent), 0) / userResults.length;
     
-    if (averageScore >= 80) return "Réponses très engagées et passionnées";
-    if (averageScore >= 60) return "Réponses modérées et réfléchies";
-    return "Réponses prudentes et mesurées";
+    if (averageScore >= 80) return t('ourCouple.responsePattern2');
+    if (averageScore >= 60) return t('ourCouple.responsePattern3');
+    return t('ourCouple.responsePattern4');
   };
 
   const getPersonalGrowthAreas = (results: QuizResult[], isUser1: boolean): string[] => {
@@ -547,7 +549,7 @@ export default function NotreCouplePage() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={BRAND_PINK} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Analyse de votre couple...</Text>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('ourCouple.loading')}</Text>
           </View>
         </View>
       </AppLayout>
@@ -560,7 +562,7 @@ export default function NotreCouplePage() {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <MaterialCommunityIcons name="heart-outline" size={32} color={BRAND_PINK} />
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Notre couple</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('ourCouple.title')}</Text>
         </View>
         
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -611,7 +613,7 @@ export default function NotreCouplePage() {
             </Text>
 
             {/* Relationship Duration */}
-            <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>Ensemble depuis</Text>
+            <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>{t('ourCouple.togetherSince')}</Text>
             <View style={styles.durationContainer}>
               {(() => {
                 if (anniversaryDate) {
@@ -628,24 +630,24 @@ export default function NotreCouplePage() {
                       {years > 0 && (
                         <>
                           <Text style={styles.durationNumber}>{years}</Text>
-                                                <Text style={[styles.durationText, { color: colors.text }]}>an{years > 1 ? 's' : ''}</Text>
-                    </>
-                  )}
-                  {months > 0 && (
-                    <>
-                      <Text style={styles.durationNumber}>{months}</Text>
-                      <Text style={[styles.durationText, { color: colors.text }]}>mois</Text>
-                    </>
-                  )}
-                  <Text style={styles.durationNumber}>{days}</Text>
-                  <Text style={[styles.durationText, { color: colors.text }]}>jour{days > 1 ? 's' : ''}</Text>
+                          <Text style={[styles.durationText, { color: colors.text }]}>{years > 1 ? t('ourCouple.yearsPlural') : t('ourCouple.years')}</Text>
+                        </>
+                      )}
+                      {months > 0 && (
+                        <>
+                          <Text style={styles.durationNumber}>{months}</Text>
+                          <Text style={[styles.durationText, { color: colors.text }]}>{t('ourCouple.months')}</Text>
+                        </>
+                      )}
+                      <Text style={styles.durationNumber}>{days}</Text>
+                      <Text style={[styles.durationText, { color: colors.text }]}>{days > 1 ? t('ourCouple.daysPlural') : t('ourCouple.days')}</Text>
                     </>
                   );
                 }
                 return (
                   <>
                     <Text style={styles.durationNumber}>0</Text>
-                    <Text style={styles.durationText}>jour</Text>
+                    <Text style={styles.durationText}>{t('ourCouple.days')}</Text>
                   </>
                 );
               })()}
@@ -661,7 +663,7 @@ export default function NotreCouplePage() {
                   </View>
                   <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user1 || 'Lara'}</Text>
                   <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}>
-                    Compatibilité basée sur {user1QuizCount} quiz
+                    {t('ourCouple.compatibilityBasedOn')} {user1QuizCount} {user1QuizCount > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
                   </Text>
                 </View>
   
@@ -672,9 +674,9 @@ export default function NotreCouplePage() {
                      </Text>
                    </View>
                    <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user2 || 'Med'}</Text>
-                                        <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}>
-                       Compatibilité basée sur {user2QuizCount} quiz
-                     </Text>
+                   <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}>
+                     {t('ourCouple.compatibilityBasedOn')} {user2QuizCount} {user2QuizCount > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
+                   </Text>
                  </View>
               </View>
           </View>
@@ -683,7 +685,7 @@ export default function NotreCouplePage() {
           <View style={styles.anniversarySection}>
             <View style={styles.anniversaryHeader}>
               <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
-              <Text style={[styles.anniversaryTitle, { color: colors.text }]}>Anniversaire de couple</Text>
+              <Text style={[styles.anniversaryTitle, { color: colors.text }]}>{t('ourCouple.anniversaryTitle')}</Text>
             </View>
             <View style={[styles.dateInputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <MaterialCommunityIcons name="calendar" size={20} color={BRAND_GRAY} />
@@ -697,7 +699,7 @@ export default function NotreCouplePage() {
               <MaterialCommunityIcons name="pencil" size={20} color={BRAND_BLUE} />
             </View>
             <Pressable style={styles.updateDateButton} onPress={updateAnniversaryDate}>
-              <Text style={styles.updateDateButtonText}>{isUpdatingDate ? 'Mise à jour...' : 'Mettre à jour la date'}</Text>
+              <Text style={styles.updateDateButtonText}>{isUpdatingDate ? t('ourCouple.updating') : t('ourCouple.updateDate')}</Text>
             </Pressable>
           </View>
 
@@ -708,13 +710,13 @@ export default function NotreCouplePage() {
                <Text style={[styles.statNumber, { color: colors.text }]}>
                  {answeredQuestionsCount}
                </Text>
-               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Questions répondues</Text>
+               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.questionsAnswered')}</Text>
              </View>
  
              <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                <MaterialCommunityIcons name="heart-outline" size={24} color={BRAND_PINK} />
                <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pulses envoyés</Text>
+               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.pulsesSent')}</Text>
              </View>
  
              <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
@@ -722,20 +724,20 @@ export default function NotreCouplePage() {
                <Text style={[styles.statNumber, { color: colors.text }]}>
                  {quizResults.length}
                </Text>
-               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Quizz complétés</Text>
+               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.quizzesCompleted')}</Text>
              </View>
  
              <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                <MaterialCommunityIcons name="image-outline" size={24} color={BRAND_PINK} />
                <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Souvenirs partagés</Text>
+               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.sharedMemories')}</Text>
              </View>
            </View>
 
           {/* Existing Compatibility Dashboard - Moved to Bottom */}
           {coupleInsights && (
             <View style={styles.compatibilitySection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Dashboard de Compatibilité</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('ourCouple.compatibilityDashboard')}</Text>
               
               {/* Overall Compatibility Score */}
               <View style={styles.compatibilityCard}>
@@ -745,13 +747,13 @@ export default function NotreCouplePage() {
                   end={{ x: 1, y: 0 }}
                   style={styles.compatibilityGradient}
                 >
-                  <Text style={styles.compatibilityTitle}>Compatibilité Globale</Text>
+                  <Text style={styles.compatibilityTitle}>{t('ourCouple.globalCompatibility')}</Text>
                   <View style={styles.scoreContainer}>
                     <Text style={styles.scoreText}>{coupleInsights.overallCompatibility}%</Text>
                     <Text style={styles.scoreEmoji}>{getScoreEmoji(coupleInsights.overallCompatibility)}</Text>
                   </View>
                   <Text style={styles.compatibilitySubtitle}>
-                    Basé sur {coupleInsights.totalQuizzes} quiz{coupleInsights.totalQuizzes > 1 ? 's' : ''}
+                    {t('ourCouple.basedOn')} {coupleInsights.totalQuizzes} {coupleInsights.totalQuizzes > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
                   </Text>
                 </LinearGradient>
               </View>
@@ -760,7 +762,7 @@ export default function NotreCouplePage() {
               <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                 <View style={styles.cardHeader}>
                   <MaterialCommunityIcons name="message-text" size={24} color={BRAND_BLUE} />
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>Style de Communication</Text>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.communicationStyle')}</Text>
                 </View>
                 <Text style={[styles.insightText, { color: colors.textSecondary }]}>{coupleInsights.communicationStyle}</Text>
               </View>
@@ -771,14 +773,14 @@ export default function NotreCouplePage() {
                 <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.cardHeader}>
                     <MaterialCommunityIcons name="star" size={24} color="#4CAF50" />
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>Points Forts</Text>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.strengths')}</Text>
                   </View>
                   {coupleInsights.strongestAreas.length > 0 ? (
                     coupleInsights.strongestAreas.map((area, index) => (
                       <Text key={index} style={[styles.insightItem, { color: colors.textSecondary }]}>• {area}</Text>
                     ))
                   ) : (
-                    <Text style={[styles.noDataText, { color: colors.textSecondary }]}>Continuez à explorer ensemble !</Text>
+                    <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('ourCouple.continueExploring')}</Text>
                   )}
                 </View>
 
@@ -786,14 +788,14 @@ export default function NotreCouplePage() {
                 <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.cardHeader}>
                     <MaterialCommunityIcons name="trending-up" size={24} color="#FF9800" />
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>À Améliorer</Text>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.growthAreas')}</Text>
                   </View>
                   {coupleInsights.growthAreas.length > 0 ? (
                     coupleInsights.growthAreas.map((area, index) => (
                       <Text key={index} style={[styles.insightItem, { color: colors.textSecondary }]}>• {area}</Text>
                     ))
                   ) : (
-                    <Text style={[styles.noDataText, { color: colors.textSecondary }]}>Excellent travail !</Text>
+                    <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('ourCouple.excellentWork')}</Text>
                   )}
                 </View>
               </View>
@@ -803,33 +805,33 @@ export default function NotreCouplePage() {
                 <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.cardHeader}>
                     <MaterialCommunityIcons name="account" size={24} color={BRAND_PINK} />
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>Vos Insights Personnels</Text>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.personalInsights')}</Text>
                   </View>
                   
                   <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>Pattern de Réponses:</Text>
+                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>{t('ourCouple.responsePatterns')}</Text>
                     <Text style={[styles.insightValue, { color: colors.text }]}>{personalInsights.responsePatterns}</Text>
                   </View>
 
                   <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>Sujets Préférés:</Text>
+                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>{t('ourCouple.favoriteTopics')}</Text>
                     {personalInsights.favoriteTopics.length > 0 ? (
                       personalInsights.favoriteTopics.map((topic, index) => (
                         <Text key={index} style={[styles.insightValue, { color: colors.text }]}>• {topic}</Text>
                       ))
                     ) : (
-                      <Text style={[styles.noDataText, { color: colors.textSecondary }]}>Continuez à explorer !</Text>
+                      <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('ourCouple.continueExploringPersonal')}</Text>
                     )}
                   </View>
 
                   <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>Zones de Croissance:</Text>
+                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>{t('ourCouple.growthZones')}</Text>
                     {personalInsights.growthAreas.length > 0 ? (
                       personalInsights.growthAreas.map((area, index) => (
                         <Text key={index} style={[styles.insightValue, { color: colors.text }]}>• {area}</Text>
                       ))
                     ) : (
-                      <Text style={[styles.noDataText, { color: colors.textSecondary }]}>Vous êtes sur la bonne voie !</Text>
+                      <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('ourCouple.onRightTrack')}</Text>
                     )}
                   </View>
                 </View>
@@ -840,7 +842,7 @@ export default function NotreCouplePage() {
                 <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.cardHeader}>
                     <MaterialCommunityIcons name="chart-line" size={24} color={BRAND_BLUE} />
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>Résultats Détaillés</Text>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.detailedResults')}</Text>
                   </View>
                   
                   {quizResults.map((result, index) => (
@@ -856,11 +858,11 @@ export default function NotreCouplePage() {
                       
                       <View style={styles.quizDetails}>
                         <View style={styles.quizDetail}>
-                          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{userNames?.user1 || 'Vous'}:</Text>
+                          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{userNames?.user1 || t('ourCouple.you')}:</Text>
                           <Text style={[styles.detailValue, { color: colors.text }]}>{result.user1_percent}%</Text>
                         </View>
                         <View style={styles.quizDetail}>
-                          <Text style={styles.detailLabel}>{userNames?.user2 || 'Partenaire'}:</Text>
+                          <Text style={styles.detailLabel}>{userNames?.user2 || t('ourCouple.partner')}:</Text>
                           <Text style={[styles.detailValue, { color: colors.text }]}>{result.user2_percent}%</Text>
                         </View>
                       </View>
@@ -875,9 +877,9 @@ export default function NotreCouplePage() {
           {quizResults.length === 0 && (
             <View style={[styles.noDataCard, { backgroundColor: colors.surface }]}>
               <MaterialCommunityIcons name="heart-outline" size={48} color={BRAND_GRAY} />
-              <Text style={[styles.noDataTitle, { color: colors.text }]}>Aucun quiz complété</Text>
+              <Text style={[styles.noDataTitle, { color: colors.text }]}>{t('ourCouple.noQuizCompleted')}</Text>
               <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-                Complétez des quiz ensemble pour découvrir votre compatibilité et obtenir des insights personnalisés.
+                {t('ourCouple.noQuizMessage')}
               </Text>
             </View>
           )}

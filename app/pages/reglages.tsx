@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
@@ -12,6 +13,7 @@ export default function ReglagesPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { t } = useLanguage();
 
   // Don't render if not authenticated or profile not completed
   if (loading || profileLoading || !user || !isProfileComplete) {
@@ -21,56 +23,56 @@ export default function ReglagesPage() {
   const settingsOptions = [
     {
       id: 'bons-plans',
-      title: 'Bons plans',
+      title: t('settings.goodDeals'),
       icon: 'earth',
       route: '/pages/bons-plans'
     },
     {
       id: 'notre-couple',
-      title: 'Notre couple',
+      title: t('settings.ourCouple'),
       icon: 'heart-outline',
       route: '/pages/notre-couple'
     },
 
     {
       id: 'confidentialite',
-      title: 'Confidentialité',
+      title: t('settings.privacy'),
       icon: 'lock-outline',
       route: '/pages/confidentialite'
     },
     {
       id: 'langue',
-      title: 'Langue',
+      title: t('settings.language'),
       icon: 'translate',
       route: '/pages/langue'
     },
     {
       id: 'themes',
-      title: 'Thèmes',
+      title: t('settings.themes'),
       icon: 'weather-night',
       route: '/pages/themes'
     },
     {
       id: 'jeux',
-      title: 'Jeux',
+      title: t('settings.games'),
       icon: 'account-group',
       route: '/pages/jeux'
     },
     {
       id: 'mon-profil',
-      title: 'Mon profil',
+      title: t('settings.myProfile'),
       icon: 'account-outline',
       route: '/pages/mon-profil'
     },
     {
       id: 'help-support',
-      title: 'Help & Support',
+      title: t('settings.helpSupport'),
       icon: 'help-circle-outline',
       route: '/pages/help-support'
     },
     {
       id: 'a-propos',
-      title: 'A propos',
+      title: t('settings.about'),
       icon: 'information-outline',
       route: '/pages/a-propos'
     }
@@ -85,7 +87,7 @@ export default function ReglagesPage() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Réglages</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.title')}</Text>
         </View>
 
         {/* Settings List */}

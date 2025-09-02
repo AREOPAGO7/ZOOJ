@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
 import { ChatMessage, questionService } from '../../lib/questionService';
@@ -16,6 +17,7 @@ export default function QuestionChatPage() {
   const { user, profile, loading } = useAuth();
   const { questionId } = useLocalSearchParams<{ questionId: string }>();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const [question, setQuestion] = useState<any>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -314,7 +316,7 @@ export default function QuestionChatPage() {
       // Get couple information
       const { data: coupleData } = await questionService.getCouple(user!.id);
       if (!coupleData) {
-        alert('Erreur: Couple non trouvé');
+        alert(t('questionChat.coupleNotFound'));
         return;
       }
 
@@ -339,7 +341,7 @@ export default function QuestionChatPage() {
           .single();
 
         if (createError) {
-          alert('Erreur lors de la création de la question quotidienne');
+          alert(t('questionChat.errorCreatingQuestion'));
           return;
         }
         dailyQuestion = newDailyQuestion;
@@ -347,7 +349,7 @@ export default function QuestionChatPage() {
 
       // Ensure we have a daily question before proceeding
       if (!dailyQuestion) {
-        alert('Erreur: Impossible de créer la question quotidienne');
+        alert(t('questionChat.errorCreatingDailyQuestion'));
         return;
       }
 
@@ -364,7 +366,7 @@ export default function QuestionChatPage() {
 
       if (answerError) {
         console.error('Error submitting answer:', answerError);
-        alert('Erreur lors de la soumission de la réponse');
+        alert(t('questionChat.errorSubmittingAnswer'));
         return;
       }
 
@@ -377,7 +379,7 @@ export default function QuestionChatPage() {
 
     } catch (error) {
       console.error('Error submitting answer:', error);
-      alert('Erreur lors de la soumission de la réponse');
+      alert(t('questionChat.errorSubmittingAnswer'));
     } finally {
       setSubmittingAnswer(false);
     }
@@ -530,7 +532,7 @@ export default function QuestionChatPage() {
 
     return (
       <View style={styles.answersSection}>
-        <Text style={[styles.answersTitle, { color: colors.textSecondary }]}>Vos réponses :</Text>
+        <Text style={[styles.answersTitle, { color: colors.textSecondary }]}>{t('questionChat.yourAnswers')}</Text>
         
         {/* Show user's own answer if they have answered */}
         {userAnswered && (
@@ -539,7 +541,7 @@ export default function QuestionChatPage() {
               <Text style={styles.avatarText}>👤</Text>
             </View>
             <View style={styles.answerContent}>
-              <Text style={[styles.answerLabel, { color: '#000' }]}>Moi</Text>
+              <Text style={[styles.answerLabel, { color: '#000' }]}>{t('questionChat.me')}</Text>
               <Text style={[styles.answerText, { color: '#000' }]}>
                 {answers.find(a => a.user_id === user!.id)?.answer_text}
               </Text>
@@ -554,7 +556,7 @@ export default function QuestionChatPage() {
               <Text style={styles.avatarText}>👥</Text>
             </View>
             <View style={[styles.answerContent, styles.partnerAnswerContent]}>
-              <Text style={[styles.answerLabel, { color: '#000' }]}>Mon partenaire</Text>
+              <Text style={[styles.answerLabel, { color: '#000' }]}>{t('questionChat.myPartner')}</Text>
               <Text style={[styles.answerText, { color: '#000' }]}>
                 {answers.find(a => a.user_id !== user!.id)?.answer_text}
               </Text>
@@ -567,7 +569,7 @@ export default function QuestionChatPage() {
           <View style={styles.answerInputContainer}>
             <TextInput
               style={[styles.answerInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder="Tapez votre réponse..."
+              placeholder={t('questionChat.typeAnswer')}
               value={answerText}
               onChangeText={setAnswerText}
               multiline
@@ -581,7 +583,7 @@ export default function QuestionChatPage() {
               {submittingAnswer ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={[styles.submitAnswerButtonText, { color: '#FFFFFF' }]}>Envoyer</Text>
+                <Text style={[styles.submitAnswerButtonText, { color: '#FFFFFF' }]}>{t('questionChat.send')}</Text>
               )}
             </Pressable>
           </View>
@@ -596,7 +598,7 @@ export default function QuestionChatPage() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={BRAND_BLUE} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('questionChat.loading')}</Text>
       </View>
     );
   }
@@ -615,7 +617,7 @@ export default function QuestionChatPage() {
              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
            </Pressable>
            <View style={styles.headerTitleContainer}>
-             <Text style={[styles.headerTitle, { color: colors.text }]}>Question du jour</Text>
+             <Text style={[styles.headerTitle, { color: colors.text }]}>{t('questionChat.title')}</Text>
            </View>
            <Pressable style={styles.menuButton}>
              <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.text} />
@@ -626,7 +628,7 @@ export default function QuestionChatPage() {
         {loadingChat ? (
           <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
             <ActivityIndicator size="large" color={BRAND_BLUE} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('questionChat.loading')}</Text>
           </View>
         ) : (
           <>
@@ -641,7 +643,7 @@ export default function QuestionChatPage() {
                  <View style={styles.questionStatusContainer}>
                    <MaterialCommunityIcons name="clock-outline" size={16} color="#F59E0B" />
                    <Text style={styles.questionStatusText}>
-                     Question fermée - Discussion terminée
+                     {t('questionChat.questionClosed')}
                    </Text>
                  </View>
                )}
@@ -653,7 +655,7 @@ export default function QuestionChatPage() {
                          {/* Chat Messages */}
              {threadId ? (
                <View style={styles.chatSection}>
-                 <Text style={[styles.chatTitle, { color: colors.text }]}>Discussion</Text>
+                 <Text style={[styles.chatTitle, { color: colors.text }]}>{t('questionChat.discussion')}</Text>
                  <FlatList
                    ref={flatListRef}
                    data={messages}
@@ -666,9 +668,9 @@ export default function QuestionChatPage() {
                </View>
              ) : (
                <View style={styles.chatSection}>
-                 <Text style={[styles.chatTitle, { color: colors.text }]}>Discussion</Text>
+                 <Text style={[styles.chatTitle, { color: colors.text }]}>{t('questionChat.discussion')}</Text>
                  <Text style={[styles.noChatText, { color: colors.textSecondary }]}>
-                   Répondez d'abord à la question pour commencer la discussion
+                   {t('questionChat.answerFirst')}
                  </Text>
                </View>
              )}
@@ -689,7 +691,7 @@ export default function QuestionChatPage() {
                    
                    <TextInput
                      style={[styles.messageInput, { backgroundColor: colors.background, color: colors.text }]}
-                     placeholder="Message..."
+                     placeholder={t('questionChat.message')}
                      value={newMessage}
                      onChangeText={setNewMessage}
                      multiline

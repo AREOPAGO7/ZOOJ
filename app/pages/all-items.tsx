@@ -2,13 +2,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View
 } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
@@ -62,6 +63,7 @@ interface ListItem {
 export default function AllItemsPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useLanguage();
   
   const [items, setItems] = useState<ListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -216,9 +218,9 @@ export default function AllItemsPage() {
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) {
-      return 'Aujourd\'hui';
+      return t('calendar.today');
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Hier';
+      return t('calendar.yesterday');
     } else {
       const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
       return `${date.getDate()} ${months[date.getMonth()]}`;
@@ -233,18 +235,18 @@ export default function AllItemsPage() {
 
   const getPriorityText = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'Urgent';
-      case 'normal': return 'Normal';
-      case 'peut_attendre': return 'Peut attendre';
+      case 'urgent': return t('calendar.urgent');
+      case 'normal': return t('calendar.normal');
+      case 'peut_attendre': return t('calendar.canWait');
       default: return priority;
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'a_faire': return 'À faire';
-      case 'en_cours': return 'En cours';
-      case 'termine': return 'Terminé';
+      case 'a_faire': return t('calendar.toDo');
+      case 'en_cours': return t('calendar.inProgress');
+      case 'termine': return t('calendar.completed');
       default: return status;
     }
   };
@@ -275,8 +277,8 @@ export default function AllItemsPage() {
           <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
           <View style={styles.itemTypeBadge}>
             <Text style={styles.itemTypeText}>
-              {item.type === 'event' ? 'Événement' : 
-               item.type === 'souvenir' ? 'Souvenir' : 'Tâche'}
+              {item.type === 'event' ? t('calendar.event') : 
+               item.type === 'souvenir' ? t('calendar.souvenir') : t('calendar.todo')}
             </Text>
           </View>
         </View>
@@ -318,7 +320,7 @@ export default function AllItemsPage() {
     </Pressable>
   );
 
-  const renderFilterButton = (filter: 'all' | 'events' | 'souvenirs' | 'todos', label: string, icon: string) => (
+  const renderFilterButton = (filter: 'all' | 'events' | 'souvenirs' | 'todos', labelKey: string, icon: string) => (
     <Pressable
       style={[styles.filterButton, activeFilter === filter && styles.filterButtonActive]}
       onPress={() => setActiveFilter(filter)}
@@ -329,7 +331,7 @@ export default function AllItemsPage() {
         color={activeFilter === filter ? 'white' : '#666'} 
       />
       <Text style={[styles.filterButtonText, activeFilter === filter && styles.filterButtonTextActive]}>
-        {label}
+        {t(labelKey)}
       </Text>
     </Pressable>
   );
@@ -339,7 +341,7 @@ export default function AllItemsPage() {
       <AppLayout>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Chargement...</Text>
+          <Text style={styles.loadingText}>{t('calendar.loading')}</Text>
         </View>
       </AppLayout>
     );
@@ -352,18 +354,18 @@ export default function AllItemsPage() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Tous nos éléments</Text>
+          <Text style={styles.title}>{t('calendar.allItems')}</Text>
           <Text style={styles.subtitle}>
-            {filteredItems.length} élément{filteredItems.length !== 1 ? 's' : ''} trouvé{filteredItems.length !== 1 ? 's' : ''}
+            {filteredItems.length} {filteredItems.length !== 1 ? t('calendar.itemsFoundPlural') : t('calendar.itemsFound')}
           </Text>
         </View>
 
         {/* Filter Buttons */}
         <View style={styles.filterContainer}>
-          {renderFilterButton('all', 'Tout', 'view-list')}
-          {renderFilterButton('events', 'Événements', 'calendar-event')}
-          {renderFilterButton('souvenirs', 'Souvenirs', 'camera')}
-          {renderFilterButton('todos', 'Tâches', 'checkbox-marked-outline')}
+          {renderFilterButton('all', 'calendar.all', 'view-list')}
+          {renderFilterButton('events', 'calendar.events', 'calendar-event')}
+          {renderFilterButton('souvenirs', 'calendar.souvenirs', 'camera')}
+          {renderFilterButton('todos', 'calendar.todos', 'checkbox-marked-outline')}
         </View>
 
         {/* Items List */}
@@ -379,12 +381,12 @@ export default function AllItemsPage() {
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="inbox-outline" size={64} color="#CCC" />
             <Text style={styles.emptyTitle}>
-              {activeFilter === 'all' ? 'Aucun élément trouvé' : 
-               activeFilter === 'events' ? 'Aucun événement' :
-               activeFilter === 'souvenirs' ? 'Aucun souvenir' : 'Aucune tâche'}
+              {activeFilter === 'all' ? t('calendar.noItems') : 
+               activeFilter === 'events' ? t('calendar.noEventsFilter') :
+               activeFilter === 'souvenirs' ? t('calendar.noSouvenirsFilter') : t('calendar.noTodosFilter')}
             </Text>
             <Text style={styles.emptySubtitle}>
-              Commencez par créer votre premier élément dans le calendrier
+              {t('calendar.startCreating')}
             </Text>
           </View>
         )}

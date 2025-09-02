@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotificationManager } from '../../hooks/useNotificationManager';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
@@ -66,6 +67,7 @@ export default function QuizzPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const { sendQuizInvite } = useNotificationManager();
   
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -115,7 +117,7 @@ export default function QuizzPage() {
   // Function to send quiz invite to partner
   const handleSendQuizInvite = async (quiz: Quiz) => {
     if (!user || !coupleId) {
-      Alert.alert('Erreur', 'Impossible d\'envoyer l\'invitation');
+      Alert.alert(t('common.error'), t('quiz.errorSendingInvite'));
       return;
     }
 
@@ -136,7 +138,7 @@ export default function QuizzPage() {
       console.log('Couple error:', error);
 
       if (error || !couple) {
-        throw new Error('Couple non trouvé');
+        throw new Error(t('questions.coupleNotFound'));
       }
 
       const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id;
@@ -147,7 +149,7 @@ export default function QuizzPage() {
       const result = await sendQuizInvite(
         partnerId,
         quiz.title,
-        `Votre partenaire vous invite à participer au quiz "${quiz.title}" !`,
+        t('quiz.inviteMessage'),
         quiz.id
       );
 
@@ -155,11 +157,11 @@ export default function QuizzPage() {
 
       if (result?.error) {
         console.error('Quiz invite error:', result.error);
-        Alert.alert('Erreur', 'Impossible d\'envoyer l\'invitation au quiz');
+        Alert.alert(t('common.error'), t('quiz.errorSendingInvite'));
       } else if ('invite' in result && 'notification' in result && result.invite && result.notification) {
         Alert.alert(
-          'Invitation envoyée !', 
-          `Votre partenaire a reçu une invitation pour le quiz "${quiz.title}"`
+          t('quiz.invitationSent'), 
+          t('quiz.invitationSentMessage').replace('{title}', quiz.title)
         );
         console.log('✅ Quiz invite and notification sent successfully!');
         console.log('Invite:', result.invite);
@@ -169,17 +171,17 @@ export default function QuizzPage() {
         console.log('Invite:', result.invite);
         console.log('Notification:', result.notification);
         Alert.alert(
-          'Invitation partiellement envoyée', 
-          `L'invitation a été créée mais la notification n'a pas pu être envoyée`
+          t('quiz.invitationPartial'), 
+          t('quiz.invitationPartialMessage')
         );
       } else {
         console.warn('⚠️ Unexpected result format');
         console.log('Result:', result);
-        Alert.alert('Erreur', 'Format de réponse inattendu');
+        Alert.alert(t('common.error'), t('common.error'));
       }
     } catch (error) {
       console.error('Error sending quiz invite:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de l\'envoi de l\'invitation');
+      Alert.alert(t('common.error'), t('quiz.errorSendingInviteMessage'));
     } finally {
       setIsSendingInvite(false);
     }
@@ -199,10 +201,10 @@ export default function QuizzPage() {
       // Remove from pending invites
       setPendingInvites(prev => prev.filter(inv => inv.id !== invite.id));
 
-      Alert.alert('Succès', 'Invitation acceptée ! Vous pouvez maintenant participer au quiz.');
+      Alert.alert(t('common.success'), t('quiz.invitationAccepted'));
     } catch (error) {
       console.error('Error accepting invite:', error);
-      Alert.alert('Erreur', 'Impossible d\'accepter l\'invitation');
+      Alert.alert(t('common.error'), t('quiz.errorAcceptingInvite'));
     }
   };
 
@@ -220,10 +222,10 @@ export default function QuizzPage() {
       // Remove from pending invites
       setPendingInvites(prev => prev.filter(inv => inv.id !== invite.id));
 
-      Alert.alert('Succès', 'Invitation déclinée');
+      Alert.alert(t('common.success'), t('quiz.invitationDeclined'));
     } catch (error) {
       console.error('Error declining invite:', error);
-      Alert.alert('Erreur', 'Impossible de décliner l\'invitation');
+      Alert.alert(t('common.error'), t('quiz.errorDecliningInvite'));
     }
   };
 
@@ -446,7 +448,7 @@ export default function QuizzPage() {
       }
     } catch (error) {
       console.error('Error starting quiz:', error);
-      Alert.alert('Erreur', 'Impossible de démarrer le quiz');
+      Alert.alert(t('common.error'), t('quiz.errorStartingQuiz'));
     }
   };
 
@@ -501,8 +503,8 @@ export default function QuizzPage() {
 
       // Show success feedback
       Alert.alert(
-        'Quiz soumis avec succès! 🎉',
-        'Vos réponses ont été enregistrées.',
+        t('quiz.quizSubmitted'),
+        t('quiz.quizSubmittedMessage'),
         [{ text: 'OK' }]
       );
 
@@ -543,7 +545,7 @@ export default function QuizzPage() {
       }
     } catch (error) {
       console.error('Error submitting quiz:', error);
-      Alert.alert('Erreur', 'Impossible de soumettre le quiz');
+      Alert.alert(t('common.error'), t('quiz.errorSubmittingQuiz'));
     } finally {
       setIsSubmittingQuiz(false);
     }
@@ -593,7 +595,7 @@ export default function QuizzPage() {
       setHasAnsweredQuiz(true);
     } catch (error) {
       console.error('Error calculating results:', error);
-      Alert.alert('Erreur', 'Impossible de calculer les résultats');
+      Alert.alert(t('common.error'), t('quiz.errorCalculatingResults'));
     }
   };
 
@@ -706,14 +708,14 @@ export default function QuizzPage() {
       } else {
         // Partner still hasn't answered, show message
         Alert.alert(
-          'Pas encore de résultats',
-          'Votre partenaire n\'a pas encore répondu au quiz. Utilisez le bouton "Vérifier si le partenaire a répondu" pour vérifier régulièrement.',
+          t('quiz.noResultsYet'),
+          t('quiz.noResultsMessage'),
           [{ text: 'OK' }]
         );
       }
     } catch (error) {
       console.error('Error checking results:', error);
-      Alert.alert('Erreur', 'Impossible de vérifier les résultats');
+      Alert.alert(t('common.error'), t('quiz.errorCheckingResults'));
     } finally {
       setIsCheckingResults(false);
     }
@@ -809,7 +811,7 @@ export default function QuizzPage() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={BRAND_BLUE} />
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={styles.loadingText}>{t('quiz.loading')}</Text>
       </View>
     );
   }
@@ -848,15 +850,15 @@ export default function QuizzPage() {
             <ScrollView style={styles.resultsScroll} showsVerticalScrollIndicator={false}>
               {/* Congratulations */}
               <View style={styles.congratulationsContainer}>
-                <Text style={styles.congratulationsText}>Félicitations à vous !</Text>
-                <Text style={styles.congratulationsSubtext}>Quiz terminé avec succès</Text>
+                <Text style={styles.congratulationsText}>{t('quiz.congratulations')}</Text>
+                <Text style={styles.congratulationsSubtext}>{t('quiz.quizCompleted')}</Text>
               </View>
 
               {/* Quiz Completion Invite Section */}
               <View style={styles.completionInviteSection}>
-                <Text style={styles.completionInviteTitle}>Partagez ce quiz !</Text>
+                <Text style={styles.completionInviteTitle}>{t('quiz.shareQuiz')}</Text>
                 <Text style={styles.completionInviteDescription}>
-                  Vous avez terminé ce quiz avec succès ! Invitez votre partenaire à le faire aussi pour comparer vos résultats.
+                  {t('quiz.shareDescription')}
                 </Text>
                 
                 <Pressable
@@ -880,7 +882,7 @@ export default function QuizzPage() {
                       style={{ marginRight: 8 }}
                     />
                     <Text style={styles.completionInviteButtonText}>
-                      {isSendingInvite ? 'Envoi de l\'invitation...' : 'Inviter votre partenaire'}
+                      {isSendingInvite ? t('quiz.sendingInvite') : t('quiz.invitePartnerQuiz')}
                     </Text>
                   </LinearGradient>
                 </Pressable>
@@ -891,10 +893,10 @@ export default function QuizzPage() {
                 <View style={styles.scoreCircle}>
                   <Text style={styles.scoreText}>{quizResult.score}%</Text>
                 </View>
-                <Text style={styles.scoreLabel}>Compatibilité globale</Text>
+                <Text style={styles.scoreLabel}>{t('quiz.globalCompatibility')}</Text>
                 <Text style={styles.scoreSubtext}>
-                  {quizResult.score >= 80 ? 'Excellent score !' : 
-                   quizResult.score >= 60 ? 'Bon score !' : 'À améliorer'}
+                  {quizResult.score >= 80 ? t('quiz.excellentScore') : 
+                   quizResult.score >= 60 ? t('quiz.goodScore') : t('quiz.needsImprovement')}
                 </Text>
               </View>
 
@@ -917,31 +919,31 @@ export default function QuizzPage() {
                     style={{ marginRight: 8 }}
                   />
                   <Text style={styles.refreshButtonText}>
-                    {isLoadingResults ? 'Actualisation...' : 'Actualiser les résultats'}
+                    {isLoadingResults ? t('quiz.refreshing') : t('quiz.refreshResults')}
                   </Text>
                 </LinearGradient>
               </Pressable>
 
               {/* Your Responses Section */}
               <View style={styles.yourResponsesSection}>
-                <Text style={styles.sectionTitle}>Vos réponses</Text>
+                <Text style={styles.sectionTitle}>{t('quiz.yourResponses')}</Text>
                 <Text style={styles.responsesDescription}>
-                  Les points forts sont en vert, tandis que les points que vous pouvez améliorer dans votre couple sont surlignés en rouge.
+                  {t('quiz.responsesDescription')}
                 </Text>
               </View>
 
               {/* Detailed Results */}
               <View style={styles.detailedResultsContainer}>
-                <Text style={styles.detailedResultsTitle}>Résultats Détaillés</Text>
+                <Text style={styles.detailedResultsTitle}>{t('quiz.detailedResults')}</Text>
                 
                 {/* Strengths */}
                 {quizResult.strengths.length > 0 && (
                   <View style={styles.resultsSection}>
-                    <Text style={styles.sectionTitle}>Points forts</Text>
+                    <Text style={styles.sectionTitle}>{t('quiz.strengths')}</Text>
                     {quizResult.strengths.map((strength, index) => (
                       <View key={index} style={styles.resultItem}>
                         <View style={styles.strengthBadge}>
-                          <Text style={styles.strengthBadgeText}>Point fort</Text>
+                          <Text style={styles.strengthBadgeText}>{t('quiz.strengthBadge')}</Text>
                         </View>
                         <Text style={styles.resultQuestion}>{strength.question}</Text>
                         <View style={styles.partnerResponses}>
@@ -949,7 +951,7 @@ export default function QuizzPage() {
                             <Text style={styles.partnerName}>
                               {userNames?.user1
                                 ? userNames.user1.split(' ')[0]
-                                : 'Utilisateur 1'}
+                                : t('quiz.user1')}
                             </Text>
                             <View style={styles.heartResponse}>
                               {[1, 2, 3].map((value) => (
@@ -967,7 +969,7 @@ export default function QuizzPage() {
                                                      <Text style={styles.partnerName}>
                                {userNames?.user2
                                  ? userNames.user2.split(' ')[0]
-                                 : 'Utilisateur 2'}
+                                 : t('quiz.user2')}
                              </Text>
                             <View style={styles.heartResponse}>
                               {[1, 2, 3].map((value) => (
@@ -990,16 +992,16 @@ export default function QuizzPage() {
                 {/* Weaknesses */}
                 {quizResult.weaknesses.length > 0 && (
                   <View style={styles.resultsSection}>
-                    <Text style={styles.sectionTitle}>À améliorer</Text>
+                    <Text style={styles.sectionTitle}>{t('quiz.weaknesses')}</Text>
                     {quizResult.weaknesses.map((weakness, index) => (
                       <View key={index} style={styles.resultItem}>
                         <View style={styles.weaknessBadge}>
-                          <Text style={styles.weaknessBadgeText}>À améliorer</Text>
+                          <Text style={styles.weaknessBadgeText}>{t('quiz.weaknessBadge')}</Text>
                         </View>
                         <Text style={styles.resultQuestion}>{weakness.question}</Text>
                         <View style={styles.partnerResponses}>
                           <View style={styles.partnerResponse}>
-                            <Text style={styles.partnerName}>{userNames?.user1 || 'Utilisateur 1'}</Text>
+                            <Text style={styles.partnerName}>{userNames?.user1 || t('quiz.user1')}</Text>
                             <View style={styles.heartResponse}>
                               {[1, 2, 3].map((value) => (
                                 <MaterialCommunityIcons
@@ -1012,7 +1014,7 @@ export default function QuizzPage() {
                             </View>
                           </View>
                           <View style={styles.partnerResponse}>
-                            <Text style={styles.partnerName}>{userNames?.user2 || 'Utilisateur 2'}</Text>
+                            <Text style={styles.partnerName}>{userNames?.user2 || t('quiz.user2')}</Text>
                             <View style={styles.heartResponse}>
                               {[1, 2, 3].map((value) => (
                                 <MaterialCommunityIcons
@@ -1033,17 +1035,17 @@ export default function QuizzPage() {
 
               {/* Quiz Results Summary */}
               <View style={styles.quizResultsSummary}>
-                <Text style={styles.sectionTitle}>Résultats du quiz</Text>
+                <Text style={styles.sectionTitle}>{t('quiz.quizResults')}</Text>
                 <Text style={styles.summaryText}>
-                  Cette page montre dans quelle mesure le sujet "{selectedQuiz?.title}" te convient dans ta relation actuellement.
+                  {t('quiz.quizResultsDescription').replace('{title}', selectedQuiz?.title || '')}
                 </Text>
               </View>
 
               {/* Quiz Invite Section */}
               <View style={styles.quizInviteSection}>
-                <Text style={styles.sectionTitle}>Inviter votre partenaire</Text>
+                <Text style={styles.sectionTitle}>{t('quiz.invitePartner')}</Text>
                 <Text style={styles.inviteDescription}>
-                  Votre partenaire n'a pas encore répondu à ce quiz. Envoyez-lui une invitation pour qu'il puisse participer !
+                  {t('quiz.inviteDescription')}
                 </Text>
                 
                 <Pressable
@@ -1067,7 +1069,7 @@ export default function QuizzPage() {
                       style={{ marginRight: 8 }}
                     />
                     <Text style={styles.invitePartnerButtonText}>
-                      {isSendingInvite ? 'Envoi de l\'invitation...' : 'Inviter votre partenaire'}
+                      {isSendingInvite ? t('quiz.sendingInvite') : t('quiz.invitePartnerQuiz')}
                     </Text>
                   </LinearGradient>
                 </Pressable>
@@ -1079,7 +1081,7 @@ export default function QuizzPage() {
               <View style={styles.alreadyAnsweredHeader}>
                 <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
                 <Text style={styles.alreadyAnsweredText}>
-                  Vous avez déjà répondu à ce quiz
+                  {t('quiz.alreadyAnswered')}
                 </Text>
               </View>
 
@@ -1094,7 +1096,7 @@ export default function QuizzPage() {
                       
                       {/* Show Previous Answer (Read-only) */}
                       <View style={styles.previousAnswerContainer}>
-                        <Text style={styles.previousAnswerLabel}>Votre réponse précédente :</Text>
+                        <Text style={styles.previousAnswerLabel}>{t('quiz.previousAnswer')}</Text>
                         <View style={styles.answerOptions}>
                           {[1, 2, 3].map((value) => (
                             <View
@@ -1119,8 +1121,7 @@ export default function QuizzPage() {
                         </View>
                       </View>
                     </View>
-                  );
-                })}
+                  )                })}
               </ScrollView>
 
               {/* Verification Buttons Container */}
@@ -1145,12 +1146,12 @@ export default function QuizzPage() {
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
                           <Text style={styles.checkResultsButtonText}>
-                            Vérification...
+                            {t('quiz.checking')}
                           </Text>
                         </View>
                       ) : (
                         <Text style={styles.checkResultsButtonText}>
-                          Vérifier les résultats
+                          {t('quiz.checkResults')}
                         </Text>
                       )}
                     </LinearGradient>
@@ -1201,7 +1202,7 @@ export default function QuizzPage() {
               {/* Progress Indicator */}
               <View style={styles.progressContainer}>
                 <Text style={[styles.progressText, { color: colors.textSecondary }]}>
-                  {answers.length} / {quizQuestions.length} questions répondues
+                  {answers.length} / {quizQuestions.length} {t('quiz.questionsAnswered')}
                 </Text>
                 <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
                   <View 
@@ -1259,9 +1260,9 @@ export default function QuizzPage() {
 
               {/* Quiz Taking Invite Section */}
               <View style={styles.quizTakingInviteSection}>
-                <Text style={styles.quizTakingInviteTitle}>Inviter votre partenaire</Text>
+                <Text style={styles.quizTakingInviteTitle}>{t('quiz.invitePartner')}</Text>
                 <Text style={styles.quizTakingInviteDescription}>
-                  Pendant que vous répondez aux questions, invitez votre partenaire à participer aussi !
+                  {t('quiz.whileTaking')}
                 </Text>
                 
                 <Pressable
@@ -1285,7 +1286,7 @@ export default function QuizzPage() {
                       style={{ marginRight: 8 }}
                     />
                     <Text style={styles.quizTakingInviteButtonText}>
-                      {isSendingInvite ? 'Envoi de l\'invitation...' : 'Inviter votre partenaire'}
+                      {isSendingInvite ? t('quiz.sendingInvite') : t('quiz.invitePartnerQuiz')}
                     </Text>
                   </LinearGradient>
                 </Pressable>
@@ -1311,12 +1312,12 @@ export default function QuizzPage() {
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
                         <Text style={styles.submitButtonText}>
-                          Envoi en cours...
+                          {t('quiz.sending')}
                         </Text>
                       </View>
                     ) : (
                       <Text style={styles.submitButtonText}>
-                        Soumettre le quiz
+                        {t('quiz.submitQuiz')}
                       </Text>
                     )}
                   </LinearGradient>
@@ -1339,7 +1340,7 @@ export default function QuizzPage() {
             <Pressable onPress={resetQuiz} style={styles.backButton}>
               <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
             </Pressable>
-            <Text style={[styles.quizTitle, { color: colors.text }]}>Quizz</Text>
+            <Text style={[styles.quizTitle, { color: colors.text }]}>{t('quiz.title')}</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -1347,8 +1348,8 @@ export default function QuizzPage() {
           <ScrollView style={styles.resultsScroll} showsVerticalScrollIndicator={false}>
             {/* Congratulations */}
             <View style={styles.congratulationsContainer}>
-              <Text style={[styles.congratulationsText, { color: colors.text }]}>Félicitations à vous !</Text>
-              <Text style={[styles.congratulationsSubtext, { color: colors.textSecondary }]}>Quiz terminé avec succès</Text>
+              <Text style={[styles.congratulationsText, { color: colors.text }]}>{t('quiz.congratulations')}</Text>
+              <Text style={[styles.congratulationsSubtext, { color: colors.textSecondary }]}>{t('quiz.quizCompleted')}</Text>
             </View>
 
             {/* Compatibility Score */}
@@ -1356,10 +1357,10 @@ export default function QuizzPage() {
               <View style={styles.scoreCircle}>
                 <Text style={styles.scoreText}>{quizResult.score}%</Text>
               </View>
-              <Text style={[styles.scoreLabel, { color: colors.text }]}>Compatibilité globale</Text>
+              <Text style={[styles.scoreLabel, { color: colors.text }]}>{t('quiz.globalCompatibility')}</Text>
               <Text style={[styles.scoreSubtext, { color: colors.textSecondary }]}>
-                {quizResult.score >= 80 ? 'Excellent score !' : 
-                 quizResult.score >= 60 ? 'Bon score !' : 'À améliorer'}
+                {quizResult.score >= 80 ? t('quiz.excellentScore') : 
+                 quizResult.score >= 60 ? t('quiz.goodScore') : t('quiz.needsImprovement')}
               </Text>
             </View>
 
@@ -1382,36 +1383,36 @@ export default function QuizzPage() {
                   style={{ marginRight: 8 }}
                 />
                 <Text style={styles.refreshButtonText}>
-                  {isLoadingResults ? 'Actualisation...' : 'Actualiser les résultats'}
+                  {isLoadingResults ? t('quiz.refreshing') : t('quiz.refreshResults')}
                 </Text>
               </LinearGradient>
             </Pressable>
 
             {/* Your Responses Section */}
             <View style={styles.yourResponsesSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Vos réponses</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.yourResponses')}</Text>
               <Text style={[styles.responsesDescription, { color: colors.textSecondary }]}>
-                Les points forts sont en vert, tandis que les points que vous pouvez améliorer dans votre couple sont surlignés en rouge.
+                {t('quiz.responsesDescription')}
               </Text>
             </View>
 
             {/* Detailed Results */}
             <View style={styles.detailedResultsContainer}>
-              <Text style={[styles.detailedResultsTitle, { color: colors.text }]}>Résultats Détaillés</Text>
+              <Text style={[styles.detailedResultsTitle, { color: colors.text }]}>{t('quiz.detailedResults')}</Text>
               
               {/* Strengths */}
               {quizResult.strengths.length > 0 && (
                 <View style={styles.resultsSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Points forts</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.strengths')}</Text>
                   {quizResult.strengths.map((strength, index) => (
                     <View key={index} style={[styles.resultItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <View style={styles.strengthBadge}>
-                        <Text style={styles.strengthBadgeText}>Point fort</Text>
+                        <Text style={styles.strengthBadgeText}>{t('quiz.strengthBadge')}</Text>
                       </View>
                       <Text style={[styles.resultQuestion, { color: colors.text }]}>{strength.question}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
-                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user1 || 'Utilisateur 1'}</Text>
+                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
@@ -1425,7 +1426,7 @@ export default function QuizzPage() {
                           </View>
                         </View>
                         <View style={styles.partnerResponse}>
-                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user2 || 'Utilisateur 2'}</Text>
+                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user2 || t('quiz.user2')}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
@@ -1446,16 +1447,16 @@ export default function QuizzPage() {
               {/* Weaknesses */}
               {quizResult.weaknesses.length > 0 && (
                 <View style={styles.resultsSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>À améliorer</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.weaknesses')}</Text>
                   {quizResult.weaknesses.map((weakness, index) => (
                     <View key={index} style={[styles.resultItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <View style={styles.weaknessBadge}>
-                        <Text style={styles.weaknessBadgeText}>À améliorer</Text>
+                        <Text style={styles.weaknessBadgeText}>{t('quiz.weaknessBadge')}</Text>
                       </View>
                       <Text style={[styles.resultQuestion, { color: colors.text }]}>{weakness.question}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
-                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user1 || 'Utilisateur 1'}</Text>
+                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
@@ -1468,7 +1469,7 @@ export default function QuizzPage() {
                           </View>
                         </View>
                         <View style={styles.partnerResponse}>
-                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user2 || 'Utilisateur 2'}</Text>
+                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user2 || t('quiz.user2')}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
@@ -1489,9 +1490,9 @@ export default function QuizzPage() {
 
             {/* Quiz Results Summary */}
             <View style={styles.quizResultsSummary}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Résultats du quiz</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.quizResults')}</Text>
               <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
-                Cette page montre dans quelle mesure le sujet "{selectedQuiz?.title}" te convient dans ta relation actuellement.
+                {t('quiz.quizResultsDescription').replace('{title}', selectedQuiz?.title || '')}
               </Text>
             </View>
           </ScrollView>
@@ -1541,7 +1542,7 @@ export default function QuizzPage() {
                     <View style={styles.quizInfo}>
                       <Text style={[styles.quizCardTitle, { color: colors.text }]}>{quiz.title}</Text>
                       <Text style={[styles.quizCardDetails, { color: colors.textSecondary }]}>
-                        {quiz.questions_count} questions • {quiz.estimated_time} min
+                        {quiz.questions_count} {t('quiz.questions')} • {quiz.estimated_time} {t('quiz.minutes')}
                       </Text>
                     </View>
                     <MaterialCommunityIcons
@@ -1559,7 +1560,7 @@ export default function QuizzPage() {
                   size={48}
                   color={colors.textSecondary}
                 />
-                <Text style={[styles.noQuizzesText, { color: colors.textSecondary }]}>Aucun quiz disponible pour cette thématique</Text>
+                <Text style={[styles.noQuizzesText, { color: colors.textSecondary }]}>{t('quiz.noQuizzesTheme')}</Text>
               </View>
             )}
           </ScrollView>
@@ -1580,8 +1581,8 @@ export default function QuizzPage() {
       >
         {/* Header */}
         <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Quizz</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Découvrez votre compatibilité</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('quiz.title')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('quiz.subtitle')}</Text>
           <Pressable style={styles.searchButton}>
             <MaterialCommunityIcons name="magnify" size={24} color={colors.textSecondary} />
           </Pressable>
@@ -1591,7 +1592,7 @@ export default function QuizzPage() {
         {pendingInvites.length > 0 && (
           <View style={styles.pendingInvitesSection}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Invitations en attente ({pendingInvites.length})
+              {t('quiz.pendingInvites')} ({pendingInvites.length})
             </Text>
             {pendingInvites.map((invite) => (
               <View key={invite.id} style={[styles.pendingInviteCard, { backgroundColor: colors.surface }]}>
@@ -1603,10 +1604,10 @@ export default function QuizzPage() {
                   />
                   <View style={styles.pendingInviteInfo}>
                     <Text style={[styles.pendingInviteTitle, { color: colors.text }]}>
-                      Invitation au quiz
+                      {t('quiz.quizInvitation')}
                     </Text>
                     <Text style={[styles.pendingInviteMessage, { color: colors.textSecondary }]}>
-                      {invite.message || 'Votre partenaire vous invite à participer à un quiz'}
+                      {invite.message || t('quiz.inviteMessage')}
                     </Text>
                   </View>
                 </View>
@@ -1616,7 +1617,7 @@ export default function QuizzPage() {
                     onPress={() => handleAcceptInvite(invite)}
                   >
                     <Text style={[styles.acceptInviteButtonText, { color: colors.surface }]}>
-                      Accepter
+                      {t('quiz.accept')}
                     </Text>
                   </Pressable>
                   <Pressable
@@ -1624,7 +1625,7 @@ export default function QuizzPage() {
                     onPress={() => handleDeclineInvite(invite)}
                   >
                     <Text style={[styles.declineInviteButtonText, { color: colors.surface }]}>
-                      Décliner
+                      {t('quiz.decline')}
                     </Text>
                   </Pressable>
                 </View>
@@ -1635,7 +1636,7 @@ export default function QuizzPage() {
 
         {/* Themes */}
         <View style={styles.themesSection}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Thématiques</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.themes')}</Text>
           {themes.length > 0 ? (
             <ScrollView 
               horizontal 
@@ -1693,7 +1694,7 @@ export default function QuizzPage() {
                 size={48}
                 color={colors.textSecondary}
               />
-              <Text style={[styles.noThemesText, { color: colors.textSecondary }]}>Aucune thématique disponible</Text>
+              <Text style={[styles.noThemesText, { color: colors.textSecondary }]}>{t('quiz.noThemes')}</Text>
             </View>
           )}
         </View>
@@ -1701,9 +1702,9 @@ export default function QuizzPage() {
         {/* Quizzes for You Section */}
         <View style={styles.quizzesSection}>
           <View style={styles.quizzesHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quizz pour vous</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.quizzesForYou')}</Text>
             <Text style={[styles.quizzesSubtitle, { color: colors.textSecondary }]}>
-              Cliquez sur un quiz pour le commencer ou invitez votre partenaire
+              {t('quiz.quizzesSubtitle')}
             </Text>
           </View>
           {quizzes.length > 0 ? (
@@ -1726,7 +1727,7 @@ export default function QuizzPage() {
                   <View style={styles.quizInfo}>
                     <Text style={[styles.quizCardTitle, { color: colors.text }]}>{quiz.title}</Text>
                     <Text style={[styles.quizCardDetails, { color: colors.textSecondary }]}>
-                      {quiz.questions_count} questions • {quiz.estimated_time} min
+                      {quiz.questions_count} {t('quiz.questions')} • {quiz.estimated_time} {t('quiz.minutes')}
                     </Text>
                   </View>
                   <MaterialCommunityIcons
@@ -1747,7 +1748,7 @@ export default function QuizzPage() {
                 size={48}
                 color={colors.textSecondary}
               />
-              <Text style={[styles.noQuizzesText, { color: colors.textSecondary }]}>Aucun quiz disponible</Text>
+              <Text style={[styles.noQuizzesText, { color: colors.textSecondary }]}>{t('quiz.noQuizzes')}</Text>
             </View>
           )}
         </View>
