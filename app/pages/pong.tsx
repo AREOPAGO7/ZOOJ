@@ -7,6 +7,8 @@ import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
+import { GameStats, gameStatsService } from '../../lib/gameStatsService';
+import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
 // Pong game types
@@ -43,6 +45,11 @@ interface GameState {
   isPlaying: boolean;
   gamePhase: 'playing' | 'paused' | 'gameOver';
   winner?: string;
+  gameStartTime: number;
+  ballHitsPlayer: number;
+  ballHitsBot: number;
+  longestRally: number;
+  currentRally: number;
 }
 
 // Game constants
@@ -94,6 +101,8 @@ export default function PongPage() {
 
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [gameStats, setGameStats] = useState<any>(null);
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
   const panGestureRef = useRef<PanGestureHandler>(null);
 
@@ -122,12 +131,51 @@ export default function PongPage() {
       gameStatus: 'Appuyez pour commencer',
       isPlaying: false,
       gamePhase: 'paused',
+      gameStartTime: Date.now(),
+      ballHitsPlayer: 0,
+      ballHitsBot: 0,
+      longestRally: 0,
+      currentRally: 0,
     };
   }, []);
+
+  // Get couple ID
+  const getCoupleId = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data: couple, error } = await supabase
+        .from('couples')
+        .select('id, user1_id, user2_id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .single();
+
+      if (couple) {
+        setCoupleId(couple.id);
+        return couple;
+      }
+    } catch (error) {
+      console.error('Error getting couple ID:', error);
+    }
+    return null;
+  }, [user]);
+
+  // Load game statistics
+  const loadGameStats = useCallback(async () => {
+    if (!coupleId) return;
+    
+    try {
+      const stats = await gameStatsService.getCoupleGameStats(coupleId);
+      setGameStats(stats);
+    } catch (error) {
+      console.error('Error loading game stats:', error);
+    }
+  }, [coupleId]);
 
   // Load game state on mount
   useEffect(() => {
     const loadGame = async () => {
+      await getCoupleId();
       const savedState = await loadGameState();
       if (savedState) {
         setGameState(savedState);
@@ -137,7 +185,46 @@ export default function PongPage() {
       setIsLoading(false);
     };
     loadGame();
-  }, [initializeGame]);
+  }, [initializeGame, getCoupleId]);
+
+  // Load stats when couple ID is available
+  useEffect(() => {
+    if (coupleId) {
+      loadGameStats();
+    }
+  }, [coupleId, loadGameStats]);
+
+  // Save game statistics
+  const saveGameStats = useCallback(async (gameState: GameState, couple: any) => {
+    if (!couple || !coupleId) return;
+
+    try {
+      const gameDuration = Math.floor((Date.now() - gameState.gameStartTime) / 1000);
+      const winnerId = gameState.winner === 'Vous' ? couple.user1_id : 
+                      gameState.winner === 'Bot' ? couple.user2_id : undefined;
+
+      const stats: GameStats = {
+        couple_id: coupleId,
+        game_type: 'pong',
+        player1_id: couple.user1_id,
+        player2_id: couple.user2_id,
+        winner_id: winnerId,
+        is_draw: gameState.winner === undefined,
+        game_duration: gameDuration,
+        player1_score: gameState.playerScore,
+        player2_score: gameState.botScore,
+        pong_ball_hits_player1: gameState.ballHitsPlayer,
+        pong_ball_hits_player2: gameState.ballHitsBot,
+        pong_longest_rally: gameState.longestRally,
+      };
+
+      await gameStatsService.saveGameStats(stats);
+      // Reload stats after saving
+      loadGameStats();
+    } catch (error) {
+      console.error('Error saving game stats:', error);
+    }
+  }, [coupleId, loadGameStats]);
 
   // Save game state whenever it changes
   useEffect(() => {
@@ -181,6 +268,11 @@ export default function PongPage() {
           // Add some angle based on where the ball hits the paddle
           const hitPos = (ball.position.x - playerPaddle.position.x) / playerPaddle.width;
           ball.velocity.x = (hitPos - 0.5) * 4;
+          
+          // Track ball hits and rally
+          newState.ballHitsPlayer++;
+          newState.currentRally++;
+          newState.longestRally = Math.max(newState.longestRally, newState.currentRally);
         }
 
         // Bot paddle collision
@@ -193,6 +285,11 @@ export default function PongPage() {
           // Add some angle based on where the ball hits the paddle
           const hitPos = (ball.position.x - botPaddle.position.x) / botPaddle.width;
           ball.velocity.x = (hitPos - 0.5) * 4;
+          
+          // Track ball hits and rally
+          newState.ballHitsBot++;
+          newState.currentRally++;
+          newState.longestRally = Math.max(newState.longestRally, newState.currentRally);
         }
 
         // Bot AI - follow the ball
@@ -213,6 +310,7 @@ export default function PongPage() {
             radius: BALL_RADIUS,
           };
           newState.gameStatus = `Vous: ${newState.playerScore} - Bot: ${newState.botScore}`;
+          newState.currentRally = 0; // Reset rally on score
         } else if (ball.position.y > GAME_HEIGHT) {
           newState.botScore++;
           newState.ball = {
@@ -221,6 +319,7 @@ export default function PongPage() {
             radius: BALL_RADIUS,
           };
           newState.gameStatus = `Vous: ${newState.playerScore} - Bot: ${newState.botScore}`;
+          newState.currentRally = 0; // Reset rally on score
         }
 
         // Check for win condition
@@ -229,11 +328,25 @@ export default function PongPage() {
           newState.winner = 'Vous';
           newState.gameStatus = t('pong.youWin');
           newState.isPlaying = false;
+          
+          // Save stats when game ends
+          getCoupleId().then(couple => {
+            if (couple) {
+              saveGameStats(newState, couple);
+            }
+          });
         } else if (newState.botScore >= WIN_SCORE) {
           newState.gamePhase = 'gameOver';
           newState.winner = 'Bot';
           newState.gameStatus = t('pong.botWins');
           newState.isPlaying = false;
+          
+          // Save stats when game ends
+          getCoupleId().then(couple => {
+            if (couple) {
+              saveGameStats(newState, couple);
+            }
+          });
         }
 
         return newState;
@@ -429,6 +542,39 @@ export default function PongPage() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Game Statistics */}
+          {gameStats && (
+            <View style={styles.statsContainer}>
+              <Text style={styles.statsTitle}>Statistiques du Couple</Text>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.total_games_played || 0}</Text>
+                  <Text style={styles.statLabel}>Parties jouées</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.pong_games || 0}</Text>
+                  <Text style={styles.statLabel}>Pong</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player1_wins || 0}</Text>
+                  <Text style={styles.statLabel}>Victoires Joueur 1</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player2_wins || 0}</Text>
+                  <Text style={styles.statLabel}>Victoires Joueur 2</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player1_win_rate || 0}%</Text>
+                  <Text style={styles.statLabel}>Taux de victoire J1</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player2_win_rate || 0}%</Text>
+                  <Text style={styles.statLabel}>Taux de victoire J2</Text>
+                </View>
+              </View>
+            </View>
+          )}
           
           {/* Touch Controls */}
           {gameState.isPlaying && (
@@ -692,5 +838,47 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6B7280',
     marginTop: 2,
+  },
+  statsContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  statsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });

@@ -37,6 +37,11 @@ interface GameState {
   drawCount: number;
   gamePhase: 'playing' | 'gameOver';
   winner: Player | null;
+  gameStartTime: number;
+  cardsPlayedPlayer1: number;
+  cardsPlayedPlayer2: number;
+  specialCardsUsed: number;
+  totalCardsPlayed: number;
 }
 
 // Create a full Uno deck
@@ -376,6 +381,8 @@ export default function UnoPage() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [animatingCard, setAnimatingCard] = useState<Card | null>(null);
+  const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [gameStats, setGameStats] = useState<any>(null);
   const animatedValue = useState(new Animated.Value(0))[0];
 
   // Initialize new game
@@ -405,7 +412,12 @@ export default function UnoPage() {
       lastPlayedCard: startCard,
       drawCount: 0,
       gamePhase: 'playing',
-      winner: null
+      winner: null,
+      gameStartTime: Date.now(),
+      cardsPlayedPlayer1: 0,
+      cardsPlayedPlayer2: 0,
+      specialCardsUsed: 0,
+      totalCardsPlayed: 0,
     };
   }, [t]);
 

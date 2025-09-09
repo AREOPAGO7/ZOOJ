@@ -1,11 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { CoupleMoodDisplay } from '../../components/CoupleMoodDisplay';
 import { MoodSelector } from '../../components/MoodSelector';
 import { ReceivedPulse } from '../../components/ReceivedPulse';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
@@ -21,6 +23,7 @@ export default function AccueilPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   
   const [quizResultsCount, setQuizResultsCount] = useState<number>(0);
@@ -33,6 +36,15 @@ export default function AccueilPage() {
   const [pulseRefreshKey, setPulseRefreshKey] = useState(0);
   const [todayQuestion, setTodayQuestion] = useState<DailyQuestion | null>(null);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
+  const [isCheckingCouple, setIsCheckingCouple] = useState(false);
+  const [isInCouple, setIsInCouple] = useState<boolean | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [joinCode, setJoinCode] = useState<string>('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [showJoinSection, setShowJoinSection] = useState<boolean>(false);
+  const [quizThemes, setQuizThemes] = useState<any[]>([]);
+  const [isLoadingThemes, setIsLoadingThemes] = useState(false);
 
   // Pulse options data - exactement comme dans l'image
   const pulseOptions = [
@@ -43,12 +55,31 @@ export default function AccueilPage() {
     { emoji: '💨', label: t('home.pulseOptions.cloud') },
   ];
 
-  // Quiz categories data
-  const quizCategories = [
-    { emoji: '📚', title: t('home.quizCategories.reading'), color: '#4A90E2' },
-    { emoji: '💪', title: t('home.quizCategories.fitness'), color: '#50C878' },
-    { emoji: '🌿', title: t('home.quizCategories.nature'), color: '#228B22' },
-  ];
+  // Load quiz themes
+  const loadQuizThemes = async () => {
+    setIsLoadingThemes(true);
+    try {
+      const { data, error } = await supabase
+        .from('quiz_themes')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setQuizThemes(data || []);
+    } catch (error) {
+      console.error('Error loading quiz themes:', error);
+    } finally {
+      setIsLoadingThemes(false);
+    }
+  };
+
+  // Navigate to quizzes with theme selected
+  const navigateToQuizTheme = (theme: any) => {
+    router.push({
+      pathname: '/pages/quizz',
+      params: { themeId: theme.id, themeName: theme.name }
+    });
+  };
 
   // Fetch today's question
   const fetchTodayQuestion = async () => {
@@ -188,6 +219,42 @@ export default function AccueilPage() {
     }
   }, [user, loading, router]);
 
+  // Check couple membership and fetch invite code if needed
+  useEffect(() => {
+    const checkCoupleAndInvite = async () => {
+      if (!user) return;
+      setIsCheckingCouple(true);
+      try {
+        const { data: couple } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .single();
+
+        const inCouple = !!couple?.id;
+        setIsInCouple(inCouple);
+
+        if (!inCouple) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('invite_code')
+            .eq('id', user.id)
+            .single();
+          setInviteCode(profile?.invite_code ?? null);
+        }
+      } catch (err) {
+        console.error('Error checking couple/invite code:', err);
+        setIsInCouple(false);
+      } finally {
+        setIsCheckingCouple(false);
+      }
+    };
+
+    if (user) {
+      checkCoupleAndInvite();
+    }
+  }, [user]);
+
   // Fetch quiz results count when profile is complete
   useEffect(() => {
     console.log('useEffect triggered:', { isProfileComplete, userId: user?.id });
@@ -226,6 +293,7 @@ export default function AccueilPage() {
   useEffect(() => {
     if (isProfileComplete && user) {
       fetchCoupleMoods();
+      loadQuizThemes();
     }
   }, [isProfileComplete, user]);
 
@@ -277,11 +345,11 @@ export default function AccueilPage() {
   };
 
   // Show loading while checking auth or profile completion
-  if (loading || profileLoading) {
+  if (loading || profileLoading || isCheckingCouple || isInCouple === null) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('home.loading')}</Text>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
+        <ActivityIndicator size="large" color="#2DB6FF" />
+        <Text className={`mt-4 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{t('home.loading')}</Text>
       </View>
     );
   }
@@ -291,24 +359,166 @@ export default function AccueilPage() {
     return null;
   }
 
+  // If user is not in a couple, render invite page instead of the normal Accueil content
+  if (isInCouple === false) {
+    const handleCopy = async () => {
+      if (inviteCode) {
+        await Clipboard.setStringAsync(inviteCode);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    };
+
+    const handlePaste = async () => {
+      const text = await Clipboard.getStringAsync();
+      setJoinCode(text.trim());
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    };
+
+    const handleJoin = async () => {
+      if (!user) return;
+      const code = joinCode.trim();
+      if (!code) {
+        setJoinError('Code invalide');
+        return;
+      }
+      setJoinError(null);
+      setIsJoining(true);
+      try {
+        // Find partner profile by invite code
+        const { data: partnerProfile, error: partnerErr } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('invite_code', code)
+          .single();
+
+        if (partnerErr || !partnerProfile?.id) {
+          setJoinError('Code introuvable');
+          return;
+        }
+
+        if (partnerProfile.id === user.id) {
+          setJoinError('Vous ne pouvez pas utiliser votre propre code');
+          return;
+        }
+
+        // Ensure neither user is already in a couple
+        const { data: existingForMe } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .maybeSingle();
+        if (existingForMe?.id) {
+          setJoinError('Vous êtes déjà en couple');
+          return;
+        }
+
+        const { data: existingForPartner } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${partnerProfile.id},user2_id.eq.${partnerProfile.id}`)
+          .maybeSingle();
+        if (existingForPartner?.id) {
+          setJoinError('Ce code est déjà utilisé');
+          return;
+        }
+
+        // Create couple relation with partner as user1
+        const { error: insertErr } = await supabase
+          .from('couples')
+          .insert({ user1_id: partnerProfile.id, user2_id: user.id });
+        if (insertErr) {
+          setJoinError('Impossible de créer le couple');
+          return;
+        }
+
+        // Refresh local state
+        setIsInCouple(true);
+      } catch (e) {
+        setJoinError('Une erreur est survenue');
+      } finally {
+        setIsJoining(false);
+      }
+    };
+
+    return (
+      <AppLayout>
+        <ScrollView className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} px-5`} showsVerticalScrollIndicator={false}>
+          <View className="items-center mb-8">
+            <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-2`}>Connectez votre couple</Text>
+            <Text className={`text-base ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} text-center`}>Partagez votre code pour lier vos comptes</Text>
+          </View>
+
+          <View className={`${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-3xl p-6 items-center mb-6`}>
+            <View className="w-20 h-20 bg-gradient-to-r from-pink-100 to-blue-100 dark:from-pink-900 dark:to-blue-900 rounded-full justify-center items-center mb-4">
+              <Text className="text-4xl">💞</Text>
+            </View>
+            <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>Votre code d'invitation</Text>
+            <View className="flex-row items-center mb-4">
+              <View className={`${isDarkMode ? 'bg-dark-border' : 'bg-gray-50'} rounded-2xl px-4 py-3 mr-3`}>
+                <Text className={`text-lg font-mono ${isDarkMode ? 'text-dark-text' : 'text-text'} tracking-wider`}>{inviteCode ?? '—'}</Text>
+              </View>
+              <TouchableOpacity className="bg-pink-200 dark:bg-pink-600 rounded-xl px-4 py-2" onPress={handleCopy} disabled={!inviteCode}>
+                <Text className="text-white font-semibold">Copier</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity className="bg-blue-200 dark:bg-blue-600 rounded-xl px-6 py-3 w-full" onPress={handleCopy} disabled={!inviteCode}>
+              <Text className="text-white font-semibold text-center">Copier le code</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View className="items-center mb-6">
+            <TouchableOpacity onPress={() => setShowJoinSection(prev => !prev)}>
+              <Text className={`${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} underline font-semibold`}>{showJoinSection ? 'Masquer' : 'Déjà un code ?'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showJoinSection && (
+            <View className={`${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-2xl p-6 mb-6`}>
+              <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>Entrer un code reçu</Text>
+              <View className="flex-row items-center mb-4">
+                <TextInput
+                  value={joinCode}
+                  onChangeText={setJoinCode}
+                  placeholder="Code partenaire"
+                  placeholderTextColor="#7A7A7A"
+                  autoCapitalize="characters"
+                  className={`flex-1 ${isDarkMode ? 'bg-dark-border text-dark-text' : 'bg-gray-50 text-text'} rounded-xl px-4 py-3`}
+                />
+                <TouchableOpacity className="ml-3 bg-pink-200 dark:bg-pink-600 rounded-xl px-4 py-3" onPress={handlePaste}>
+                  <Text className="text-pink-800 dark:text-pink-200 font-semibold">Coller</Text>
+                </TouchableOpacity>
+              </View>
+              {joinError ? <Text className="text-red-500 dark:text-red-400 mb-2">{joinError}</Text> : null}
+              <TouchableOpacity className="bg-blue-200 dark:bg-blue-600 rounded-xl px-6 py-3" onPress={handleJoin} disabled={isJoining || !joinCode.trim()}>
+                <Text className="text-white font-semibold text-center">{isJoining ? 'Connexion…' : 'Rejoindre le couple'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Text className={`${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} text-center mb-6`}>Demandez à votre partenaire d'entrer ce code pour vous rejoindre.</Text>
+        </ScrollView>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
-      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
+      <ScrollView className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} px-5`} showsVerticalScrollIndicator={false}>
 
         {/* Header Section - Compatibility & Profile Pictures */}
-        <View style={styles.headerSection}>
-          <View style={styles.headerTop}>
-            <Text style={styles.compatibilityTitle}>{t('home.compatibility')}</Text>
+        <View className="mb-8">
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('home.compatibility')}</Text>
             <TouchableOpacity 
-              style={styles.notificationButton}
+              className={`w-10 h-10 ${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-full justify-center items-center`}
               onPress={() => router.push('/pages/notifications')}
             >
-              <MaterialCommunityIcons name="bell" size={24} color="#2D2D2D" />
+              <MaterialCommunityIcons name="bell" size={24} color={isDarkMode ? "#FFFFFF" : "#2D2D2D"} />
             </TouchableOpacity>
           </View>
           
           {/* Profile Pictures with Mood Display */}
-          <View style={styles.profileSection}>
+          <View className="mb-6">
             <CoupleMoodDisplay
               coupleMoods={coupleMoods}
               currentUserId={user?.id || ''}
@@ -317,38 +527,36 @@ export default function AccueilPage() {
           </View>
 
           {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBar}>
+          <View className="flex-row items-center">
+            <View className="flex-1 mr-4">
+              <View className={`h-3 ${isDarkMode ? 'bg-dark-border' : 'bg-gray-200'} rounded-full overflow-hidden`}>
                 <View 
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.min(quizResultsCount, 100)}%` }
-                  ]} 
+                  className="h-full bg-primary rounded-full"
+                  style={{ width: `${Math.min(quizResultsCount, 100)}%` }}
                 />
               </View>
             </View>
-            <Text style={styles.percentageText}>{Math.min(quizResultsCount, 100)}%</Text>
+            <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} min-w-12 text-right`}>{Math.min(quizResultsCount, 100)}%</Text>
           </View>
         </View>
 
         {/* Votre humeur aujourd'hui Section */}
-        <View style={styles.moodSection}>
-          <Text style={styles.sectionTitle}>{t('home.yourMoodToday')}</Text>
+        <View className="mb-8">
+          <Text className={`text-xl font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>{t('home.yourMoodToday')}</Text>
           <Pressable 
-            style={styles.moodCard}
+            className={`${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-2xl p-5`}
             onPress={() => setIsMoodSelectorVisible(true)}
           >
-            <View style={styles.moodCardContent}>
-              <View style={styles.moodInfo}>
-                <Text style={styles.moodEmoji}>
+            <View className="flex-row items-center">
+              <View className="flex-row items-center flex-1">
+                <Text className="text-3xl mr-4">
                   {currentUserMood ? moodService.getMoodInfo(currentUserMood).emoji : '😐'}
                 </Text>
-                <View style={styles.moodTextContainer}>
-                  <Text style={styles.moodText}>
+                <View className="flex-1">
+                  <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-1`}>
                     {currentUserMood ? moodService.getMoodInfo(currentUserMood).label + '!' : t('home.setYourMood')}
                   </Text>
-                  <Text style={styles.moodDescription}>
+                  <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
                     {currentUserMood === 'joyeux' ? t('home.moodDescriptions.joyeux') : 
                      currentUserMood === 'content' ? t('home.moodDescriptions.content') :
                      currentUserMood === 'neutre' ? t('home.moodDescriptions.neutre') :
@@ -358,29 +566,29 @@ export default function AccueilPage() {
                   </Text>
                 </View>
               </View>
-              <View style={styles.addButton}>
-                <Text style={styles.addButtonText}>+</Text>
+              <View className="w-10 h-10 bg-secondary rounded-full justify-center items-center">
+                <Text className="text-white font-semibold text-lg">+</Text>
               </View>
             </View>
           </Pressable>
         </View>
 
         {/* Envoyez un pulse à votre moitié Section */}
-        <View style={styles.pulseSection}>
-          <Text style={styles.sectionTitle}>{t('home.sendPulse')}</Text>
-          <Text style={styles.pulseDescription}>
+        <View className="mb-8">
+          <Text className={`text-xl font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-2`}>{t('home.sendPulse')}</Text>
+          <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} mb-4 leading-5`}>
             {t('home.pulseDescription')}
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pulseScrollView}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
             {pulseOptions.map((option, index) => (
               <Pressable 
                 key={index} 
-                style={styles.pulseOption}
+                className="mr-4"
                 onPress={() => handlePulseSend(option.emoji)}
                 disabled={isSendingPulse}
               >
-                <View style={styles.pulseIcon}>
-                  <Text style={styles.pulseEmoji}>{option.emoji}</Text>
+                <View className={`w-16 h-16 ${isDarkMode ? 'bg-dark-border' : 'bg-gray-50'} rounded-full justify-center items-center`}>
+                  <Text className="text-2xl">{option.emoji}</Text>
                 </View>
               </Pressable>
             ))}
@@ -388,57 +596,78 @@ export default function AccueilPage() {
         </View>
 
         {/* Thématiques des Quizz Section */}
-        <View style={styles.quizSection}>
-          <Text style={styles.sectionTitle}>{t('home.quizThemes')}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quizScrollView}>
-            {quizCategories.map((category, index) => (
-              <Pressable key={index} style={styles.quizCard}>
-                <View style={[styles.quizImageContainer, { backgroundColor: category.color }]}>
-                  <Text style={styles.quizEmoji}>{category.emoji}</Text>
-                </View>
-                <Text style={styles.quizTitle}>{category.title}</Text>
-              </Pressable>
-            ))}
+        <View className="mb-8">
+          <Text className={`text-xl font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>{t('home.quizThemes')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+            {isLoadingThemes ? (
+              <View className="flex-row items-center">
+                <ActivityIndicator size="small" color={isDarkMode ? '#CCCCCC' : '#7A7A7A'} />
+                <Text className={`ml-2 text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>Chargement...</Text>
+              </View>
+            ) : quizThemes.length > 0 ? (
+              quizThemes.slice(0, 6).map((theme, index) => {
+                // Generate different colors for each theme
+                const colors = ['#4A90E2', '#50C878', '#228B22', '#FF6B6B', '#9B59B6', '#F39C12'];
+                const emojis = ['📚', '💪', '🌿', '❤️', '🎯', '🌟'];
+                const themeColor = colors[index % colors.length];
+                const themeEmoji = emojis[index % emojis.length];
+                
+                return (
+                  <Pressable 
+                    key={theme.id} 
+                    className="mr-4 items-center"
+                    onPress={() => navigateToQuizTheme(theme)}
+                  >
+                    <View className="w-16 h-16 rounded-full justify-center items-center mb-2" style={{ backgroundColor: themeColor }}>
+                      <Text className="text-2xl">{themeEmoji}</Text>
+                    </View>
+                    <Text className={`text-sm font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} text-center`}>{theme.name}</Text>
+                  </Pressable>
+                );
+              })
+            ) : (
+              <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>Aucun thème disponible</Text>
+            )}
           </ScrollView>
         </View>
 
         {/* Question du jour Section */}
-        <View style={styles.dailyQuestionSection}>
-          <Text style={styles.sectionTitle}>{t('home.dailyQuestion')}</Text>
-          <View style={styles.questionCard}>
+        <View className="mb-8">
+          <Text className={`text-xl font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>{t('home.dailyQuestion')}</Text>
+          <View className={`${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-2xl p-5`}>
             {isLoadingQuestion ? (
-              <View style={styles.questionLoadingContainer}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.questionLoadingText}>{t('home.loadingQuestion')}</Text>
+              <View className="flex-row items-center justify-center py-4">
+                <ActivityIndicator size="small" color="#2DB6FF" />
+                <Text className={`ml-2 text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{t('home.loadingQuestion')}</Text>
               </View>
             ) : todayQuestion?.question ? (
               <>
-                <Text style={styles.questionText}>
+                <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4 text-center leading-6`}>
                   "{todayQuestion.question.content}"
                 </Text>
-                <Text style={styles.questionDate}>
+                <Text className={`text-xs ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} text-center mb-4`}>
                   {new Date(todayQuestion.scheduled_for).toLocaleDateString('fr-FR')}
                 </Text>
                 <Pressable 
-                  style={styles.answerButton}
+                  className="bg-primary rounded-xl py-3"
                   onPress={() => router.push('/pages/questions')}
                 >
-                  <Text style={styles.answerButtonText}>{t('home.answer')}</Text>
+                  <Text className="text-white font-semibold text-center">{t('home.answer')}</Text>
                 </Pressable>
               </>
             ) : (
               <>
-                <Text style={styles.questionText}>
+                <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4 text-center leading-6`}>
                   "{t('home.noQuestionAvailable')}"
                 </Text>
-                <Text style={styles.questionDebug}>
+                <Text className="text-xs text-red-500 text-center mb-4">
                   Debug: Vérifiez la console pour plus d'informations
                 </Text>
                 <Pressable 
-                  style={styles.answerButton}
+                  className="bg-primary rounded-xl py-3"
                   onPress={() => router.push('/pages/questions')}
                 >
-                  <Text style={styles.answerButtonText}>{t('home.seeQuestions')}</Text>
+                  <Text className="text-white font-semibold text-center">{t('home.seeQuestions')}</Text>
                 </Pressable>
               </>
             )}
@@ -460,273 +689,3 @@ export default function AccueilPage() {
     </AppLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5', // Light grey background like in the image
-    paddingHorizontal: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-  },
-  
-
-
-  // Header Section
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 15,
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  compatibilityTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2D2D2D',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  progressBarContainer: {
-    flex: 1,
-    marginRight: 20,
-  },
-  progressBar: {
-    height: 12,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 6,
-    backgroundColor: '#2DB6FF', // Blue gradient start
-  },
-  percentageText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    minWidth: 50,
-    textAlign: 'right',
-  },
-
-  // Mood Section
-  moodSection: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    marginBottom: 16,
-  },
-  moodCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
-  },
-  moodCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  moodInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  moodEmoji: {
-    fontSize: 32,
-    marginRight: 12,
-  },
-  moodTextContainer: {
-    flex: 1,
-  },
-  moodText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    marginBottom: 4,
-  },
-  moodDescription: {
-    fontSize: 14,
-    color: '#7A7A7A',
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FF69B4', // Pink background like in the image
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-
-  // Pulse Section
-  pulseSection: {
-    marginBottom: 30,
-  },
-  pulseDescription: {
-    fontSize: 14,
-    color: '#7A7A7A',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  pulseScrollView: {
-    paddingHorizontal: 0,
-  },
-  pulseOption: {
-    alignItems: 'center',
-    marginRight: 20,
-    minWidth: 60,
-  },
-  pulseIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#F8F0FF', // Light pink background like in the image
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  pulseEmoji: {
-    fontSize: 24,
-  },
-
-  // Quiz Section
-  quizSection: {
-    marginBottom: 30,
-  },
-  quizScrollView: {
-    paddingHorizontal: 0,
-  },
-  quizCard: {
-    alignItems: 'center',
-    marginRight: 20,
-    minWidth: 80,
-  },
-  quizImageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quizEmoji: {
-    fontSize: 28,
-  },
-  quizTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    textAlign: 'center',
-  },
-
-  // Daily Question Section
-  dailyQuestionSection: {
-    marginBottom: 30,
-  },
-  questionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
-  },
-  questionText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#2D2D2D',
-    marginBottom: 16,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  answerButton: {
-    backgroundColor: '#2DB6FF',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  answerButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  questionLoadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  questionLoadingText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#7A7A7A',
-  },
-  questionDate: {
-    fontSize: 12,
-    color: '#7A7A7A',
-    textAlign: 'center',
-    marginBottom: 12,
-    fontStyle: 'italic',
-  },
-  questionDebug: {
-    fontSize: 10,
-    color: '#FF6B6B',
-    textAlign: 'center',
-    marginBottom: 8,
-    fontStyle: 'italic',
-  },
-});

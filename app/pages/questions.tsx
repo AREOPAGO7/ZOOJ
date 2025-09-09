@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 // import { dailyQuestionScheduler } from '../../lib/dailyQuestionScheduler';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Answer, questionService } from '../../lib/questionService';
@@ -16,6 +17,7 @@ export default function QuestionsPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   const [questions, setQuestions] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -24,6 +26,9 @@ export default function QuestionsPage() {
   const [answerTexts, setAnswerTexts] = useState<{ [key: string]: string }>({});
   const [submittingAnswers, setSubmittingAnswers] = useState<{ [key: string]: boolean }>({});
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'myTurn' | 'theirTurn'>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showSearchInput, setShowSearchInput] = useState<boolean>(false);
+  const [allQuestions, setAllQuestions] = useState<any[]>([]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -101,17 +106,34 @@ export default function QuestionsPage() {
           )
         `);
 
+      // Get partner ID for accurate filtering
+      const partnerId = coupleData.user1_id === user!.id ? coupleData.user2_id : coupleData.user1_id;
+      
+      // Get user's specific answers for accurate filtering
+      const { data: userAnswers } = await supabase
+        .from('answers')
+        .select('daily_question_id, user_id')
+        .eq('user_id', user!.id);
+
+      // Get partner's specific answers for accurate filtering
+      const { data: partnerAnswers } = await supabase
+        .from('answers')
+        .select('daily_question_id, user_id')
+        .eq('user_id', partnerId);
+
+      // Create Sets for quick lookup
+      const userAnsweredQuestionIds = new Set(userAnswers?.map(answer => answer.daily_question_id) || []);
+      const partnerAnsweredQuestionIds = new Set(partnerAnswers?.map(answer => answer.daily_question_id) || []);
+
       // Process couple-specific questions first (these are your answered questions and chat history)
       const coupleQuestionsWithStatus = coupleQuestionsData?.map(dailyQuestion => {
         const questionAnswers = allAnswers?.filter((answer: any) => 
           answer.daily_question_id === dailyQuestion.id
         ) || [];
         
-        const userAnswered = questionAnswers.some((answer: any) => 
-          answer.user_id === user!.id
-        );
-        
-        const bothAnswered = questionAnswers.length >= 2;
+        const userAnswered = userAnsweredQuestionIds.has(dailyQuestion.id);
+        const partnerAnswered = partnerAnsweredQuestionIds.has(dailyQuestion.id);
+        const bothAnswered = userAnswered && partnerAnswered;
         
         return {
           id: dailyQuestion.question.id,
@@ -119,7 +141,8 @@ export default function QuestionsPage() {
           created_at: dailyQuestion.question.created_at,
           daily_question_id: dailyQuestion.id,
           scheduled_for: dailyQuestion.scheduled_for,
-          answered: userAnswered,
+          userAnswered,
+          partnerAnswered,
           bothAnswered,
           answerCount: questionAnswers.length,
           isGlobal: false,
@@ -144,11 +167,9 @@ export default function QuestionsPage() {
           answer.daily_question_id === dailyQuestion.id
         ) || [];
         
-        const userAnswered = questionAnswers.some((answer: any) => 
-          answer.user_id === user!.id
-        );
-        
-        const bothAnswered = questionAnswers.length >= 2;
+        const userAnswered = userAnsweredQuestionIds.has(dailyQuestion.id);
+        const partnerAnswered = partnerAnsweredQuestionIds.has(dailyQuestion.id);
+        const bothAnswered = userAnswered && partnerAnswered;
         
         return {
           id: dailyQuestion.question.id,
@@ -156,7 +177,8 @@ export default function QuestionsPage() {
           created_at: dailyQuestion.question.created_at,
           daily_question_id: dailyQuestion.id,
           scheduled_for: dailyQuestion.scheduled_for,
-          answered: userAnswered,
+          userAnswered,
+          partnerAnswered,
           bothAnswered,
           answerCount: questionAnswers.length,
           isGlobal: true,
@@ -167,12 +189,87 @@ export default function QuestionsPage() {
       // Combine both types of questions
       const questionsWithAnswerStatus = [...coupleQuestionsWithStatus, ...globalQuestionsWithStatus];
 
-      setQuestions(questionsWithAnswerStatus);
+      setAllQuestions(questionsWithAnswerStatus); // Store all questions for search
+      setQuestions(questionsWithAnswerStatus); // Set initial display
       
     } catch (error) {
       console.error('Error loading questions:', error);
     } finally {
       setLoadingQuestions(false);
+    }
+  };
+
+  // Filter and search functionality
+  const applyFilters = (questionsToFilter: any[] = allQuestions, filterToUse: string = activeFilter, searchToUse: string = searchQuery) => {
+    let filtered = [...questionsToFilter];
+    
+    // Apply search filter
+    if (searchToUse.trim()) {
+      filtered = filtered.filter(question => 
+        question.content.toLowerCase().includes(searchToUse.toLowerCase())
+      );
+    }
+    
+    // Apply status filter based on database structure
+    switch (filterToUse) {
+      case 'unread':
+        // Show questions where user hasn't answered
+        filtered = filtered.filter(question => !question.userAnswered);
+        break;
+        
+      case 'myTurn':
+        // Show questions where: user hasn't answered yet
+        // This includes: unanswered questions (answerCount = 0) OR questions where partner answered but user didn't (answerCount = 1 and !userAnswered)
+        filtered = filtered.filter(question => {
+          return !question.userAnswered;
+        });
+        break;
+        
+      case 'theirTurn':
+        // Show questions where: partner hasn't answered yet
+        // This includes: unanswered questions (answerCount = 0) OR questions where user answered but partner didn't (answerCount = 1 and userAnswered)
+        filtered = filtered.filter(question => {
+          return !question.partnerAnswered;
+        });
+        break;
+        
+      case 'all':
+      default:
+        // Show all questions
+        break;
+    }
+    
+    return filtered;
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const filteredQuestions = applyFilters(allQuestions, activeFilter, query);
+    setQuestions(filteredQuestions);
+  };
+
+  const handleFilterChange = (filter: 'all' | 'unread' | 'myTurn' | 'theirTurn') => {
+    setActiveFilter(filter);
+    const filteredQuestions = applyFilters(allQuestions, filter, searchQuery);
+    
+    // Debug logging
+    console.log('=== FILTER DEBUG ===');
+    console.log('Filter:', filter);
+    console.log('All questions:', allQuestions.length);
+    console.log('Filtered questions:', filteredQuestions.length);
+    console.log('Sample question data:', allQuestions[0]);
+    console.log('==================');
+    
+    setQuestions(filteredQuestions);
+  };
+
+  const toggleSearchInput = () => {
+    setShowSearchInput(!showSearchInput);
+    if (showSearchInput) {
+      // If closing search, clear search and apply current filter
+      setSearchQuery('');
+      const filteredQuestions = applyFilters(allQuestions, activeFilter, '');
+      setQuestions(filteredQuestions);
     }
   };
 
@@ -214,16 +311,9 @@ export default function QuestionsPage() {
   };
 
   const getFilteredQuestions = () => {
-    switch (activeFilter) {
-      case 'unread':
-        return questions.filter(q => !q.answered);
-      case 'myTurn':
-        return questions.filter(q => !q.answered && q.answerCount === 1);
-      case 'theirTurn':
-        return questions.filter(q => !q.answered && q.answerCount === 0);
-      default:
-        return questions;
-    }
+    // This function is now replaced by the applyFilters function
+    // But we keep it for compatibility with the FlatList
+    return questions;
   };
 
   const handleQuestionPress = async (question: any) => {
@@ -408,7 +498,7 @@ export default function QuestionsPage() {
   };
 
   const renderQuestionItem = ({ item }: { item: any }) => {
-    const isAnswered = item.answered;
+    const isAnswered = item.userAnswered;
     const isExpanded = expandedQuestionId === item.id;
     const showChatButton = item.bothAnswered;
 
@@ -417,7 +507,7 @@ export default function QuestionsPage() {
         <Pressable
           style={[
             styles.questionItem,
-            { backgroundColor: colors.surface, borderColor: colors.border },
+            { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border },
             !isAnswered && styles.newQuestionItem,
             isAnswered && styles.answeredQuestionItem
           ]}
@@ -443,10 +533,10 @@ export default function QuestionsPage() {
           </View>
           
           <View style={styles.questionContent}>
-            <Text style={[styles.questionText, { color: colors.text }]} numberOfLines={2}>
+            <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
               {item.content || t('questions.questionOfDay')}
             </Text>
-            <Text style={[styles.questionDate, { color: colors.textSecondary }]}>
+            <Text style={[styles.questionDate, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
               {formatDate(item.created_at)}
             </Text>
             
@@ -479,24 +569,32 @@ export default function QuestionsPage() {
           <MaterialCommunityIcons 
             name={isExpanded ? "chevron-up" : "chevron-right"} 
             size={20} 
-            color={colors.textSecondary} 
+            color={isDarkMode ? '#CCCCCC' : colors.textSecondary} 
           />
         </Pressable>
 
         {/* Collapsible Answer Input */}
         {isExpanded && !isAnswered && (
-          <View style={styles.answerInputContainer}>
+          <View style={[styles.answerInputContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA', borderTopColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
             <TextInput
-              style={[styles.answerInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[styles.answerInput, { 
+                backgroundColor: isDarkMode ? '#000000' : '#FFFFFF', 
+                borderColor: isDarkMode ? '#333333' : '#E5E7EB', 
+                color: isDarkMode ? '#FFFFFF' : '#2D2D2D' 
+              }]}
               placeholder={t('questions.typeAnswer')}
               value={answerTexts[item.id] || ''}
               onChangeText={(text) => setAnswerTexts(prev => ({ ...prev, [item.id]: text }))}
               multiline
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={isDarkMode ? '#CCCCCC' : colors.textSecondary}
             />
             <View style={styles.answerActions}>
               <Pressable
-                style={[styles.submitAnswerButton, !answerTexts[item.id]?.trim() && styles.submitAnswerButtonDisabled]}
+                  style={[
+                    styles.submitAnswerButton, 
+                    { backgroundColor: isDarkMode ? '#2DB6FF' : '#87CEEB' },
+                    !answerTexts[item.id]?.trim() && styles.submitAnswerButtonDisabled
+                  ]}
                 onPress={() => handleSubmitAnswer(item)}
                 disabled={!answerTexts[item.id]?.trim() || submittingAnswers[item.id]}
               >
@@ -530,54 +628,72 @@ export default function QuestionsPage() {
 
   return (
     <AppLayout>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: isDarkMode ? '#000000' : colors.background }]}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('questions.title')}</Text>
-          <Pressable style={styles.searchButton}>
-            <MaterialCommunityIcons name="magnify" size={24} color={colors.text} />
+        <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
+          <Text style={[styles.headerTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('questions.title')}</Text>
+          <Pressable style={styles.searchButton} onPress={toggleSearchInput}>
+            <MaterialCommunityIcons name={showSearchInput ? "close" : "magnify"} size={24} color={isDarkMode ? '#FFFFFF' : colors.text} />
           </Pressable>
         </View>
 
+        {/* Search Input */}
+        {showSearchInput && (
+          <View style={[styles.searchContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA', borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
+            <TextInput
+              style={[styles.searchInput, { 
+                backgroundColor: isDarkMode ? '#000000' : '#FFFFFF', 
+                borderColor: isDarkMode ? '#333333' : '#E5E7EB', 
+                color: isDarkMode ? '#FFFFFF' : '#2D2D2D' 
+              }]}
+              placeholder={t('search')}
+              placeholderTextColor={isDarkMode ? '#CCCCCC' : '#9CA3AF'}
+              value={searchQuery}
+              onChangeText={handleSearch}
+              autoFocus={true}
+            />
+          </View>
+        )}
+
         {/* Filter Tabs */}
-        <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <View style={[styles.filterContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterScrollContent}
           >
             <Pressable
-              style={[styles.filterTab, { backgroundColor: colors.surface, borderColor: colors.border }, activeFilter === 'all' && styles.filterTabActive]}
-              onPress={() => setActiveFilter('all')}
+              style={[styles.filterTab, { backgroundColor: isDarkMode ? '#000000' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }, activeFilter === 'all' && styles.filterTabActive]}
+              onPress={() => handleFilterChange('all')}
             >
-              <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'all' && styles.filterTabTextActive]}>
+              <Text style={[styles.filterTabText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }, activeFilter === 'all' && styles.filterTabTextActive]}>
                 {t('questions.all')}
               </Text>
             </Pressable>
             
             <Pressable
-              style={[styles.filterTab, { backgroundColor: colors.surface, borderColor: colors.border }, activeFilter === 'unread' && styles.filterTabActive]}
-              onPress={() => setActiveFilter('unread')}
+              style={[styles.filterTab, { backgroundColor: isDarkMode ? '#000000' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }, activeFilter === 'unread' && styles.filterTabActive]}
+              onPress={() => handleFilterChange('unread')}
             >
-              <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'unread' && styles.filterTabTextActive]}>
+              <Text style={[styles.filterTabText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }, activeFilter === 'unread' && styles.filterTabTextActive]}>
                 {t('questions.unread')}
               </Text>
             </Pressable>
             
             <Pressable
-              style={[styles.filterTab, { backgroundColor: colors.surface, borderColor: colors.border }, activeFilter === 'myTurn' && styles.filterTabActive]}
-              onPress={() => setActiveFilter('myTurn')}
+              style={[styles.filterTab, { backgroundColor: isDarkMode ? '#000000' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }, activeFilter === 'myTurn' && styles.filterTabActive]}
+              onPress={() => handleFilterChange('myTurn')}
             >
-              <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'myTurn' && styles.filterTabTextActive]}>
+              <Text style={[styles.filterTabText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }, activeFilter === 'myTurn' && styles.filterTabTextActive]}>
                 {t('questions.myTurn')}
               </Text>
             </Pressable>
             
             <Pressable
-              style={[styles.filterTab, { backgroundColor: colors.surface, borderColor: colors.border }, activeFilter === 'theirTurn' && styles.filterTabActive]}
-              onPress={() => setActiveFilter('theirTurn')}
+              style={[styles.filterTab, { backgroundColor: isDarkMode ? '#000000' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }, activeFilter === 'theirTurn' && styles.filterTabActive]}
+              onPress={() => handleFilterChange('theirTurn')}
             >
-              <Text style={[styles.filterTabText, { color: colors.textSecondary }, activeFilter === 'theirTurn' && styles.filterTabTextActive]}>
+              <Text style={[styles.filterTabText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }, activeFilter === 'theirTurn' && styles.filterTabTextActive]}>
                 {t('questions.theirTurn')}
               </Text>
             </Pressable>
@@ -645,6 +761,18 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     padding: 8,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  searchInput: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    borderWidth: 1,
   },
   loadingContainer: {
     flex: 1,

@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import AppLayout from '../app-layout';
@@ -21,8 +22,9 @@ const CLOUDINARY_CONFIG = {
 
 export default function MonProfilPage() {
   const router = useRouter();
-  const { user, profile, profileLoading, updateProfile, updatePassword } = useAuth();
+  const { user, profile, profileLoading, updateProfile, updatePassword, signOut } = useAuth();
   const { t } = useLanguage();
+  const { isDarkMode } = useDarkTheme();
   
   const [fullName, setFullName] = useState(profile?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -131,34 +133,10 @@ export default function MonProfilPage() {
     }
   };
 
-  const handleLogout = () => {
-    console.log('Logout button clicked!'); // Debug log
-    
+  const handleLogout = async () => {
     try {
-      // Clear localStorage immediately
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.clear();
-        console.log('LocalStorage cleared successfully');
-      }
-      
-      // Also try to clear any other storage
-      try {
-        if (typeof window !== 'undefined' && window.sessionStorage) {
-          sessionStorage.clear();
-          console.log('SessionStorage cleared successfully');
-        }
-      } catch (e) {
-        console.log('SessionStorage clear error:', e);
-      }
-      
-      console.log('About to navigate to main page');
-      
-      // Navigate to the main page immediately after logout
-      router.replace('/');
-      
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Even if there's an error, try to navigate
+      await signOut();
+    } finally {
       router.replace('/');
     }
   };

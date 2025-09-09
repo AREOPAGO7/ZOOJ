@@ -1,8 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotificationManager } from '../../hooks/useNotificationManager';
@@ -34,6 +36,7 @@ interface Quiz {
   id: string;
   title: string;
   description: string;
+  image?: string;
   theme: {
     id: string;
     name: string;
@@ -64,9 +67,11 @@ interface QuizResult {
 
 export default function QuizzPage() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   const { sendQuizInvite } = useNotificationManager();
   
@@ -94,6 +99,18 @@ export default function QuizzPage() {
   const [quizCache, setQuizCache] = useState<Map<string, any>>(new Map());
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  // Couple/invite state
+  const [isCheckingCouple, setIsCheckingCouple] = useState(false);
+  const [isInCouple, setIsInCouple] = useState<boolean | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [showJoinSection, setShowJoinSection] = useState<boolean>(false);
+  const [joinCode, setJoinCode] = useState<string>('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  // Search state
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showSearchInput, setShowSearchInput] = useState<boolean>(false);
+  const [filteredQuizzes, setFilteredQuizzes] = useState<Quiz[]>([]);
 
   // Function to check for pending quiz invites
   const checkPendingInvites = async () => {
@@ -243,6 +260,36 @@ export default function QuizzPage() {
     }
   }, [user]);
 
+  // Check couple membership and fetch invite code
+  useEffect(() => {
+    const checkCoupleAndInvite = async () => {
+      if (!user) return;
+      setIsCheckingCouple(true);
+      try {
+        const { data: couple } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .single();
+        const inCouple = !!couple?.id;
+        setIsInCouple(inCouple);
+        if (!inCouple) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('invite_code')
+            .eq('id', user.id)
+            .single();
+          setInviteCode(profile?.invite_code ?? null);
+        }
+      } catch (e) {
+        setIsInCouple(false);
+      } finally {
+        setIsCheckingCouple(false);
+      }
+    };
+    if (user) checkCoupleAndInvite();
+  }, [user]);
+
   // Load quizzes and themes
   useEffect(() => {
     if (user && isProfileComplete) {
@@ -324,6 +371,7 @@ export default function QuizzPage() {
         id: quiz.id,
         title: quiz.title,
         description: quiz.description,
+        image: quiz.image,
         theme: quiz.theme,
         questions_count: quiz.questions?.length || 0,
         estimated_time: Math.ceil((quiz.questions?.length || 0) * 0.5) // Rough estimate: 30 seconds per question
@@ -575,10 +623,24 @@ export default function QuizzPage() {
       // Calculate compatibility
       const result = calculateCompatibility(userAnswers, partnerAnswers);
 
-      // Store results
+      // Store results - use delete + insert approach since table doesn't have unique constraint
+      console.log('Storing quiz results...');
+      
+      // First, delete any existing results for this quiz and couple
+      const { error: deleteError } = await supabase
+        .from('quiz_results')
+        .delete()
+        .eq('quiz_id', selectedQuiz.id)
+        .eq('couple_id', coupleId);
+      
+      if (deleteError) {
+        console.log('Delete error (this is usually fine):', deleteError);
+      }
+      
+      // Then insert the new result
       const { error: storeError } = await supabase
         .from('quiz_results')
-        .upsert({
+        .insert({
           quiz_id: selectedQuiz.id,
           couple_id: coupleId,
           score: result.score,
@@ -586,7 +648,7 @@ export default function QuizzPage() {
           user2_percent: result.user2_percent,
           strengths: result.strengths,
           weaknesses: result.weaknesses
-        }, { onConflict: 'quiz_id,couple_id' });
+        });
 
       if (storeError) throw storeError;
 
@@ -806,12 +868,54 @@ export default function QuizzPage() {
     setRefreshing(false);
   };
 
+  // Search functionality
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim() === '') {
+      setFilteredQuizzes(quizzes);
+    } else {
+      const filtered = quizzes.filter(quiz => 
+        quiz.title.toLowerCase().includes(query.toLowerCase()) ||
+        quiz.description.toLowerCase().includes(query.toLowerCase()) ||
+        quiz.theme.name.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredQuizzes(filtered);
+    }
+  };
+
+  const toggleSearchInput = () => {
+    setShowSearchInput(!showSearchInput);
+    if (showSearchInput) {
+      setSearchQuery('');
+      setFilteredQuizzes(quizzes);
+    }
+  };
+
+  // Update filtered quizzes when quizzes change
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredQuizzes(quizzes);
+    } else {
+      handleSearch(searchQuery);
+    }
+  }, [quizzes]);
+
+  // Handle theme selection from navigation parameters
+  useEffect(() => {
+    if (params.themeId && themes.length > 0) {
+      const theme = themes.find(t => t.id === params.themeId);
+      if (theme) {
+        setSelectedTheme(theme);
+      }
+    }
+  }, [params.themeId, themes]);
+
   // Show loading while checking auth or profile completion
-  if (loading || profileLoading) {
+  if (loading || profileLoading || isCheckingCouple || isInCouple === null) {
     return (
-      <View style={styles.loadingContainer}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-white'} justify-center items-center`}>
         <ActivityIndicator size="large" color={BRAND_BLUE} />
-        <Text style={styles.loadingText}>{t('quiz.loading')}</Text>
+        <Text style={[styles.loadingText, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>{t('quiz.loading')}</Text>
       </View>
     );
   }
@@ -821,20 +925,148 @@ export default function QuizzPage() {
     return null;
   }
 
+  // If user is not in a couple, show invite/join screen (same as accueil UX)
+  if (isInCouple === false) {
+    const handleCopy = async () => {
+      if (inviteCode) {
+        await Clipboard.setStringAsync(inviteCode);
+      }
+    };
+
+    const handlePaste = async () => {
+      const text = await Clipboard.getStringAsync();
+      setJoinCode(text.trim());
+    };
+
+    const handleJoin = async () => {
+      if (!user) return;
+      const code = joinCode.trim();
+      if (!code) {
+        setJoinError('Code invalide');
+        return;
+      }
+      setJoinError(null);
+      setIsJoining(true);
+      try {
+        const { data: partnerProfile, error: partnerErr } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('invite_code', code)
+          .single();
+        if (partnerErr || !partnerProfile?.id) {
+          setJoinError('Code introuvable');
+          return;
+        }
+        if (partnerProfile.id === user.id) {
+          setJoinError('Vous ne pouvez pas utiliser votre propre code');
+          return;
+        }
+        const { data: existingForMe } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .maybeSingle();
+        if (existingForMe?.id) {
+          setJoinError('Vous êtes déjà en couple');
+          return;
+        }
+        const { data: existingForPartner } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${partnerProfile.id},user2_id.eq.${partnerProfile.id}`)
+          .maybeSingle();
+        if (existingForPartner?.id) {
+          setJoinError('Ce code est déjà utilisé');
+          return;
+        }
+        const { error: insertErr } = await supabase
+          .from('couples')
+          .insert({ user1_id: partnerProfile.id, user2_id: user.id });
+        if (insertErr) {
+          setJoinError('Impossible de créer le couple');
+          return;
+        }
+        setIsInCouple(true);
+      } catch (e) {
+        setJoinError('Une erreur est survenue');
+      } finally {
+        setIsJoining(false);
+      }
+    };
+
+    return (
+      <AppLayout>
+        <ScrollView className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-white'}`} showsVerticalScrollIndicator={false}>
+          <View style={styles.inviteHeader}> 
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.title')}</Text>
+            <Text style={[styles.inviteSubtitle, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>Partagez votre code pour lier vos comptes</Text>
+          </View>
+
+          <View style={[styles.inviteCard, { backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF', borderColor: isDarkMode ? '#333333' : '#8DD8FF' }]}>
+            <View style={[styles.inviteHero, { backgroundColor: isDarkMode ? '#333333' : '#FFE6F2' }]}>
+              <Text style={styles.inviteHeroEmoji}>💞</Text>
+            </View>
+            <Text style={[styles.inviteCodeLabel, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>Votre code d'invitation</Text>
+            <View style={styles.codePillRow}>
+              <View style={[styles.codePill, { backgroundColor: isDarkMode ? '#333333' : '#F4FBFF', borderColor: isDarkMode ? '#555555' : '#8DD8FF' }]}>
+                <Text style={[styles.codePillText, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{inviteCode ?? '—'}</Text>
+              </View>
+              <TouchableOpacity style={styles.inlineCopyButtonAbsolute} onPress={handleCopy} disabled={!inviteCode}>
+                <Text style={styles.inlineCopyText}>Copier</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.primaryCopyButton} onPress={handleCopy} disabled={!inviteCode}>
+              <Text style={styles.primaryCopyText}>Copier le code</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.joinToggleContainer}>
+            <TouchableOpacity onPress={() => setShowJoinSection(prev => !prev)}>
+              <Text style={[styles.joinToggleText, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>{showJoinSection ? 'Masquer' : 'Déjà un code ?'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showJoinSection && (
+            <View style={[styles.joinCard, { backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF', borderColor: isDarkMode ? '#333333' : '#FFE0F0' }]}>
+              <Text style={[styles.inviteCodeLabel, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>Entrer un code reçu</Text>
+              <View style={styles.joinRow}>
+                <TextInput
+                  value={joinCode}
+                  onChangeText={setJoinCode}
+                  placeholder="Code partenaire"
+                  placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
+                  autoCapitalize="characters"
+                  style={[styles.joinInput, { backgroundColor: isDarkMode ? '#333333' : '#FAFBFF', borderColor: isDarkMode ? '#555555' : '#E6EAF2', color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}
+                />
+                <TouchableOpacity style={styles.pasteButton} onPress={() => handlePaste()}>
+                  <Text style={styles.pasteButtonText}>Coller</Text>
+                </TouchableOpacity>
+              </View>
+              {joinError ? <Text style={styles.joinError}>{joinError}</Text> : null}
+              <TouchableOpacity style={[styles.primaryCopyButton, styles.joinPrimaryButton]} onPress={handleJoin} disabled={isJoining || !joinCode.trim()}>
+                <Text style={styles.primaryCopyText}>{isJoining ? 'Connexion…' : 'Rejoindre le couple'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
+      </AppLayout>
+    );
+  }
+
   // Quiz taking screen or results display
   if ((isTakingQuiz || quizResult) && selectedQuiz && quizQuestions.length > 0) {
     const allQuestionsAnswered = answers.length === quizQuestions.length;
 
   return (
     <AppLayout>
-        <View style={styles.quizContainer}>
+        <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-white'}`}>
           {/* Header */}
-          <View style={styles.quizHeader}>
+          <View style={[styles.quizHeader, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
             <Pressable onPress={resetQuiz} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color="#2D2D2D" />
+              <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : '#2D2D2D'} />
             </Pressable>
             <View style={styles.quizTitleContainer}>
-              <Text style={styles.quizTitle}>{selectedQuiz.title}</Text>
+              <Text style={[styles.quizTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{selectedQuiz.title}</Text>
               {pendingInvites.length > 0 && (
                 <View style={styles.quizNotificationBadge}>
                   <MaterialCommunityIcons name="bell" size={16} color="#FFFFFF" />
@@ -850,51 +1082,18 @@ export default function QuizzPage() {
             <ScrollView style={styles.resultsScroll} showsVerticalScrollIndicator={false}>
               {/* Congratulations */}
               <View style={styles.congratulationsContainer}>
-                <Text style={styles.congratulationsText}>{t('quiz.congratulations')}</Text>
-                <Text style={styles.congratulationsSubtext}>{t('quiz.quizCompleted')}</Text>
+                <Text style={[styles.congratulationsText, { color: isDarkMode ? '#FFFFFF' : BRAND_PINK }]}>{t('quiz.congratulations')}</Text>
+                <Text style={[styles.congratulationsSubtext, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>{t('quiz.quizCompleted')}</Text>
               </View>
 
-              {/* Quiz Completion Invite Section */}
-              <View style={styles.completionInviteSection}>
-                <Text style={styles.completionInviteTitle}>{t('quiz.shareQuiz')}</Text>
-                <Text style={styles.completionInviteDescription}>
-                  {t('quiz.shareDescription')}
-                </Text>
-                
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.completionInviteButton,
-                    pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
-                  ]}
-                  onPress={() => handleSendQuizInvite(selectedQuiz!)}
-                  disabled={isSendingInvite}
-                >
-                  <LinearGradient
-                    colors={[BRAND_BLUE, BRAND_PINK]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.completionInviteButtonGradient}
-                  >
-                    <MaterialCommunityIcons
-                      name="heart"
-                      size={20}
-                      color="#FFFFFF"
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text style={styles.completionInviteButtonText}>
-                      {isSendingInvite ? t('quiz.sendingInvite') : t('quiz.invitePartnerQuiz')}
-                    </Text>
-                  </LinearGradient>
-                </Pressable>
-              </View>
 
               {/* Compatibility Score */}
               <View style={styles.scoreContainer}>
                 <View style={styles.scoreCircle}>
                   <Text style={styles.scoreText}>{quizResult.score}%</Text>
                 </View>
-                <Text style={styles.scoreLabel}>{t('quiz.globalCompatibility')}</Text>
-                <Text style={styles.scoreSubtext}>
+                <Text style={[styles.scoreLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.globalCompatibility')}</Text>
+                <Text style={[styles.scoreSubtext, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>
                   {quizResult.score >= 80 ? t('quiz.excellentScore') : 
                    quizResult.score >= 60 ? t('quiz.goodScore') : t('quiz.needsImprovement')}
                 </Text>
@@ -926,29 +1125,29 @@ export default function QuizzPage() {
 
               {/* Your Responses Section */}
               <View style={styles.yourResponsesSection}>
-                <Text style={styles.sectionTitle}>{t('quiz.yourResponses')}</Text>
-                <Text style={styles.responsesDescription}>
+                <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.yourResponses')}</Text>
+                <Text style={[styles.responsesDescription, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>
                   {t('quiz.responsesDescription')}
                 </Text>
               </View>
 
               {/* Detailed Results */}
               <View style={styles.detailedResultsContainer}>
-                <Text style={styles.detailedResultsTitle}>{t('quiz.detailedResults')}</Text>
+                <Text style={[styles.detailedResultsTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.detailedResults')}</Text>
                 
                 {/* Strengths */}
                 {quizResult.strengths.length > 0 && (
                   <View style={styles.resultsSection}>
-                    <Text style={styles.sectionTitle}>{t('quiz.strengths')}</Text>
+                    <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.strengths')}</Text>
                     {quizResult.strengths.map((strength, index) => (
-                      <View key={index} style={styles.resultItem}>
+                      <View key={index} style={[styles.resultItem, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA', borderColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
                         <View style={styles.strengthBadge}>
                           <Text style={styles.strengthBadgeText}>{t('quiz.strengthBadge')}</Text>
                         </View>
-                        <Text style={styles.resultQuestion}>{strength.question}</Text>
+                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{strength.question}</Text>
                         <View style={styles.partnerResponses}>
                           <View style={styles.partnerResponse}>
-                            <Text style={styles.partnerName}>
+                            <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
                               {userNames?.user1
                                 ? userNames.user1.split(' ')[0]
                                 : t('quiz.user1')}
@@ -966,7 +1165,7 @@ export default function QuizzPage() {
                             </View>
                           </View>
                           <View style={styles.partnerResponse}>
-                                                     <Text style={styles.partnerName}>
+                                                     <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
                                {userNames?.user2
                                  ? userNames.user2.split(' ')[0]
                                  : t('quiz.user2')}
@@ -992,35 +1191,35 @@ export default function QuizzPage() {
                 {/* Weaknesses */}
                 {quizResult.weaknesses.length > 0 && (
                   <View style={styles.resultsSection}>
-                    <Text style={styles.sectionTitle}>{t('quiz.weaknesses')}</Text>
+                    <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.weaknesses')}</Text>
                     {quizResult.weaknesses.map((weakness, index) => (
-                      <View key={index} style={styles.resultItem}>
+                      <View key={index} style={[styles.resultItem, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA', borderColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
                         <View style={styles.weaknessBadge}>
                           <Text style={styles.weaknessBadgeText}>{t('quiz.weaknessBadge')}</Text>
                         </View>
-                        <Text style={styles.resultQuestion}>{weakness.question}</Text>
+                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{weakness.question}</Text>
                         <View style={styles.partnerResponses}>
                           <View style={styles.partnerResponse}>
-                            <Text style={styles.partnerName}>{userNames?.user1 || t('quiz.user1')}</Text>
+                            <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{userNames?.user1 || t('quiz.user1')}</Text>
                             <View style={styles.heartResponse}>
                               {[1, 2, 3].map((value) => (
                                 <MaterialCommunityIcons
                                   name="heart"
                                   size={20}
-                                  color={weakness.user_answer === value ? BRAND_PINK : "#E0E0E0"}
+                                  color={weakness.user_answer === value ? BRAND_PINK : (isDarkMode ? "#666666" : "#E0E0E0")}
                                   style={styles.responseHeart}
                                 />
                               ))}
                             </View>
                           </View>
                           <View style={styles.partnerResponse}>
-                            <Text style={styles.partnerName}>{userNames?.user2 || t('quiz.user2')}</Text>
+                            <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{userNames?.user2 || t('quiz.user2')}</Text>
                             <View style={styles.heartResponse}>
                               {[1, 2, 3].map((value) => (
                                 <MaterialCommunityIcons
                                   name="heart"
                                   size={20}
-                                  color={weakness.partner_answer === value ? BRAND_PINK : "#E0E0E0"}
+                                  color={weakness.partner_answer === value ? BRAND_PINK : (isDarkMode ? "#666666" : "#E0E0E0")}
                                   style={styles.responseHeart}
                                 />
                               ))}
@@ -1035,52 +1234,19 @@ export default function QuizzPage() {
 
               {/* Quiz Results Summary */}
               <View style={styles.quizResultsSummary}>
-                <Text style={styles.sectionTitle}>{t('quiz.quizResults')}</Text>
-                <Text style={styles.summaryText}>
+                <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.quizResults')}</Text>
+                <Text style={[styles.summaryText, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>
                   {t('quiz.quizResultsDescription').replace('{title}', selectedQuiz?.title || '')}
                 </Text>
               </View>
 
-              {/* Quiz Invite Section */}
-              <View style={styles.quizInviteSection}>
-                <Text style={styles.sectionTitle}>{t('quiz.invitePartner')}</Text>
-                <Text style={styles.inviteDescription}>
-                  {t('quiz.inviteDescription')}
-                </Text>
-                
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.invitePartnerButton,
-                    pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
-                  ]}
-                  onPress={() => handleSendQuizInvite(selectedQuiz!)}
-                  disabled={isSendingInvite}
-                >
-                  <LinearGradient
-                    colors={[BRAND_BLUE, BRAND_PINK]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.invitePartnerButtonGradient}
-                  >
-                    <MaterialCommunityIcons
-                      name="heart"
-                      size={20}
-                      color="#FFFFFF"
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text style={styles.invitePartnerButtonText}>
-                      {isSendingInvite ? t('quiz.sendingInvite') : t('quiz.invitePartnerQuiz')}
-                    </Text>
-                  </LinearGradient>
-                </Pressable>
-              </View>
             </ScrollView>
           ) : hasAnsweredQuiz ? (
             // Show previous answers (read-only) - only user has answered
             <>
-              <View style={styles.alreadyAnsweredHeader}>
+              <View style={[styles.alreadyAnsweredHeader, { backgroundColor: isDarkMode ? '#1A1A1A' : '#E8F5E8' }]}>
                 <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
-                <Text style={styles.alreadyAnsweredText}>
+                <Text style={[styles.alreadyAnsweredText, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
                   {t('quiz.alreadyAnswered')}
                 </Text>
               </View>
@@ -1090,13 +1256,13 @@ export default function QuizzPage() {
                   const previousAnswer = previousAnswers.find(a => a.question_id === question.id);
                   
                   return (
-                    <View key={question.id} style={styles.questionItem}>
-                      <Text style={styles.questionNumber}>Question {index + 1}</Text>
-                      <Text style={styles.questionText}>{question.content}</Text>
+                    <View key={question.id} style={[styles.questionItem, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA', borderColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                      <Text style={[styles.questionNumber, { color: isDarkMode ? '#2DB6FF' : BRAND_BLUE }]}>Question {index + 1}</Text>
+                      <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{question.content}</Text>
                       
                       {/* Show Previous Answer (Read-only) */}
                       <View style={styles.previousAnswerContainer}>
-                        <Text style={styles.previousAnswerLabel}>{t('quiz.previousAnswer')}</Text>
+                        <Text style={[styles.previousAnswerLabel, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>{t('quiz.previousAnswer')}</Text>
                         <View style={styles.answerOptions}>
                           {[1, 2, 3].map((value) => (
                             <View
@@ -1198,13 +1364,13 @@ export default function QuizzPage() {
             </>
           ) : (
             // Show quiz taking interface - COMPLETELY REBUILT
-            <View style={styles.quizAnswerContainer}>
+            <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-white'}`}>
               {/* Progress Indicator */}
               <View style={styles.progressContainer}>
-                <Text style={[styles.progressText, { color: colors.textSecondary }]}>
+                <Text style={[styles.progressText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                   {answers.length} / {quizQuestions.length} {t('quiz.questionsAnswered')}
                 </Text>
-                <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+                <View style={[styles.progressBar, { backgroundColor: isDarkMode ? '#333333' : colors.border }]}>
                   <View 
                     style={[
                       styles.progressFill, 
@@ -1225,9 +1391,9 @@ export default function QuizzPage() {
                     const questionAnswer = answers.find(a => a.question_id === question.id);
                     
                     return (
-                      <View key={question.id} style={[styles.questionItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                        <Text style={[styles.questionNumber, { color: colors.textSecondary }]}>Question {index + 1}</Text>
-                        <Text style={[styles.questionText, { color: colors.text }]}>{question.content}</Text>
+                      <View key={question.id} style={[styles.questionItem, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}>
+                        <Text style={[styles.questionNumber, { color: isDarkMode ? '#2DB6FF' : colors.textSecondary }]}>Question {index + 1}</Text>
+                        <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{question.content}</Text>
                         
                         {/* Answer Options with Progressive Heart Visibility */}
                         <View style={styles.answerOptions}>
@@ -1259,9 +1425,9 @@ export default function QuizzPage() {
               </View>
 
               {/* Quiz Taking Invite Section */}
-              <View style={styles.quizTakingInviteSection}>
-                <Text style={styles.quizTakingInviteTitle}>{t('quiz.invitePartner')}</Text>
-                <Text style={styles.quizTakingInviteDescription}>
+              <View style={[styles.quizTakingInviteSection, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA' }]}>
+                <Text style={[styles.quizTakingInviteTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.invitePartner')}</Text>
+                <Text style={[styles.quizTakingInviteDescription, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>
                   {t('quiz.whileTaking')}
                 </Text>
                 
@@ -1293,7 +1459,7 @@ export default function QuizzPage() {
               </View>
 
               {/* Submit Button - Fixed at bottom */}
-              <View style={[styles.submitButtonContainer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+              <View className={`px-5 py-4 border-t ${isDarkMode ? 'bg-dark-bg border-dark-border' : 'bg-background border-border'}`}>
                 <Pressable
                   onPress={submitQuiz}
                   disabled={!allQuestionsAnswered || isSubmittingQuiz}
@@ -1334,13 +1500,13 @@ export default function QuizzPage() {
   if (quizResult && selectedQuiz) {
     return (
       <AppLayout>
-        <View style={[styles.resultsContainer, { backgroundColor: colors.background }]}>
+        <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
           {/* Header */}
-          <View style={[styles.quizHeader, { borderBottomColor: colors.border }]}>
+          <View style={[styles.quizHeader, { borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
             <Pressable onPress={resetQuiz} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
+              <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : colors.text} />
             </Pressable>
-            <Text style={[styles.quizTitle, { color: colors.text }]}>{t('quiz.title')}</Text>
+            <Text style={[styles.quizTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.title')}</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -1348,8 +1514,8 @@ export default function QuizzPage() {
           <ScrollView style={styles.resultsScroll} showsVerticalScrollIndicator={false}>
             {/* Congratulations */}
             <View style={styles.congratulationsContainer}>
-              <Text style={[styles.congratulationsText, { color: colors.text }]}>{t('quiz.congratulations')}</Text>
-              <Text style={[styles.congratulationsSubtext, { color: colors.textSecondary }]}>{t('quiz.quizCompleted')}</Text>
+              <Text style={[styles.congratulationsText, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.congratulations')}</Text>
+              <Text style={[styles.congratulationsSubtext, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{t('quiz.quizCompleted')}</Text>
             </View>
 
             {/* Compatibility Score */}
@@ -1357,8 +1523,8 @@ export default function QuizzPage() {
               <View style={styles.scoreCircle}>
                 <Text style={styles.scoreText}>{quizResult.score}%</Text>
               </View>
-              <Text style={[styles.scoreLabel, { color: colors.text }]}>{t('quiz.globalCompatibility')}</Text>
-              <Text style={[styles.scoreSubtext, { color: colors.textSecondary }]}>
+              <Text style={[styles.scoreLabel, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.globalCompatibility')}</Text>
+              <Text style={[styles.scoreSubtext, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                 {quizResult.score >= 80 ? t('quiz.excellentScore') : 
                  quizResult.score >= 60 ? t('quiz.goodScore') : t('quiz.needsImprovement')}
               </Text>
@@ -1390,49 +1556,49 @@ export default function QuizzPage() {
 
             {/* Your Responses Section */}
             <View style={styles.yourResponsesSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.yourResponses')}</Text>
-              <Text style={[styles.responsesDescription, { color: colors.textSecondary }]}>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.yourResponses')}</Text>
+              <Text style={[styles.responsesDescription, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                 {t('quiz.responsesDescription')}
               </Text>
             </View>
 
             {/* Detailed Results */}
             <View style={styles.detailedResultsContainer}>
-              <Text style={[styles.detailedResultsTitle, { color: colors.text }]}>{t('quiz.detailedResults')}</Text>
+              <Text style={[styles.detailedResultsTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.detailedResults')}</Text>
               
               {/* Strengths */}
               {quizResult.strengths.length > 0 && (
                 <View style={styles.resultsSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.strengths')}</Text>
+                  <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.strengths')}</Text>
                   {quizResult.strengths.map((strength, index) => (
-                    <View key={index} style={[styles.resultItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View key={index} style={[styles.resultItem, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}>
                       <View style={styles.strengthBadge}>
                         <Text style={styles.strengthBadgeText}>{t('quiz.strengthBadge')}</Text>
                       </View>
-                      <Text style={[styles.resultQuestion, { color: colors.text }]}>{strength.question}</Text>
+                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{strength.question}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
-                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
+                          <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
                                 key={value}
                                 name="heart"
                                 size={20}
-                                color={strength.user_answer === value ? BRAND_PINK : colors.textSecondary}
+                                color={strength.user_answer === value ? BRAND_PINK : (isDarkMode ? "#666666" : colors.textSecondary)}
                                 style={styles.responseHeart}
                               />
                             ))}
                           </View>
                         </View>
                         <View style={styles.partnerResponse}>
-                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user2 || t('quiz.user2')}</Text>
+                          <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{userNames?.user2 || t('quiz.user2')}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
                                 name="heart"
                                 size={20}
-                                color={strength.partner_answer === value ? BRAND_PINK : colors.textSecondary}
+                                color={strength.partner_answer === value ? BRAND_PINK : (isDarkMode ? "#666666" : colors.textSecondary)}
                                 style={styles.responseHeart}
                               />
                             ))}
@@ -1447,35 +1613,35 @@ export default function QuizzPage() {
               {/* Weaknesses */}
               {quizResult.weaknesses.length > 0 && (
                 <View style={styles.resultsSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.weaknesses')}</Text>
+                  <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.weaknesses')}</Text>
                   {quizResult.weaknesses.map((weakness, index) => (
-                    <View key={index} style={[styles.resultItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View key={index} style={[styles.resultItem, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}>
                       <View style={styles.weaknessBadge}>
                         <Text style={styles.weaknessBadgeText}>{t('quiz.weaknessBadge')}</Text>
                       </View>
-                      <Text style={[styles.resultQuestion, { color: colors.text }]}>{weakness.question}</Text>
+                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{weakness.question}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
-                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
+                          <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
                                 name="heart"
                                 size={20}
-                                color={weakness.user_answer === value ? BRAND_PINK : colors.textSecondary}
+                                color={weakness.user_answer === value ? BRAND_PINK : (isDarkMode ? "#666666" : colors.textSecondary)}
                                 style={styles.responseHeart}
                               />
                             ))}
                           </View>
                         </View>
                         <View style={styles.partnerResponse}>
-                          <Text style={[styles.partnerName, { color: colors.text }]}>{userNames?.user2 || t('quiz.user2')}</Text>
+                          <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{userNames?.user2 || t('quiz.user2')}</Text>
                           <View style={styles.heartResponse}>
                             {[1, 2, 3].map((value) => (
                               <MaterialCommunityIcons
                                 name="heart"
                                 size={20}
-                                color={weakness.partner_answer === value ? BRAND_PINK : colors.textSecondary}
+                                color={weakness.partner_answer === value ? BRAND_PINK : (isDarkMode ? "#666666" : colors.textSecondary)}
                                 style={styles.responseHeart}
                               />
                             ))}
@@ -1490,8 +1656,8 @@ export default function QuizzPage() {
 
             {/* Quiz Results Summary */}
             <View style={styles.quizResultsSummary}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.quizResults')}</Text>
-              <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.quizResults')}</Text>
+              <Text style={[styles.summaryText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                 {t('quiz.quizResultsDescription').replace('{title}', selectedQuiz?.title || '')}
               </Text>
             </View>
@@ -1507,19 +1673,19 @@ export default function QuizzPage() {
     
     return (
       <AppLayout>
-        <View style={[styles.themeContainer, { backgroundColor: colors.background }]}>
+        <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
           {/* Header */}
-          <View style={[styles.themeHeader, { borderBottomColor: colors.border }]}>
+          <View style={[styles.themeHeader, { borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
             <Pressable onPress={resetTheme} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
+              <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : colors.text} />
             </Pressable>
-            <Text style={[styles.themeTitle, { color: colors.text }]}>{selectedTheme.name}</Text>
+            <Text style={[styles.themeTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{selectedTheme.name}</Text>
             <View style={{ width: 24 }} />
           </View>
 
           {/* Theme Description */}
-          <View style={[styles.themeDescriptionContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.themeDescription, { color: colors.textSecondary }]}>{selectedTheme.description}</Text>
+          <View style={[styles.themeDescriptionContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}>
+            <Text style={[styles.themeDescription, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{selectedTheme.description}</Text>
           </View>
 
           {/* Quizzes for this theme */}
@@ -1528,27 +1694,35 @@ export default function QuizzPage() {
               themeQuizzes.map((quiz) => (
                 <Pressable
                   key={quiz.id}
-                  style={[styles.quizCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  style={[styles.quizCard, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}
                   onPress={() => startQuiz(quiz)}
                 >
                   <View style={styles.quizCardContent}>
-                    <View style={[styles.quizThumbnail, { backgroundColor: colors.surface }]}>
-                      <MaterialCommunityIcons
-                        name="help-circle-outline"
-                        size={40}
-                        color={colors.textSecondary}
-                      />
+                    <View style={[styles.quizThumbnail, { backgroundColor: isDarkMode ? '#333333' : colors.surface }]}>
+                      {quiz.image ? (
+                        <Image
+                          source={{ uri: quiz.image }}
+                          style={styles.quizImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <MaterialCommunityIcons
+                          name="help-circle-outline"
+                          size={40}
+                          color={isDarkMode ? '#CCCCCC' : colors.textSecondary}
+                        />
+                      )}
                     </View>
                     <View style={styles.quizInfo}>
-                      <Text style={[styles.quizCardTitle, { color: colors.text }]}>{quiz.title}</Text>
-                      <Text style={[styles.quizCardDetails, { color: colors.textSecondary }]}>
+                      <Text style={[styles.quizCardTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{quiz.title}</Text>
+                      <Text style={[styles.quizCardDetails, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                         {quiz.questions_count} {t('quiz.questions')} • {quiz.estimated_time} {t('quiz.minutes')}
                       </Text>
                     </View>
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={24}
-                      color={colors.textSecondary}
+                      color={isDarkMode ? '#CCCCCC' : colors.textSecondary}
                     />
                   </View>
                 </Pressable>
@@ -1558,9 +1732,9 @@ export default function QuizzPage() {
                 <MaterialCommunityIcons
                   name="help-circle-outline"
                   size={48}
-                  color={colors.textSecondary}
+                  color={isDarkMode ? '#CCCCCC' : colors.textSecondary}
                 />
-                <Text style={[styles.noQuizzesText, { color: colors.textSecondary }]}>{t('quiz.noQuizzesTheme')}</Text>
+                <Text style={[styles.noQuizzesText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{t('quiz.noQuizzesTheme')}</Text>
               </View>
             )}
           </ScrollView>
@@ -1573,7 +1747,7 @@ export default function QuizzPage() {
   return (
     <AppLayout>
       <ScrollView 
-        style={[styles.container, { backgroundColor: colors.background }]} 
+        className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`} 
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -1581,21 +1755,42 @@ export default function QuizzPage() {
       >
         {/* Header */}
         <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('quiz.title')}</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('quiz.subtitle')}</Text>
-          <Pressable style={styles.searchButton}>
-            <MaterialCommunityIcons name="magnify" size={24} color={colors.textSecondary} />
+        <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.title')}</Text>
+          <Text style={[styles.subtitle, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{t('quiz.subtitle')}</Text>
+          <Pressable style={styles.searchButton} onPress={toggleSearchInput}>
+            <MaterialCommunityIcons name="magnify" size={24} color={isDarkMode ? '#CCCCCC' : colors.textSecondary} />
           </Pressable>
       </View>
+
+        {/* Search Input */}
+        {showSearchInput && (
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={[styles.searchInput, { 
+                backgroundColor: isDarkMode ? '#333333' : '#F8F9FA',
+                borderColor: isDarkMode ? '#555555' : '#E0E0E0',
+                color: isDarkMode ? '#FFFFFF' : '#2D2D2D'
+              }]}
+              placeholder="Rechercher un quiz..."
+              placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
+              value={searchQuery}
+              onChangeText={handleSearch}
+              autoFocus={true}
+            />
+            <Pressable style={styles.closeSearchButton} onPress={toggleSearchInput}>
+              <MaterialCommunityIcons name="close" size={20} color={isDarkMode ? '#CCCCCC' : '#7A7A7A'} />
+            </Pressable>
+          </View>
+        )}
 
         {/* Pending Quiz Invites */}
         {pendingInvites.length > 0 && (
           <View style={styles.pendingInvitesSection}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
               {t('quiz.pendingInvites')} ({pendingInvites.length})
             </Text>
             {pendingInvites.map((invite) => (
-              <View key={invite.id} style={[styles.pendingInviteCard, { backgroundColor: colors.surface }]}>
+              <View key={invite.id} style={[styles.pendingInviteCard, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
                 <View style={styles.pendingInviteContent}>
                   <MaterialCommunityIcons
                     name="heart"
@@ -1603,10 +1798,10 @@ export default function QuizzPage() {
                     color={colors.primary}
                   />
                   <View style={styles.pendingInviteInfo}>
-                    <Text style={[styles.pendingInviteTitle, { color: colors.text }]}>
+                    <Text style={[styles.pendingInviteTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
                       {t('quiz.quizInvitation')}
                     </Text>
-                    <Text style={[styles.pendingInviteMessage, { color: colors.textSecondary }]}>
+                    <Text style={[styles.pendingInviteMessage, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                       {invite.message || t('quiz.inviteMessage')}
                     </Text>
                   </View>
@@ -1636,7 +1831,7 @@ export default function QuizzPage() {
 
         {/* Themes */}
         <View style={styles.themesSection}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.themes')}</Text>
+          <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.themes')}</Text>
           {themes.length > 0 ? (
             <ScrollView 
               horizontal 
@@ -1692,9 +1887,9 @@ export default function QuizzPage() {
               <MaterialCommunityIcons
                 name="help-circle-outline"
                 size={48}
-                color={colors.textSecondary}
+                color={isDarkMode ? '#CCCCCC' : colors.textSecondary}
               />
-              <Text style={[styles.noThemesText, { color: colors.textSecondary }]}>{t('quiz.noThemes')}</Text>
+              <Text style={[styles.noThemesText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{t('quiz.noThemes')}</Text>
             </View>
           )}
         </View>
@@ -1702,38 +1897,46 @@ export default function QuizzPage() {
         {/* Quizzes for You Section */}
         <View style={styles.quizzesSection}>
           <View style={styles.quizzesHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quiz.quizzesForYou')}</Text>
-            <Text style={[styles.quizzesSubtitle, { color: colors.textSecondary }]}>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.quizzesForYou')}</Text>
+            <Text style={[styles.quizzesSubtitle, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
               {t('quiz.quizzesSubtitle')}
             </Text>
           </View>
-          {quizzes.length > 0 ? (
-            quizzes.map((quiz) => (
+          {(searchQuery.trim() !== '' ? filteredQuizzes : quizzes).length > 0 ? (
+            (searchQuery.trim() !== '' ? filteredQuizzes : quizzes).map((quiz) => (
               <View
                 key={quiz.id}
-                style={[styles.quizCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={[styles.quizCard, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}
               >
                 <Pressable
                   style={styles.quizCardContent}
                   onPress={() => startQuiz(quiz)}
                 >
-                  <View style={[styles.quizThumbnail, { backgroundColor: colors.surface }]}>
-                    <MaterialCommunityIcons
-                      name="help-circle-outline"
-                      size={40}
-                      color={colors.textSecondary}
-                    />
+                  <View style={[styles.quizThumbnail, { backgroundColor: isDarkMode ? '#333333' : colors.surface }]}>
+                    {quiz.image ? (
+                      <Image
+                        source={{ uri: quiz.image }}
+                        style={styles.quizImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <MaterialCommunityIcons
+                        name="help-circle-outline"
+                        size={40}
+                        color={isDarkMode ? '#CCCCCC' : colors.textSecondary}
+                      />
+                    )}
                   </View>
                   <View style={styles.quizInfo}>
-                    <Text style={[styles.quizCardTitle, { color: colors.text }]}>{quiz.title}</Text>
-                    <Text style={[styles.quizCardDetails, { color: colors.textSecondary }]}>
+                    <Text style={[styles.quizCardTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{quiz.title}</Text>
+                    <Text style={[styles.quizCardDetails, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                       {quiz.questions_count} {t('quiz.questions')} • {quiz.estimated_time} {t('quiz.minutes')}
                     </Text>
                   </View>
                   <MaterialCommunityIcons
                     name="chevron-right"
                     size={24}
-                    color={colors.textSecondary}
+                    color={isDarkMode ? '#CCCCCC' : colors.textSecondary}
                   />
                 </Pressable>
                 
@@ -1744,11 +1947,13 @@ export default function QuizzPage() {
           ) : (
             <View style={styles.noQuizzesContainer}>
               <MaterialCommunityIcons
-                name="help-circle-outline"
+                name={searchQuery.trim() !== '' ? "magnify" : "help-circle-outline"}
                 size={48}
-                color={colors.textSecondary}
+                color={isDarkMode ? '#CCCCCC' : colors.textSecondary}
               />
-              <Text style={[styles.noQuizzesText, { color: colors.textSecondary }]}>{t('quiz.noQuizzes')}</Text>
+              <Text style={[styles.noQuizzesText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
+                {searchQuery.trim() !== '' ? `Aucun quiz trouvé pour "${searchQuery}"` : t('quiz.noQuizzes')}
+              </Text>
             </View>
           )}
         </View>
@@ -1764,6 +1969,162 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  // Invite styles copied/adapted from Accueil invite page with lighter colors
+  inviteHeader: {
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingTop: 20,
+  },
+  inviteSubtitle: {
+    fontSize: 14,
+    color: '#7A7A7A',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  inviteCard: {
+    width: '92%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#8DD8FF',
+    shadowColor: '#8DD8FF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    alignItems: 'center',
+    marginBottom: 16,
+    alignSelf: 'center',
+  },
+  inviteHero: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FFE6F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  inviteHeroEmoji: {
+    fontSize: 30,
+  },
+  inviteCodeLabel: {
+    fontSize: 14,
+    color: '#7A7A7A',
+    marginBottom: 8,
+  },
+  codePillRow: {
+    width: '100%',
+    position: 'relative',
+    marginBottom: 16,
+  },
+  codePill: {
+    width: '100%',
+    backgroundColor: '#F4FBFF',
+    borderWidth: 1,
+    borderColor: '#8DD8FF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingRight: 70,
+    alignItems: 'center',
+  },
+  codePillText: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: '#2D2D2D',
+  },
+  inlineCopyButtonAbsolute: {
+    position: 'absolute',
+    right: 6,
+    top: 6,
+    bottom: 6,
+    backgroundColor: '#FFB3DA',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inlineCopyText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  primaryCopyButton: {
+    backgroundColor: '#8DD8FF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    width: '100%',
+    alignItems: 'center',
+  },
+  primaryCopyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  joinToggleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  joinToggleText: {
+    color: '#7A7A7A',
+    textDecorationLine: 'underline',
+    fontWeight: '600',
+  },
+  joinCard: {
+    width: '92%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#FFE0F0',
+    shadowColor: '#FFE0F0',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 6,
+    alignItems: 'center',
+    marginBottom: 16,
+    alignSelf: 'center',
+  },
+  joinRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  joinInput: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E6EAF2',
+    paddingHorizontal: 12,
+    backgroundColor: '#FAFBFF',
+  },
+  pasteButton: {
+    marginLeft: 10,
+    backgroundColor: '#FFD1E9',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  pasteButtonText: {
+    color: '#7A2B52',
+    fontWeight: '600',
+  },
+  joinPrimaryButton: {
+    marginTop: 4,
+  },
+  joinError: {
+    width: '100%',
+    color: '#D74D63',
+    marginBottom: 8,
+    textAlign: 'left',
   },
   loadingContainer: {
     flex: 1,
@@ -1797,6 +2158,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     top: 20,
+    padding: 8,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    fontSize: 16,
+  },
+  closeSearchButton: {
     padding: 8,
   },
   themesSection: {
@@ -1871,6 +2250,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+  },
+  quizImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
   },
   quizInfo: {
     flex: 1,

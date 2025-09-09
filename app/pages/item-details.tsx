@@ -3,18 +3,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
@@ -59,6 +60,7 @@ export default function ItemDetailsPage() {
   const { itemType, itemId, itemData } = useLocalSearchParams();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   
   const [item, setItem] = useState<CalendarEvent | CalendarSouvenir | CalendarTodo | null>(null);
@@ -631,7 +633,7 @@ export default function ItemDetailsPage() {
   if (isLoading) {
     return (
       <AppLayout>
-        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('calendar.loading')}</Text>
         </View>
@@ -642,7 +644,7 @@ export default function ItemDetailsPage() {
   if (!item) {
     return (
       <AppLayout>
-        <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+        <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
           <Text style={[styles.errorText, { color: colors.text }]}>Élément non trouvé</Text>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Retour</Text>
@@ -654,18 +656,18 @@ export default function ItemDetailsPage() {
 
   return (
     <AppLayout>
-      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
+      <ScrollView className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>Détails</Text>
+              <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Détails</Text>
             </View>
             
             {/* Edit Button */}
             <Pressable style={styles.editButton} onPress={startEditing}>
               <MaterialCommunityIcons name="pencil" size={20} color="white" />
-              <Text style={styles.editButtonText}>{t('common.edit')}</Text>
+              <Text style={styles.editButtonText}>{t('modifier')}</Text>
             </Pressable>
           </View>
         </View>
@@ -675,28 +677,29 @@ export default function ItemDetailsPage() {
           {/* Title */}
           {isEditing ? (
             <View style={styles.editField}>
-              <Text style={[styles.editLabel, { color: colors.text }]}>{t('calendar.titleField')}:</Text>
+              <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.titleField')}:</Text>
               <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                className={`w-full px-4 py-3 rounded-lg border ${isDarkMode ? 'bg-dark-surface border-dark-border text-dark-text' : 'bg-white border-gray-300 text-text'}`}
+                style={styles.textInput}
                 value={editTitle}
                 onChangeText={setEditTitle}
                 placeholder="Donnez un nom à votre moment"
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
               />
             </View>
           ) : (
             <>
               <View style={styles.formField}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>{t('calendar.titleField')}</Text>
+                <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.titleField')}</Text>
                 <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <Text style={[styles.infoText, { color: colors.text }]}>{item.title}</Text>
+                  <Text className={`text-base ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{item.title}</Text>
                 </View>
               </View>
               
               {/* Image Display - Only for souvenirs in view mode */}
               {'image_url' in item && item.image_url && !isEditing && (
                 <View style={styles.formField}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>Photos</Text>
+                  <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Photos</Text>
                   <View style={styles.imageDisplayContainer}>
                     <Image 
                       source={{ uri: item.image_url }} 
@@ -712,7 +715,7 @@ export default function ItemDetailsPage() {
            {/* Type Toggle - Only show in edit mode */}
            {isEditing && (
              <View style={styles.typeToggleContainer}>
-               <Text style={[styles.typeToggleLabel, { color: colors.text }]}>Type du moment partagé</Text>
+               <Text className={`text-base font-medium mb-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Type du moment partagé</Text>
                <View style={styles.typeToggleButtons}>
                  <Pressable
                    style={[
@@ -727,11 +730,7 @@ export default function ItemDetailsPage() {
                      size={20} 
                      color={editItemType === 'event' ? 'white' : colors.text} 
                    />
-                   <Text style={[
-                     styles.typeToggleButtonText,
-                     { color: colors.text },
-                     editItemType === 'event' && styles.typeToggleButtonTextSelected
-                   ]}>
+                   <Text className={`text-sm font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} ${editItemType === 'event' ? 'text-white' : ''}`}>
                      Evènement
                    </Text>
                  </Pressable>
@@ -749,11 +748,7 @@ export default function ItemDetailsPage() {
                      size={20} 
                      color={editItemType === 'souvenir' ? 'white' : colors.text} 
                    />
-                   <Text style={[
-                     styles.typeToggleButtonText,
-                     { color: colors.text },
-                     editItemType === 'souvenir' && styles.typeToggleButtonTextSelected
-                   ]}>
+                   <Text className={`text-sm font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} ${editItemType === 'souvenir' ? 'text-white' : ''}`}>
                      Souvenir
                    </Text>
                  </Pressable>
@@ -764,10 +759,10 @@ export default function ItemDetailsPage() {
                        {/* Date and Time */}
             {isEditing ? (
               <View style={styles.dateTimeContainer}>
-                <Text style={[styles.editLabel, { color: colors.text }]}>{t('calendar.dateTime')}</Text>
+                <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.dateTime')}</Text>
                 <View style={styles.dateTimeRow}>
                   <View style={styles.dateTimeField}>
-                    <Text style={[styles.dateTimeSubLabel, { color: colors.textSecondary }]}>{t('calendar.dateTime')}</Text>
+                    <Text className={`text-sm mb-1 ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>{t('calendar.dateTime')}</Text>
                     <Pressable 
                       style={[styles.dateTimeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                       onPress={() => setShowDatePicker(true)}
@@ -835,22 +830,23 @@ export default function ItemDetailsPage() {
            {/* Place */}
            {isEditing ? (
              <View style={styles.editField}>
-               <Text style={[styles.editLabel, { color: colors.text }]}>{t('calendar.place')}:</Text>
+               <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.place')}:</Text>
                <View style={styles.placeInputContainer}>
                  <TextInput
-                   style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                   className={`w-full px-4 py-3 rounded-lg border ${isDarkMode ? 'bg-dark-surface border-dark-border text-dark-text' : 'bg-white border-gray-300 text-text'}`}
+                   style={styles.textInput}
                    value={editPlace}
                    onChangeText={setEditPlace}
                    placeholder="Rechercher un lieu (ex: Safi, Cores Safi, Hassan 2 rue...)"
-                   placeholderTextColor={colors.textSecondary}
+                   placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
                  />
-                 <MaterialCommunityIcons name="map-marker" size={20} color={colors.textSecondary} />
+                 <MaterialCommunityIcons name="map-marker" size={20} color={isDarkMode ? '#CCCCCC' : '#7A7A7A'} />
                </View>
                
                {/* Place suggestions */}
                {editPlace.length >= 3 && (
-                 <View style={[styles.placeSuggestions, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                   <Text style={[styles.placeSuggestionsTitle, { color: colors.text, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+                 <View className={`${isDarkMode ? 'bg-dark-surface border-dark-border' : 'bg-white border-gray-300'}`} style={[styles.placeSuggestions]}>
+                   <Text className={`px-3 py-2 text-sm font-medium border-b ${isDarkMode ? 'text-white bg-dark-bg border-dark-border' : 'text-text bg-background border-border'}`}>
                      {isLoadingPlaces ? t('calendar.searching') : t('calendar.placesFound')}
                    </Text>
                    {isLoadingPlaces ? (
@@ -934,13 +930,14 @@ export default function ItemDetailsPage() {
            {/* Description */}
            {isEditing ? (
              <View style={styles.editField}>
-               <Text style={[styles.editLabel, { color: colors.text }]}>{t('calendar.description')}:</Text>
+               <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.description')}:</Text>
                <TextInput
-                 style={[styles.textInput, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                 className={`w-full px-4 py-3 rounded-lg border ${isDarkMode ? 'bg-dark-surface border-dark-border text-dark-text' : 'bg-white border-gray-300 text-text'}`}
+                 style={[styles.textInput, styles.textArea]}
                  value={editDescription}
                  onChangeText={setEditDescription}
                  placeholder={t('calendar.description')}
-                 placeholderTextColor={colors.textSecondary}
+                 placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
                  multiline
                  numberOfLines={4}
                />
@@ -1021,7 +1018,7 @@ export default function ItemDetailsPage() {
                   <MaterialCommunityIcons name="chevron-left" size={24} color="#2DB6FF" />
                 </Pressable>
                 
-                <Text style={styles.monthText}>
+                <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
                   {editDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
                 </Text>
                 

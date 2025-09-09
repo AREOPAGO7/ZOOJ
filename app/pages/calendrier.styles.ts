@@ -6,12 +6,19 @@ const BRAND_GRAY = "#6C6C6C";
 
 const { width: screenWidth } = Dimensions.get('window');
 
+// Responsive calendar width that scales with screen size but maintains 7 columns
+const CALENDAR_WIDTH = Math.min(screenWidth - 40, 350); // Responsive width with max of 350px
+const DAY_WIDTH = CALENDAR_WIDTH / 7; // Each day cell width (always 1/7 of calendar width)
+
 export const calendarStyles = StyleSheet.create({
   container: {
     flex: 1,
+    // backgroundColor is now dynamic from theme
+  },
+  scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    // backgroundColor is now dynamic from theme
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -61,6 +68,7 @@ export const calendarStyles = StyleSheet.create({
   },
   calendarContainer: {
     marginBottom: 16,
+    alignItems: 'center', // Center the calendar
   },
   // Event notification styles
   eventNotificationSection: {
@@ -194,25 +202,26 @@ export const calendarStyles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
     paddingHorizontal: 0,
+    width: CALENDAR_WIDTH, // Fixed width
   },
   dayOfWeek: {
     fontSize: 16,
     fontWeight: '600',
-    width: ((screenWidth - 80) / 7),
+    width: DAY_WIDTH, // Fixed day width
     textAlign: 'center',
     // color is now dynamic from theme
   },
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     paddingHorizontal: 0,
-    width: '100%',
+    width: CALENDAR_WIDTH, // Fixed width
     alignContent: 'flex-start',
   },
   calendarDay: {
-    width: ((screenWidth - 80) / 7),
-    height: ((screenWidth - 80) / 7),
+    width: DAY_WIDTH, // Fixed day width
+    height: DAY_WIDTH, // Fixed day height (square)
     justifyContent: 'center',
     alignItems: 'center',
     marginVertical: 2,
@@ -976,22 +985,24 @@ export const calendarStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
+    width: CALENDAR_WIDTH, // Fixed width
   },
   customPickerDayOfWeek: {
     fontSize: 14,
     fontWeight: '600',
     color: '#757575',
-    width: 40,
+    width: DAY_WIDTH, // Fixed day width
     textAlign: 'center',
   },
   customPickerGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    width: CALENDAR_WIDTH, // Fixed width
   },
   customPickerDay: {
-    width: 40,
-    height: 40,
+    width: DAY_WIDTH, // Fixed day width
+    height: DAY_WIDTH, // Fixed day height
     justifyContent: 'center',
     alignItems: 'center',
     margin: 2,
@@ -1017,8 +1028,8 @@ export const calendarStyles = StyleSheet.create({
     fontWeight: '700',
   },
   customPickerEmptyDay: {
-    width: 40,
-    height: 40,
+    width: DAY_WIDTH, // Fixed day width
+    height: DAY_WIDTH, // Fixed day height
     margin: 2,
   },
   timeSelector: {

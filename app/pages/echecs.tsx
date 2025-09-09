@@ -1,20 +1,21 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
+import { GameStats, gameStatsService } from '../../lib/gameStatsService';
+import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
-// Chess piece types
+// Chess game types
 type PieceType = 'king' | 'queen' | 'rook' | 'bishop' | 'knight' | 'pawn';
-type PieceColor = 'white' | 'black';
+type Color = 'white' | 'black';
 
 interface Piece {
   type: PieceType;
-  color: PieceColor;
+  color: Color;
   hasMoved?: boolean;
 }
 
@@ -28,230 +29,164 @@ interface Move {
   to: Position;
   piece: Piece;
   capturedPiece?: Piece;
+  isCastling?: boolean;
+  isEnPassant?: boolean;
+  promotion?: PieceType;
 }
 
 interface GameState {
-  board: Board;
-  currentPlayer: PieceColor;
+  board: (Piece | null)[][];
+  currentPlayer: Color;
   gameStatus: string;
-  gameHistory: Move[];
-  isBotThinking: boolean;
+  gamePhase: 'playing' | 'gameOver';
+  winner?: Color;
+  lastMove?: Move;
+  gameStartTime: number;
+  movesCount: number;
+  piecesCapturedPlayer1: number;
+  piecesCapturedPlayer2: number;
+  checkmate: boolean;
+  stalemate: boolean;
 }
 
-// Chess board state
-type Board = (Piece | null)[][];
-
-// Initialize empty board
-const createEmptyBoard = (): Board => {
-  return Array(8).fill(null).map(() => Array(8).fill(null));
-};
-
-// Initialize starting position
-const initializeBoard = (): Board => {
-  const board = createEmptyBoard();
+// Chess board setup
+const createInitialBoard = (): (Piece | null)[][] => {
+  const board: (Piece | null)[][] = Array(8).fill(null).map(() => Array(8).fill(null));
+  
+  // Place pieces
+  const pieceOrder: PieceType[] = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
   
   // Black pieces (top)
-  board[0] = [
-    { type: 'rook', color: 'black' },
-    { type: 'knight', color: 'black' },
-    { type: 'bishop', color: 'black' },
-    { type: 'queen', color: 'black' },
-    { type: 'king', color: 'black' },
-    { type: 'bishop', color: 'black' },
-    { type: 'knight', color: 'black' },
-    { type: 'rook', color: 'black' }
-  ];
-  
-  // Black pawns
   for (let col = 0; col < 8; col++) {
+    board[0][col] = { type: pieceOrder[col], color: 'black' };
     board[1][col] = { type: 'pawn', color: 'black' };
   }
   
-  // White pawns
+  // White pieces (bottom)
   for (let col = 0; col < 8; col++) {
+    board[7][col] = { type: pieceOrder[col], color: 'white' };
     board[6][col] = { type: 'pawn', color: 'white' };
   }
-  
-  // White pieces (bottom)
-  board[7] = [
-    { type: 'rook', color: 'white' },
-    { type: 'knight', color: 'white' },
-    { type: 'bishop', color: 'white' },
-    { type: 'queen', color: 'white' },
-    { type: 'king', color: 'white' },
-    { type: 'bishop', color: 'white' },
-    { type: 'knight', color: 'white' },
-    { type: 'rook', color: 'white' }
-  ];
   
   return board;
 };
 
-// Get piece symbol
+// Get piece symbol for display
 const getPieceSymbol = (piece: Piece): string => {
   const symbols = {
     white: {
-      king: '♔',
-      queen: '♕',
-      rook: '♖',
-      bishop: '♗',
-      knight: '♘',
-      pawn: '♙'
+      king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙'
     },
     black: {
-      king: '♚',
-      queen: '♛',
-      rook: '♜',
-      bishop: '♝',
-      knight: '♞',
-      pawn: '♟'
+      king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟'
     }
   };
   return symbols[piece.color][piece.type];
 };
 
-// Check if position is valid
+// Check if position is on board
 const isValidPosition = (pos: Position): boolean => {
   return pos.row >= 0 && pos.row < 8 && pos.col >= 0 && pos.col < 8;
 };
 
-// Get possible moves for a piece
-const getPossibleMoves = (board: Board, from: Position): Position[] => {
+// Get all possible moves for a piece
+const getPossibleMoves = (board: (Piece | null)[][], from: Position): Position[] => {
   const piece = board[from.row][from.col];
   if (!piece) return [];
   
   const moves: Position[] = [];
   const { type, color } = piece;
   
-  // Helper function to add move if valid
   const addMove = (row: number, col: number) => {
-    const to = { row, col };
-    if (isValidPosition(to)) {
+    if (isValidPosition({ row, col })) {
       const targetPiece = board[row][col];
       if (!targetPiece || targetPiece.color !== color) {
-        moves.push(to);
+        moves.push({ row, col });
       }
     }
   };
   
-  // Pawn moves
-  if (type === 'pawn') {
-    const direction = color === 'white' ? -1 : 1;
-    const startRow = color === 'white' ? 6 : 1;
-    
-    // Forward move
-    const forwardRow = from.row + direction;
-    if (isValidPosition({ row: forwardRow, col: from.col }) && !board[forwardRow][from.col]) {
-      addMove(forwardRow, from.col);
+  const addDirectionalMoves = (directions: number[][], maxDistance: number = 7) => {
+    directions.forEach(([dRow, dCol]) => {
+      for (let i = 1; i <= maxDistance; i++) {
+        const newRow = from.row + dRow * i;
+        const newCol = from.col + dCol * i;
+        
+        if (!isValidPosition({ row: newRow, col: newCol })) break;
+        
+        const targetPiece = board[newRow][newCol];
+        if (targetPiece) {
+          if (targetPiece.color !== color) {
+            moves.push({ row: newRow, col: newCol });
+          }
+          break;
+        }
+        moves.push({ row: newRow, col: newCol });
+      }
+    });
+  };
+  
+  switch (type) {
+    case 'pawn':
+      const direction = color === 'white' ? -1 : 1;
+      const startRow = color === 'white' ? 6 : 1;
       
-      // Double move from starting position
-      if (from.row === startRow) {
-        const doubleRow = from.row + 2 * direction;
-        if (isValidPosition({ row: doubleRow, col: from.col }) && !board[doubleRow][from.col]) {
-          addMove(doubleRow, from.col);
-        }
-      }
-    }
-    
-    // Diagonal captures
-    [-1, 1].forEach(colOffset => {
-      const captureRow = from.row + direction;
-      const captureCol = from.col + colOffset;
-      if (isValidPosition({ row: captureRow, col: captureCol })) {
-        const targetPiece = board[captureRow][captureCol];
-        if (targetPiece && targetPiece.color !== color) {
-          addMove(captureRow, captureCol);
-        }
-      }
-    });
-  }
-  
-  // Rook moves
-  if (type === 'rook') {
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    directions.forEach(([rowDir, colDir]) => {
-      for (let i = 1; i < 8; i++) {
-        const newRow = from.row + i * rowDir;
-        const newCol = from.col + i * colDir;
-        if (!isValidPosition({ row: newRow, col: newCol })) break;
+      // Forward move
+      if (isValidPosition({ row: from.row + direction, col: from.col }) && 
+          !board[from.row + direction][from.col]) {
+        moves.push({ row: from.row + direction, col: from.col });
         
-        const targetPiece = board[newRow][newCol];
-        if (targetPiece) {
-          if (targetPiece.color !== color) {
-            addMove(newRow, newCol);
-          }
-          break;
+        // Double move from start
+        if (from.row === startRow && !board[from.row + 2 * direction][from.col]) {
+          moves.push({ row: from.row + 2 * direction, col: from.col });
         }
-        addMove(newRow, newCol);
       }
-    });
-  }
-  
-  // Bishop moves
-  if (type === 'bishop') {
-    const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
-    directions.forEach(([rowDir, colDir]) => {
-      for (let i = 1; i < 8; i++) {
-        const newRow = from.row + i * rowDir;
-        const newCol = from.col + i * colDir;
-        if (!isValidPosition({ row: newRow, col: newCol })) break;
-        
-        const targetPiece = board[newRow][newCol];
-        if (targetPiece) {
-          if (targetPiece.color !== color) {
-            addMove(newRow, newCol);
+      
+      // Capture moves
+      [-1, 1].forEach(dCol => {
+        const newRow = from.row + direction;
+        const newCol = from.col + dCol;
+        if (isValidPosition({ row: newRow, col: newCol })) {
+          const targetPiece = board[newRow][newCol];
+          if (targetPiece && targetPiece.color !== color) {
+            moves.push({ row: newRow, col: newCol });
           }
-          break;
         }
-        addMove(newRow, newCol);
-      }
-    });
-  }
-  
-  // Queen moves (combination of rook and bishop)
-  if (type === 'queen') {
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
-    directions.forEach(([rowDir, colDir]) => {
-      for (let i = 1; i < 8; i++) {
-        const newRow = from.row + i * rowDir;
-        const newCol = from.col + i * colDir;
-        if (!isValidPosition({ row: newRow, col: newCol })) break;
-        
-        const targetPiece = board[newRow][newCol];
-        if (targetPiece) {
-          if (targetPiece.color !== color) {
-            addMove(newRow, newCol);
-          }
-          break;
-        }
-        addMove(newRow, newCol);
-      }
-    });
-  }
-  
-  // King moves
-  if (type === 'king') {
-    const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
-    directions.forEach(([rowDir, colDir]) => {
-      addMove(from.row + rowDir, from.col + colDir);
-    });
-  }
-  
-  // Knight moves
-  if (type === 'knight') {
-    const moves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
-    moves.forEach(([rowOffset, colOffset]) => {
-      addMove(from.row + rowOffset, from.col + colOffset);
-    });
+      });
+      break;
+      
+    case 'rook':
+      addDirectionalMoves([[0, 1], [0, -1], [1, 0], [-1, 0]]);
+      break;
+      
+    case 'bishop':
+      addDirectionalMoves([[1, 1], [1, -1], [-1, 1], [-1, -1]]);
+      break;
+      
+    case 'queen':
+      addDirectionalMoves([[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]);
+      break;
+      
+    case 'king':
+      addDirectionalMoves([[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]], 1);
+      break;
+      
+    case 'knight':
+      const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+      knightMoves.forEach(([dRow, dCol]) => {
+        addMove(from.row + dRow, from.col + dCol);
+      });
+      break;
   }
   
   return moves;
 };
 
 // Check if king is in check
-const isKingInCheck = (board: Board, color: PieceColor): boolean => {
-  // Find king position
+const isKingInCheck = (board: (Piece | null)[][], color: Color): boolean => {
   let kingPos: Position | null = null;
+  
+  // Find king
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const piece = board[row][col];
@@ -281,98 +216,88 @@ const isKingInCheck = (board: Board, color: PieceColor): boolean => {
   return false;
 };
 
-// Filter moves that would put own king in check
-const filterLegalMoves = (board: Board, from: Position, moves: Position[]): Position[] => {
-  const piece = board[from.row][from.col];
-  if (!piece) return [];
-  
-  return moves.filter(move => {
-    // Make the move
-    const newBoard = board.map(row => [...row]);
-    newBoard[move.row][move.col] = piece;
-    newBoard[from.row][from.col] = null;
-    
-    // Check if king is in check after this move
-    return !isKingInCheck(newBoard, piece.color);
-  });
-};
-
-// Simple bot AI - random move selection
-const getBotMove = (board: Board, color: PieceColor): Move | null => {
-  const possibleMoves: Move[] = [];
+// Get all legal moves for current player
+const getAllLegalMoves = (board: (Piece | null)[][], color: Color): Move[] => {
+  const moves: Move[] = [];
   
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const piece = board[row][col];
       if (piece && piece.color === color) {
-        const moves = getPossibleMoves(board, { row, col });
-        const legalMoves = filterLegalMoves(board, { row, col }, moves);
+        const possibleMoves = getPossibleMoves(board, { row, col });
         
-        legalMoves.forEach(move => {
-          possibleMoves.push({
-            from: { row, col },
-            to: move,
-            piece,
-            capturedPiece: board[move.row][move.col] || undefined
-          });
+        possibleMoves.forEach(move => {
+          // Simulate move to check if it leaves king in check
+          const newBoard = board.map(r => r.map(p => p ? { ...p } : null));
+          const capturedPiece = newBoard[move.row][move.col];
+          newBoard[move.row][move.col] = piece;
+          newBoard[row][col] = null;
+          
+          if (!isKingInCheck(newBoard, color)) {
+            moves.push({
+              from: { row, col },
+              to: move,
+              piece,
+              capturedPiece: capturedPiece || undefined
+            });
+          }
         });
       }
     }
   }
   
-  if (possibleMoves.length === 0) return null;
+  return moves;
+};
+
+// Check for checkmate or stalemate
+const checkGameEnd = (board: (Piece | null)[][], color: Color): { checkmate: boolean; stalemate: boolean } => {
+  const legalMoves = getAllLegalMoves(board, color);
+  const inCheck = isKingInCheck(board, color);
   
-  // Simple strategy: prefer captures and center control
-  const scoredMoves = possibleMoves.map(move => {
-    let score = Math.random(); // Base random score
+  if (legalMoves.length === 0) {
+    return { checkmate: inCheck, stalemate: !inCheck };
+  }
+  
+  return { checkmate: false, stalemate: false };
+};
+
+// Simple bot AI - prioritize captures and center control
+const getBotMove = (board: (Piece | null)[][], color: Color): Move | null => {
+  const legalMoves = getAllLegalMoves(board, color);
+  if (legalMoves.length === 0) return null;
+  
+  // Score moves based on captures and position
+  const scoredMoves = legalMoves.map(move => {
+    let score = 0;
     
-    // Prefer captures
+    // Prioritize captures
     if (move.capturedPiece) {
       const pieceValues = { pawn: 1, knight: 3, bishop: 3, rook: 5, queen: 9, king: 100 };
       score += pieceValues[move.capturedPiece.type] * 10;
     }
     
-    // Prefer center control
+    // Center control bonus
     const centerDistance = Math.abs(move.to.row - 3.5) + Math.abs(move.to.col - 3.5);
     score += (7 - centerDistance) * 0.5;
+    
+    // Avoid moving into danger
+    const newBoard = board.map(r => r.map(p => p ? { ...p } : null));
+    newBoard[move.to.row][move.to.col] = move.piece;
+    newBoard[move.from.row][move.from.col] = null;
+    
+    if (isKingInCheck(newBoard, color)) {
+      score -= 50;
+    }
     
     return { move, score };
   });
   
-  // Sort by score and pick the best move
+  // Sort by score and pick randomly from top moves
   scoredMoves.sort((a, b) => b.score - a.score);
-  return scoredMoves[0].move;
-};
-
-// AsyncStorage functions
-const GAME_STATE_KEY = 'chess_game_state';
-
-const saveGameState = async (gameState: GameState) => {
-  try {
-    await AsyncStorage.setItem(GAME_STATE_KEY, JSON.stringify(gameState));
-  } catch (error) {
-    console.error('Error saving game state:', error);
-  }
-};
-
-const loadGameState = async (): Promise<GameState | null> => {
-  try {
-    const savedState = await AsyncStorage.getItem(GAME_STATE_KEY);
-    if (savedState) {
-      return JSON.parse(savedState);
-    }
-  } catch (error) {
-    console.error('Error loading game state:', error);
-  }
-  return null;
-};
-
-const clearGameState = async () => {
-  try {
-    await AsyncStorage.removeItem(GAME_STATE_KEY);
-  } catch (error) {
-    console.error('Error clearing game state:', error);
-  }
+  const topMoves = scoredMoves.filter(m => m.score === scoredMoves[0].score);
+  const randomMove = topMoves[Math.floor(Math.random() * topMoves.length)];
+  
+  return randomMove.move;
 };
 
 export default function EchecsPage() {
@@ -380,262 +305,243 @@ export default function EchecsPage() {
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { t } = useLanguage();
   const router = useRouter();
-  
-  const [board, setBoard] = useState<Board>(initializeBoard());
-  const [selectedSquare, setSelectedSquare] = useState<Position | null>(null);
-  const [currentPlayer, setCurrentPlayer] = useState<PieceColor>('white');
-  const [gameStatus, setGameStatus] = useState<string>('');
-  const [isBotThinking, setIsBotThinking] = useState(false);
-  const [gameHistory, setGameHistory] = useState<Move[]>([]);
+
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [animatingPiece, setAnimatingPiece] = useState<{position: Position, piece: Piece} | null>(null);
+  const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [gameStats, setGameStats] = useState<any>(null);
+  const [selectedSquare, setSelectedSquare] = useState<Position | null>(null);
+  const [possibleMoves, setPossibleMoves] = useState<Position[]>([]);
   const animatedValue = useState(new Animated.Value(0))[0];
 
-  // Load saved game on component mount
-  useEffect(() => {
-    const loadGame = async () => {
-      const savedState = await loadGameState();
-      if (savedState) {
-        setBoard(savedState.board);
-        setCurrentPlayer(savedState.currentPlayer);
-        setGameStatus(savedState.gameStatus);
-        setGameHistory(savedState.gameHistory);
-        setIsBotThinking(savedState.isBotThinking);
-      } else {
-        // Set initial game status with current language
-        setGameStatus(t('chess.yourTurn'));
-      }
-      setIsLoading(false);
+  // Initialize new game
+  const initializeGame = useCallback((): GameState => {
+    return {
+      board: createInitialBoard(),
+      currentPlayer: 'white',
+      gameStatus: 'Votre tour',
+      gamePhase: 'playing',
+      gameStartTime: Date.now(),
+      movesCount: 0,
+      piecesCapturedPlayer1: 0,
+      piecesCapturedPlayer2: 0,
+      checkmate: false,
+      stalemate: false,
     };
-    loadGame();
-  }, [t]);
+  }, []);
 
-  // Update game status when language changes
-  useEffect(() => {
-    if (gameStatus && !isLoading) {
-      // Update status messages when language changes
-      if (gameStatus.includes('Votre tour') || gameStatus.includes('Your turn') || gameStatus.includes('دورك')) {
-        setGameStatus(t('chess.yourTurn'));
-      } else if (gameStatus.includes('Tour du Bot') || gameStatus.includes('Bot\'s turn') || gameStatus.includes('دور البوت')) {
-        setGameStatus(t('chess.botTurn'));
-      } else if (gameStatus.includes('Vous avez gagné') || gameStatus.includes('You won') || gameStatus.includes('لقد فزت')) {
-        setGameStatus(t('chess.youWin'));
-      } else if (gameStatus.includes('Le Bot a gagné') || gameStatus.includes('Bot won') || gameStatus.includes('البوت فاز')) {
-        setGameStatus(t('chess.botWins'));
-      } else if (gameStatus.includes('Pat') || gameStatus.includes('Stalemate') || gameStatus.includes('تعادل')) {
-        setGameStatus(t('chess.stalemate'));
+  // Get couple ID
+  const getCoupleId = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data: couple, error } = await supabase
+        .from('couples')
+        .select('id, user1_id, user2_id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .single();
+
+      if (couple) {
+        setCoupleId(couple.id);
+        return couple;
       }
+    } catch (error) {
+      console.error('Error getting couple ID:', error);
     }
-  }, [t, gameStatus, isLoading]);
+    return null;
+  }, [user]);
 
-  // Save game state whenever it changes
+  // Load game statistics
+  const loadGameStats = useCallback(async () => {
+    if (!coupleId) return;
+    
+    try {
+      const stats = await gameStatsService.getCoupleGameStats(coupleId);
+      setGameStats(stats);
+    } catch (error) {
+      console.error('Error loading game stats:', error);
+    }
+  }, [coupleId]);
+
+  // Initialize game on mount
   useEffect(() => {
-    if (!isLoading) {
-      const gameState: GameState = {
-        board,
-        currentPlayer,
-        gameStatus,
-        gameHistory,
-        isBotThinking
-      };
-      saveGameState(gameState);
-    }
-  }, [board, currentPlayer, gameStatus, gameHistory, isBotThinking, isLoading]);
-
-  const makeMove = useCallback((from: Position, to: Position, animated: boolean = true) => {
-    const piece = board[from.row][from.col];
-    if (!piece || piece.color !== currentPlayer) return false;
-    
-    const possibleMoves = getPossibleMoves(board, from);
-    const legalMoves = filterLegalMoves(board, from, possibleMoves);
-    
-    const isValidMove = legalMoves.some(move => move.row === to.row && move.col === to.col);
-    if (!isValidMove) return false;
-    
-    if (animated) {
-      // Set animating piece for visual feedback
-      setAnimatingPiece({ position: to, piece });
+    const initialize = async () => {
+      await getCoupleId();
+      const timer = setTimeout(() => {
+        setGameState(initializeGame());
+        setIsLoading(false);
+      }, 100);
       
-      // Animate the move
-      Animated.timing(animatedValue, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setAnimatingPiece(null);
-        animatedValue.setValue(0);
-      });
+      return () => clearTimeout(timer);
+    };
+    
+    initialize();
+  }, [initializeGame, getCoupleId]);
+
+  // Load stats when couple ID is available
+  useEffect(() => {
+    if (coupleId) {
+      loadGameStats();
     }
+  }, [coupleId, loadGameStats]);
+
+  // Save game statistics
+  const saveGameStats = useCallback(async (gameState: GameState, couple: any) => {
+    if (!couple || !coupleId) return;
+
+    try {
+      const gameDuration = Math.floor((Date.now() - gameState.gameStartTime) / 1000);
+      const winnerId = gameState.winner === 'white' ? couple.user1_id : 
+                      gameState.winner === 'black' ? couple.user2_id : undefined;
+
+      const stats: GameStats = {
+        couple_id: coupleId,
+        game_type: 'chess',
+        player1_id: couple.user1_id,
+        player2_id: couple.user2_id,
+        winner_id: winnerId,
+        is_draw: gameState.winner === undefined,
+        game_duration: gameDuration,
+        player1_score: gameState.winner === 'white' ? 1 : 0,
+        player2_score: gameState.winner === 'black' ? 1 : 0,
+        chess_pieces_captured_player1: gameState.piecesCapturedPlayer1,
+        chess_pieces_captured_player2: gameState.piecesCapturedPlayer2,
+        chess_checkmate: gameState.checkmate,
+        chess_stalemate: gameState.stalemate,
+      };
+
+      await gameStatsService.saveGameStats(stats);
+      // Reload stats after saving
+      loadGameStats();
+    } catch (error) {
+      console.error('Error saving game stats:', error);
+    }
+  }, [coupleId, loadGameStats]);
+
+  // Handle square selection
+  const handleSquarePress = useCallback((row: number, col: number) => {
+    if (!gameState || gameState.gamePhase === 'gameOver' || gameState.currentPlayer !== 'white') return;
+
+    const piece = gameState.board[row][col];
+    
+    if (selectedSquare) {
+      // Try to make a move
+      const move = possibleMoves.find(move => move.row === row && move.col === col);
+      if (move) {
+        makeMove(selectedSquare, move);
+      }
+      setSelectedSquare(null);
+      setPossibleMoves([]);
+    } else if (piece && piece.color === 'white') {
+      // Select piece
+      setSelectedSquare({ row, col });
+      const moves = getAllLegalMoves(gameState.board, 'white')
+        .filter(m => m.from.row === row && m.from.col === col)
+        .map(m => m.to);
+      setPossibleMoves(moves);
+    }
+  }, [gameState, selectedSquare, possibleMoves]);
+
+  // Make a move
+  const makeMove = useCallback((from: Position, to: Position) => {
+    if (!gameState || gameState.gamePhase === 'gameOver') return;
+
+    const piece = gameState.board[from.row][from.col];
+    if (!piece || piece.color !== gameState.currentPlayer) return;
+
+    const newBoard = gameState.board.map(r => r.map(p => p ? { ...p } : null));
+    const capturedPiece = newBoard[to.row][to.col];
     
     // Make the move
-    const newBoard = board.map(row => [...row]);
-    const capturedPiece = newBoard[to.row][to.col];
-    newBoard[to.row][to.col] = { ...piece, hasMoved: true };
+    newBoard[to.row][to.col] = piece;
     newBoard[from.row][from.col] = null;
     
+    // Update piece moved status
+    if (piece.type === 'king' || piece.type === 'rook') {
+      newBoard[to.row][to.col]!.hasMoved = true;
+    }
+
     const move: Move = {
       from,
       to,
       piece,
       capturedPiece: capturedPiece || undefined
     };
-    
-    setBoard(newBoard);
-    setGameHistory(prev => [...prev, move]);
-    setSelectedSquare(null);
-    
-    // Check for checkmate or stalemate
-    const nextPlayer: PieceColor = currentPlayer === 'white' ? 'black' : 'white';
-    const nextPlayerMoves: Move[] = [];
-    
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const nextPiece = newBoard[row][col];
-        if (nextPiece && nextPiece.color === nextPlayer) {
-          const moves = getPossibleMoves(newBoard, { row, col });
-          const legalMoves = filterLegalMoves(newBoard, { row, col }, moves);
-          legalMoves.forEach(move => {
-            nextPlayerMoves.push({
-              from: { row, col },
-              to: move,
-              piece: nextPiece,
-              capturedPiece: newBoard[move.row][move.col] || undefined
-            });
-          });
-        }
-      }
-    }
-    
-    if (nextPlayerMoves.length === 0) {
-      if (isKingInCheck(newBoard, nextPlayer)) {
-        setGameStatus(currentPlayer === 'white' ? t('chess.youWin') : t('chess.botWins'));
-      } else {
-        setGameStatus(t('chess.stalemate'));
-      }
-      return true;
-    }
-    
-    if (isKingInCheck(newBoard, nextPlayer)) {
-      setGameStatus(nextPlayer === 'white' ? t('chess.yourTurn') : t('chess.botTurn'));
-    } else {
-      setGameStatus(nextPlayer === 'white' ? t('chess.yourTurn') : t('chess.botTurn'));
-    }
-    
-    setCurrentPlayer(nextPlayer);
-    return true;
-  }, [board, currentPlayer]);
 
-  // Bot move after player move
+    let newGameState: GameState = {
+      ...gameState,
+      board: newBoard,
+      currentPlayer: gameState.currentPlayer === 'white' ? 'black' : 'white',
+      movesCount: gameState.movesCount + 1,
+      lastMove: move,
+    };
+
+    // Update captured pieces count
+    if (capturedPiece) {
+      if (gameState.currentPlayer === 'white') {
+        newGameState.piecesCapturedPlayer1++;
+      } else {
+        newGameState.piecesCapturedPlayer2++;
+      }
+    }
+
+    // Check for game end
+    const gameEnd = checkGameEnd(newBoard, newGameState.currentPlayer);
+    if (gameEnd.checkmate || gameEnd.stalemate) {
+      newGameState.gamePhase = 'gameOver';
+      newGameState.checkmate = gameEnd.checkmate;
+      newGameState.stalemate = gameEnd.stalemate;
+      
+      if (gameEnd.checkmate) {
+        newGameState.winner = gameState.currentPlayer; // Previous player wins
+        newGameState.gameStatus = `${gameState.currentPlayer === 'white' ? 'Blancs' : 'Noirs'} gagnent par échec et mat!`;
+      } else {
+        newGameState.gameStatus = 'Match nul par pat!';
+      }
+      
+      // Save stats when game ends
+      getCoupleId().then(couple => {
+        if (couple) {
+          saveGameStats(newGameState, couple);
+        }
+      });
+    } else {
+      newGameState.gameStatus = newGameState.currentPlayer === 'white' ? 'Votre tour' : 'Tour du Bot';
+    }
+
+    setGameState(newGameState);
+  }, [gameState, getCoupleId, saveGameStats]);
+
+  // Bot move effect
   useEffect(() => {
-    if (currentPlayer === 'black' && !isBotThinking && gameStatus.includes('Tour des noirs')) {
-      setIsBotThinking(true);
-      
-      setTimeout(() => {
-        const botMove = getBotMove(board, 'black');
-        if (botMove) {
-          makeMove(botMove.from, botMove.to, false); // Bot moves without animation
-        }
-        setIsBotThinking(false);
-      }, 1000); // 1 second delay for bot thinking
-    }
-  }, [currentPlayer, board, makeMove, isBotThinking, gameStatus]);
-
-  const handleSquarePress = (row: number, col: number) => {
-    if (currentPlayer !== 'white' || isBotThinking) return;
+    if (!gameState || gameState.gamePhase === 'gameOver' || gameState.currentPlayer !== 'black') return;
     
-    const position = { row, col };
+    const timer = setTimeout(() => {
+      const botMove = getBotMove(gameState.board, 'black');
+      if (botMove) {
+        makeMove(botMove.from, botMove.to);
+      }
+    }, 1000);
     
-    if (selectedSquare) {
-      if (selectedSquare.row === row && selectedSquare.col === col) {
-        setSelectedSquare(null);
-        return;
-      }
-      
-      if (makeMove(selectedSquare, position)) {
-        // Move was successful
-      } else {
-        setSelectedSquare(null);
-      }
-    } else {
-      const piece = board[row][col];
-      if (piece && piece.color === currentPlayer) {
-        setSelectedSquare(position);
-      }
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [gameState, makeMove]);
 
-  const resetGame = async () => {
-    setBoard(initializeBoard());
+  const resetGame = useCallback(() => {
+    setGameState(initializeGame());
     setSelectedSquare(null);
-    setCurrentPlayer('white');
-    setGameStatus(t('chess.yourTurn'));
-    setIsBotThinking(false);
-    setGameHistory([]);
-    setAnimatingPiece(null);
-    await clearGameState();
-  };
-
-  const getSquareStyle = (row: number, col: number) => {
-    const isLight = (row + col) % 2 === 0;
-    const isSelected = selectedSquare && selectedSquare.row === row && selectedSquare.col === col;
-    const piece = board[row][col];
-    const isHighlighted = selectedSquare && (() => {
-      const moves = getPossibleMoves(board, selectedSquare);
-      const legalMoves = filterLegalMoves(board, selectedSquare, moves);
-      return legalMoves.some(move => move.row === row && move.col === col);
-    })();
-    
-    return [
-      styles.square,
-      {
-        backgroundColor: isLight ? '#F0D9B5' : '#B58863',
-      }
-    ];
-  };
-
-  const getSquareBorderStyle = (row: number, col: number) => {
-    const isSelected = selectedSquare && selectedSquare.row === row && selectedSquare.col === col;
-    const isHighlighted = selectedSquare && (() => {
-      const moves = getPossibleMoves(board, selectedSquare);
-      const legalMoves = filterLegalMoves(board, selectedSquare, moves);
-      return legalMoves.some(move => move.row === row && move.col === col);
-    })();
-    
-    if (isSelected || isHighlighted) {
-      return [
-        styles.squareBorder,
-        {
-          borderColor: isSelected ? '#FFD700' : '#90EE90',
-          borderWidth: isSelected ? 3 : 2,
-        }
-      ];
-    }
-    return null;
-  };
-
-  const screenWidth = Dimensions.get('window').width;
-  const boardSize = Math.min(screenWidth - 40, 400);
+    setPossibleMoves([]);
+  }, [initializeGame]);
 
   // Don't render if not authenticated or profile not completed
   if (loading || profileLoading || !user || !isProfileComplete) {
     return null;
   }
 
-  // Show loading while restoring game
-  if (isLoading) {
+  if (isLoading || !gameState) {
     return (
       <AppLayout>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color="#000000" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('games.chess')}</Text>
-            <View style={styles.placeholder} />
-          </View>
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>{t('chess.loading')}</Text>
-          </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement...</Text>
         </View>
       </AppLayout>
     );
@@ -655,66 +561,120 @@ export default function EchecsPage() {
         </View>
         
         <View style={styles.gameContainer}>
+          {/* Game Status */}
           <View style={styles.gameInfo}>
-            <Text style={styles.statusText}>{gameStatus}</Text>
-            {isBotThinking && (
-              <Text style={styles.botThinkingText}>Bot réfléchit...</Text>
-            )}
-          </View>
-          
-          <View style={[styles.boardContainer, { width: boardSize, height: boardSize }]}>
-            <View style={[styles.board, { width: boardSize, height: boardSize }]}>
-            {board.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.row}>
-                {row.map((piece, colIndex) => (
-                  <TouchableOpacity
-                    key={`${rowIndex}-${colIndex}`}
-                    style={getSquareStyle(rowIndex, colIndex)}
-                    onPress={() => handleSquarePress(rowIndex, colIndex)}
-                    disabled={currentPlayer !== 'white' || isBotThinking}
-                  >
-                    {getSquareBorderStyle(rowIndex, colIndex) && (
-                      <View style={getSquareBorderStyle(rowIndex, colIndex)} />
-                    )}
-                    {piece && !(animatingPiece && animatingPiece.position.row === rowIndex && animatingPiece.position.col === colIndex) && (
-                      <Text style={styles.piece}>
-                        {getPieceSymbol(piece)}
-                      </Text>
-                    )}
-                    {animatingPiece && animatingPiece.position.row === rowIndex && animatingPiece.position.col === colIndex && (
-                      <Animated.View
-                        style={[
-                          styles.animatingPiece,
-                          {
-                            opacity: animatedValue,
-                            transform: [
-                              {
-                                scale: animatedValue.interpolate({
-                                  inputRange: [0, 0.5, 1],
-                                  outputRange: [0.8, 1.2, 1],
-                                }),
-                              },
-                            ],
-                          },
-                        ]}
-                      >
-                        <Text style={styles.piece}>
-                          {getPieceSymbol(animatingPiece.piece)}
-                        </Text>
-                      </Animated.View>
-                    )}
-                  </TouchableOpacity>
-                ))}
+            <Text style={styles.statusText}>{gameState.gameStatus}</Text>
+            <View style={styles.playerInfo}>
+              <View style={styles.playerIndicator}>
+                <Text style={styles.playerPiece}>♔</Text>
+                <Text style={styles.playerText}>Vous</Text>
               </View>
-            ))}
+              <View style={styles.playerIndicator}>
+                <Text style={styles.playerPiece}>♚</Text>
+                <Text style={styles.playerText}>Bot</Text>
+              </View>
             </View>
           </View>
           
+          {/* Chess Board */}
+          <View style={styles.boardContainer}>
+            <View style={styles.board}>
+              {gameState.board.map((row, rowIndex) => (
+                <View key={rowIndex} style={styles.boardRow}>
+                  {row.map((piece, colIndex) => {
+                    const isLight = (rowIndex + colIndex) % 2 === 0;
+                    const isSelected = selectedSquare?.row === rowIndex && selectedSquare?.col === colIndex;
+                    const isPossibleMove = possibleMoves.some(move => move.row === rowIndex && move.col === colIndex);
+                    const isLastMove = gameState.lastMove && 
+                      ((gameState.lastMove.from.row === rowIndex && gameState.lastMove.from.col === colIndex) ||
+                       (gameState.lastMove.to.row === rowIndex && gameState.lastMove.to.col === colIndex));
+                    
+                    return (
+                      <TouchableOpacity
+                        key={`${rowIndex}-${colIndex}`}
+                        style={[
+                          styles.square,
+                          {
+                            backgroundColor: isLight ? '#F0D9B5' : '#B58863',
+                            borderColor: isSelected ? '#FFD700' : isPossibleMove ? '#90EE90' : 'transparent',
+                            borderWidth: isSelected ? 3 : isPossibleMove ? 2 : 0,
+                          }
+                        ]}
+                        onPress={() => handleSquarePress(rowIndex, colIndex)}
+                      >
+                        {piece && (
+                          <Text style={[
+                            styles.piece,
+                            { color: piece.color === 'white' ? '#FFFFFF' : '#000000' }
+                          ]}>
+                            {getPieceSymbol(piece)}
+                          </Text>
+                        )}
+                        {isPossibleMove && !piece && (
+                          <View style={styles.possibleMoveIndicator} />
+                        )}
+                        {isLastMove && (
+                          <View style={styles.lastMoveIndicator} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          </View>
+          
+          {/* Game Controls */}
           <View style={styles.controls}>
-            <TouchableOpacity style={styles.newGameButton} onPress={resetGame}>
-              <MaterialCommunityIcons name="restart" size={20} color="#FFFFFF" />
-              <Text style={styles.newGameButtonText}>{t('chess.reset')}</Text>
-            </TouchableOpacity>
+            {gameState.gamePhase === 'gameOver' && (
+              <TouchableOpacity style={styles.newGameButton} onPress={resetGame}>
+                <MaterialCommunityIcons name="refresh" size={24} color="#FFFFFF" />
+                <Text style={styles.newGameButtonText}>Nouvelle Partie</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Game Statistics */}
+          {gameStats && (
+            <View style={styles.statsContainer}>
+              <Text style={styles.statsTitle}>Statistiques du Couple</Text>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.total_games_played || 0}</Text>
+                  <Text style={styles.statLabel}>Parties jouées</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.chess_games || 0}</Text>
+                  <Text style={styles.statLabel}>Échecs</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player1_wins || 0}</Text>
+                  <Text style={styles.statLabel}>Victoires Joueur 1</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player2_wins || 0}</Text>
+                  <Text style={styles.statLabel}>Victoires Joueur 2</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player1_win_rate || 0}%</Text>
+                  <Text style={styles.statLabel}>Taux de victoire J1</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player2_win_rate || 0}%</Text>
+                  <Text style={styles.statLabel}>Taux de victoire J2</Text>
+                </View>
+              </View>
+            </View>
+          )}
+          
+          {/* Instructions */}
+          <View style={styles.instructions}>
+            <Text style={styles.instructionText}>
+              {gameState.gamePhase === 'playing' 
+                ? 'Touchez une pièce pour voir les mouvements possibles' 
+                : "Partie terminée"
+              }
+            </Text>
           </View>
         </View>
       </View>
@@ -748,93 +708,103 @@ const styles = StyleSheet.create({
   resetButton: {
     padding: 8,
   },
-  placeholder: {
-    width: 40,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#6B7280',
   },
   gameContainer: {
     flex: 1,
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 20,
-    justifyContent: 'space-between',
   },
   gameInfo: {
     alignItems: 'center',
-    minHeight: 60,
-    justifyContent: 'center',
+    marginBottom: 20,
   },
   statusText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1F2937',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 15,
   },
-  botThinkingText: {
+  playerInfo: {
+    flexDirection: 'row',
+    gap: 30,
+  },
+  playerIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  playerPiece: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  playerText: {
     fontSize: 14,
-    color: '#6B7280',
-    fontStyle: 'italic',
+    color: '#374151',
+    fontWeight: '500',
   },
   boardContainer: {
-    marginVertical: 20,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   board: {
+    width: 320,
+    height: 320,
     borderWidth: 2,
     borderColor: '#8B4513',
-    borderRadius: 8,
-    overflow: 'hidden',
   },
-  row: {
+  boardRow: {
     flexDirection: 'row',
     flex: 1,
   },
   square: {
     flex: 1,
-    aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 0.5,
-    borderColor: 'rgba(0,0,0,0.1)',
     position: 'relative',
   },
-  squareBorder: {
+  piece: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  possibleMoveIndicator: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,255,0,0.3)',
+  },
+  lastMoveIndicator: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 4,
-  },
-  piece: {
-    fontSize: 32,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  animatingPiece: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFD700',
   },
   controls: {
-    marginTop: 20,
     alignItems: 'center',
+    marginBottom: 20,
   },
   newGameButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F47CC6',
-    paddingHorizontal: 20,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
     shadowColor: '#000',
@@ -842,14 +812,66 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   newGameButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  instructions: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  instructionText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  statsContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 6,
+    padding: 8,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  statsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingVertical: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  statValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 8,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });

@@ -4,7 +4,10 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import "../app/global.css";
+
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { DarkThemeProvider } from '../contexts/DarkThemeContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
@@ -25,16 +28,18 @@ export default function RootLayout() {
     <AuthProvider>
       <LanguageProvider>
         <ThemeProvider>
-          <NotificationProvider>
-            <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="pages" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <StatusBar style="auto" />
-            </NavigationThemeProvider>
-          </NotificationProvider>
+          <DarkThemeProvider>
+            <NotificationProvider>
+              <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="pages" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+                <StatusBar style="auto" />
+              </NavigationThemeProvider>
+            </NotificationProvider>
+          </DarkThemeProvider>
         </ThemeProvider>
       </LanguageProvider>
     </AuthProvider>

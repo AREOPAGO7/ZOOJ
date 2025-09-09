@@ -9,107 +9,95 @@ interface ReceivedPulseProps {
 }
 
 export const ReceivedPulse: React.FC<ReceivedPulseProps> = ({ userId }) => {
-  const [latestPulse, setLatestPulse] = useState<PulseWithSender | null>(null);
+  const [currentPulse, setCurrentPulse] = useState<PulseWithSender | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch latest pulse
+  // Fetch latest unread pulse
   const fetchLatestPulse = async () => {
     if (!userId) return;
-    
+
     setIsLoading(true);
     try {
-      console.log('Fetching latest pulse for user:', userId);
-      const { data, error } = await pulseService.getLatestReceivedPulse(userId);
+      const { data, error } = await pulseService.getLatestUnreadPulse(userId);
+      
       if (error) {
-        console.error('Error fetching latest pulse:', error);
         return;
       }
-      
-      console.log('Latest pulse data:', data);
-      
-      // Only show if we have a new pulse and we're not already showing one
-      if (data && !data.is_read && !isVisible) {
-        console.log('Setting pulse as visible:', data);
-        setLatestPulse(data);
+
+      if (data && !isVisible) {
+        setCurrentPulse(data);
         setIsVisible(true);
-      } else if (!data || data.is_read) {
-        console.log('No unread pulse found or already showing');
+      } else if (!data) {
         setIsVisible(false);
-        setLatestPulse(null);
+        setCurrentPulse(null);
       }
     } catch (error) {
-      console.error('Error fetching latest pulse:', error);
+      // Silent error handling
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Mark pulse as read and hide it
+  // Handle pulse press (mark as read and hide)
   const handlePulsePress = async () => {
-    if (!latestPulse) return;
-    
+    if (!currentPulse) return;
+
     try {
-      // Mark as read and hide immediately
+      // Hide immediately for better UX
       setIsVisible(false);
-      setLatestPulse(null);
+      setCurrentPulse(null);
       
       // Mark as read in database
-      await pulseService.markPulseAsRead(latestPulse.id, userId);
+      await pulseService.markPulseAsRead(currentPulse.id, userId);
       
       // Provide haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
-      console.error('Error marking pulse as read:', error);
+      // Silent error handling
     }
   };
 
-  // Auto-hide pulse after 3 seconds and prevent multiple displays
+  // Auto-hide pulse after 5 seconds
   useEffect(() => {
-    if (latestPulse && isVisible) {
+    if (currentPulse && isVisible) {
       const timer = setTimeout(() => {
-        console.log('Auto-hiding pulse after 3 seconds');
         setIsVisible(false);
-        setLatestPulse(null);
-      }, 3000);
+        setCurrentPulse(null);
+      }, 5000);
 
       return () => clearTimeout(timer);
     }
-  }, [latestPulse, isVisible]);
+  }, [currentPulse, isVisible]);
 
-  // Prevent multiple pulses from showing - only show the latest one
+  // Set up real-time subscription and initial fetch
   useEffect(() => {
-    if (latestPulse && !latestPulse.is_read) {
-      // Mark as read immediately to prevent showing again
-      pulseService.markPulseAsRead(latestPulse.id, userId);
-      setIsVisible(true);
-    }
-  }, [latestPulse, userId]);
+    if (!userId) return;
 
-  // Fetch pulse on mount and set up interval
-  useEffect(() => {
+    // Initial fetch
     fetchLatestPulse();
-    
-    // Check for new pulses every 10 seconds (more frequent)
-    const interval = setInterval(fetchLatestPulse, 10000);
-    
-    return () => clearInterval(interval);
-  }, [userId]);
 
-  // Also fetch when component becomes visible
-  useEffect(() => {
-    if (userId) {
+    // Set up real-time subscription
+    pulseService.subscribeToPulses(userId, (newPulse) => {
+      if (newPulse && !isVisible) {
+        setCurrentPulse(newPulse);
+        setIsVisible(true);
+      }
+    });
+
+    // Fallback polling every 30 seconds
+    const interval = setInterval(() => {
       fetchLatestPulse();
-    }
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+      pulseService.unsubscribeFromPulses(userId);
+    };
   }, [userId]);
 
-  // Debug: Log the state
-  console.log('ReceivedPulse state:', { isVisible, latestPulse, userId });
-
-  // Only show unread pulses
-  const shouldShow = latestPulse && !latestPulse.is_read;
-
-  if (!shouldShow) {
+  // Don't render if no pulse or not visible
+  if (!currentPulse || !isVisible) {
     return null;
   }
 
@@ -119,7 +107,12 @@ export const ReceivedPulse: React.FC<ReceivedPulseProps> = ({ userId }) => {
       '💘': 'pense à vous avec amour',
       '😄': 'est de bonne humeur',
       '😈': 'a une idée coquine',
-      '💨': 'vous envoie un petit vent'
+      '💨': 'vous envoie un petit vent',
+      '❤️': 'vous envoie de l\'amour',
+      '🔥': 'vous envoie de la passion',
+      '😘': 'vous envoie un bisou',
+      '🤗': 'vous fait un câlin',
+      '💕': 'vous envoie des cœurs'
     };
     return messageMap[emoji] || 'vous a envoyé un pulse';
   };
@@ -147,32 +140,32 @@ export const ReceivedPulse: React.FC<ReceivedPulseProps> = ({ userId }) => {
       <View style={styles.pulseCard}>
         <View style={styles.pulseHeader}>
           <View style={styles.senderInfo}>
-            {latestPulse.sender_avatar ? (
-              <Image source={{ uri: latestPulse.sender_avatar }} style={styles.senderAvatar} />
+            {currentPulse.sender_avatar ? (
+              <Image source={{ uri: currentPulse.sender_avatar }} style={styles.senderAvatar} />
             ) : (
               <View style={styles.senderAvatarPlaceholder}>
                 <MaterialCommunityIcons name="account" size={20} color="#666" />
               </View>
             )}
-            <Text style={styles.senderName}>{latestPulse.sender_name}</Text>
+            <Text style={styles.senderName}>{currentPulse.sender_name}</Text>
           </View>
-          <Text style={styles.timeAgo}>{getTimeAgo(latestPulse.created_at)}</Text>
+          <Text style={styles.timeAgo}>{getTimeAgo(currentPulse.created_at)}</Text>
         </View>
         
         <View style={styles.pulseContent}>
-          <Text style={styles.pulseEmoji}>{latestPulse.emoji}</Text>
+          <Text style={styles.pulseEmoji}>{currentPulse.emoji}</Text>
           <Text style={styles.pulseMessage}>
-            {getPulseMessage(latestPulse.emoji)}
+            {getPulseMessage(currentPulse.emoji)}
           </Text>
         </View>
         
-        {latestPulse.message && (
-          <Text style={styles.pulseText}>{latestPulse.message}</Text>
+        {currentPulse.message && (
+          <Text style={styles.pulseText}>{currentPulse.message}</Text>
         )}
         
-                 <View style={styles.footer}>
-           <Text style={styles.tapToRead}>Appuyez pour marquer comme lu • Disparaît dans 3s</Text>
-         </View>
+        <View style={styles.footer}>
+          <Text style={styles.tapToRead}>Appuyez pour marquer comme lu • Disparaît dans 5s</Text>
+        </View>
       </View>
     </Pressable>
   );

@@ -1,3 +1,4 @@
+import { useDarkTheme } from '@/contexts/DarkThemeContext'
 import { useNotifications } from '@/contexts/NotificationContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Notification } from '@/lib/notificationService'
@@ -5,17 +6,18 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import React, { useMemo, useState } from 'react'
 import {
-  Alert,
-  FlatList,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    FlatList,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native'
+import AppLayout from '../app-layout'
 // Helper function to format relative time without external dependencies
 const formatRelativeTime = (dateString: string): string => {
   const now = new Date()
@@ -36,6 +38,7 @@ const NotificationItem: React.FC<{
   onDelete: (id: string) => void
 }> = ({ notification, onMarkAsRead, onDelete }) => {
   const { colors } = useTheme()
+  const { isDarkMode } = useDarkTheme()
 
   const getIconName = () => {
     switch (notification.type) {
@@ -109,7 +112,9 @@ const NotificationItem: React.FC<{
       style={[
         styles.notificationItem,
         {
-          backgroundColor: notification.is_read ? '#FFFFFF' : '#F8F0FF',
+          backgroundColor: notification.is_read 
+            ? (isDarkMode ? '#1A1A1A' : '#FFFFFF') 
+            : (isDarkMode ? '#333333' : '#F8F0FF'),
           borderLeftColor: getPriorityColor(),
           borderLeftWidth: 4,
         }
@@ -126,13 +131,13 @@ const NotificationItem: React.FC<{
           />
         </View>
         <View style={styles.contentContainer}>
-          <Text style={[styles.title, { color: colors.text }]}>
+          <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
             {notification.title}
           </Text>
-          <Text style={[styles.message, { color: colors.textSecondary }]}>
+          <Text style={[styles.message, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
             {notification.message}
           </Text>
-          <Text style={[styles.timestamp, { color: colors.textTertiary }]}>
+          <Text style={[styles.timestamp, { color: isDarkMode ? '#999999' : colors.textTertiary }]}>
             {formatRelativeTime(notification.created_at)}
           </Text>
         </View>
@@ -162,6 +167,7 @@ const NotificationSettings: React.FC<{
   onClose: () => void
 }> = ({ visible, onClose }) => {
   const { colors } = useTheme()
+  const { isDarkMode } = useDarkTheme()
   const { notificationSettings, updateNotificationSettings } = useNotifications()
 
   if (!notificationSettings) return null
@@ -177,115 +183,115 @@ const NotificationSettings: React.FC<{
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={[styles.settingsContainer, { backgroundColor: '#F5F5F5' }]}>
-        <View style={[styles.settingsHeader, { borderBottomColor: '#E5E7EB' }]}>
-          <Text style={[styles.settingsTitle, { color: '#2D2D2D' }]}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-gray-100'}`}>
+        <View style={[styles.settingsHeader, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
+          <Text style={[styles.settingsTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
             Paramètres des notifications
           </Text>
           <TouchableOpacity onPress={onClose}>
-            <MaterialCommunityIcons name="close" size={24} color="#2D2D2D" />
+            <MaterialCommunityIcons name="close" size={24} color={isDarkMode ? '#FFFFFF' : '#2D2D2D'} />
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.settingsContent}>
-          <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
             <View>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>
+              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
                 Notifications push
               </Text>
-              <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                 Recevoir des notifications push
               </Text>
             </View>
             <Switch
               value={notificationSettings.push_enabled}
               onValueChange={(value) => handleToggle('push_enabled', value)}
-              trackColor={{ false: '#E5E7EB', true: '#2DB6FF' }}
+              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
-          <View style={[styles.settingItem, { borderBottomColor: '#E5E7EB' }]}>
+          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
             <View>
-              <Text style={[styles.settingLabel, { color: '#2D2D2D' }]}>
+              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
                 Événements
               </Text>
-              <Text style={[styles.settingDescription, { color: '#7A7A7A' }]}>
+              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
                 Notifications pour les événements
               </Text>
             </View>
             <Switch
               value={notificationSettings.events_enabled}
               onValueChange={(value) => handleToggle('events_enabled', value)}
-              trackColor={{ false: '#E5E7EB', true: '#2DB6FF' }}
+              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
-          <View style={[styles.settingItem, { borderBottomColor: '#E5E7EB' }]}>
+          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
             <View>
-              <Text style={[styles.settingLabel, { color: '#2D2D2D' }]}>
+              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
                 Questions quotidiennes
               </Text>
-              <Text style={[styles.settingDescription, { color: '#7A7A7A' }]}>
+              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
                 Notifications pour les questions quotidiennes
               </Text>
             </View>
             <Switch
               value={notificationSettings.daily_questions_enabled}
               onValueChange={(value) => handleToggle('daily_questions_enabled', value)}
-              trackColor={{ false: '#E5E7EB', true: '#2DB6FF' }}
+              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
-          <View style={[styles.settingItem, { borderBottomColor: '#E5E7EB' }]}>
+          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
             <View>
-              <Text style={[styles.settingLabel, { color: '#2D2D2D' }]}>
+              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
                 Invitations au quiz
               </Text>
-              <Text style={[styles.settingDescription, { color: '#7A7A7A' }]}>
+              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
                 Notifications pour les invitations au quiz
               </Text>
             </View>
             <Switch
               value={notificationSettings.quiz_invites_enabled}
               onValueChange={(value) => handleToggle('quiz_invites_enabled', value)}
-              trackColor={{ false: '#E5E7EB', true: '#2DB6FF' }}
+              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
-          <View style={[styles.settingItem, { borderBottomColor: '#E5E7EB' }]}>
+          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
             <View>
-              <Text style={[styles.settingLabel, { color: '#2D2D2D' }]}>
+              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
                 Mises à jour du couple
               </Text>
-              <Text style={[styles.settingDescription, { color: '#7A7A7A' }]}>
+              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
                 Notifications pour les mises à jour du couple
               </Text>
             </View>
             <Switch
               value={notificationSettings.couple_updates_enabled}
               onValueChange={(value) => handleToggle('couple_updates_enabled', value)}
-              trackColor={{ false: '#E5E7EB', true: '#2DB6FF' }}
+              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
-          <View style={[styles.settingItem, { borderBottomColor: '#E5E7EB' }]}>
+          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
             <View>
-              <Text style={[styles.settingLabel, { color: '#2D2D2D' }]}>
+              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
                 Notifications générales
               </Text>
-              <Text style={[styles.settingDescription, { color: '#7A7A7A' }]}>
+              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
                 Autres notifications importantes
               </Text>
             </View>
             <Switch
               value={notificationSettings.general_notifications_enabled}
               onValueChange={(value) => handleToggle('general_notifications_enabled', value)}
-              trackColor={{ false: '#E5E7EB', true: '#2DB6FF' }}
+              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -297,6 +303,7 @@ const NotificationSettings: React.FC<{
 
 export default function NotificationsPage() {
   const { colors } = useTheme()
+  const { isDarkMode } = useDarkTheme()
   const {
     notifications,
     unreadCount,
@@ -395,10 +402,10 @@ export default function NotificationsPage() {
           style={styles.emptyHeartIcon}
         />
       </View>
-      <Text style={[styles.emptyStateTitle, { color: '#2D2D2D' }]}>
+      <Text style={[styles.emptyStateTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
         Aucune notification
       </Text>
-      <Text style={[styles.emptyStateMessage, { color: '#7A7A7A' }]}>
+      <Text style={[styles.emptyStateMessage, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
         Vous n'avez pas encore de notifications
       </Text>
     </View>
@@ -406,7 +413,7 @@ export default function NotificationsPage() {
 
   const renderNotificationGroup = ({ item }: { item: { key: string; data: Notification[] } }) => (
     <View style={styles.groupContainer}>
-      <Text style={styles.groupTitle}>{item.key}</Text>
+      <Text style={[styles.groupTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{item.key}</Text>
       {item.data.map((notification) => (
         <NotificationItem
           key={notification.id}
@@ -419,73 +426,82 @@ export default function NotificationsPage() {
   )
 
   return (
-    <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#FFFFFF', borderBottomColor: '#E5E7EB' }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#2D2D2D" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#2D2D2D' }]}>
-          Notifications
-          {unreadCount > 0 && (
-            <Text style={[styles.unreadCount, { color: '#2DB6FF' }]}>
-              {' '}({unreadCount})
-            </Text>
-          )}
-        </Text>
-        <TouchableOpacity onPress={() => setSettingsVisible(true)}>
-          <MaterialCommunityIcons name="cog" size={24} color="#2D2D2D" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Actions */}
-      {notifications.length > 0 && (
-        <View style={[styles.actions, { backgroundColor: '#FFFFFF', borderBottomColor: '#E5E7EB' }]}>
-          <TouchableOpacity
-            style={[styles.headerActionButton, { backgroundColor: '#2DB6FF' }]}
-            onPress={handleMarkAllAsRead}
-          >
-            <MaterialCommunityIcons name="check-all" size={16} color="#FFFFFF" />
-            <Text style={[styles.headerActionButtonText, { color: '#FFFFFF' }]}>
-              Tout marquer comme lu
-            </Text>
+    <AppLayout>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-gray-100'}`}>
+        {/* Header */}
+        <View style={[styles.header, { 
+          backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF', 
+          borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB',
+          paddingTop: 20 // Reduced since AppLayout already provides top margin
+        }]}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={isDarkMode ? '#FFFFFF' : '#2D2D2D'} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.headerActionButton, { backgroundColor: '#FF69B4' }]}
-            onPress={handleDeleteAll}
-          >
-            <MaterialCommunityIcons name="delete-sweep" size={16} color="#FFFFFF" />
-            <Text style={[styles.headerActionButtonText, { color: '#FFFFFF' }]}>
-              Tout supprimer
-            </Text>
+          <Text style={[styles.headerTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
+            Notifications
+            {unreadCount > 0 && (
+              <Text style={[styles.unreadCount, { color: '#2DB6FF' }]}>
+                {' '}({unreadCount})
+              </Text>
+            )}
+          </Text>
+          <TouchableOpacity onPress={() => setSettingsVisible(true)}>
+            <MaterialCommunityIcons name="cog" size={24} color={isDarkMode ? '#FFFFFF' : '#2D2D2D'} />
           </TouchableOpacity>
         </View>
-      )}
 
-      {/* Notifications List */}
-      <FlatList
-        data={Object.entries(groupedNotifications).map(([key, data]) => ({ key, data }))}
-        keyExtractor={(item) => item.key}
-        renderItem={renderNotificationGroup}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={refreshNotifications}
-            colors={['#2DB6FF']}
-            tintColor="#2DB6FF"
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-      />
+        {/* Actions */}
+        {notifications.length > 0 && (
+          <View style={[styles.actions, { 
+            backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF', 
+            borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' 
+          }]}>
+            <TouchableOpacity
+              style={[styles.headerActionButton, { backgroundColor: '#2DB6FF' }]}
+              onPress={handleMarkAllAsRead}
+            >
+              <MaterialCommunityIcons name="check-all" size={16} color="#FFFFFF" />
+              <Text style={[styles.headerActionButtonText, { color: '#FFFFFF' }]}>
+                Tout marquer comme lu
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.headerActionButton, { backgroundColor: '#FF69B4' }]}
+              onPress={handleDeleteAll}
+            >
+              <MaterialCommunityIcons name="delete-sweep" size={16} color="#FFFFFF" />
+              <Text style={[styles.headerActionButtonText, { color: '#FFFFFF' }]}>
+                Tout supprimer
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {/* Settings Modal */}
-      <NotificationSettings
-        visible={settingsVisible}
-        onClose={() => setSettingsVisible(false)}
-      />
-    </View>
+        {/* Notifications List */}
+        <FlatList
+          data={Object.entries(groupedNotifications).map(([key, data]) => ({ key, data }))}
+          keyExtractor={(item) => item.key}
+          renderItem={renderNotificationGroup}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={refreshNotifications}
+              colors={['#2DB6FF']}
+              tintColor="#2DB6FF"
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
+
+        {/* Settings Modal */}
+        <NotificationSettings
+          visible={settingsVisible}
+          onClose={() => setSettingsVisible(false)}
+        />
+      </View>
+    </AppLayout>
   )
 }
 
@@ -609,7 +625,6 @@ const styles = StyleSheet.create({
   groupTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2D2D2D',
     marginBottom: 12,
     marginLeft: 16,
     marginTop: 8,

@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
 
@@ -10,6 +10,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { colors } = useTheme();
+  const pathname = usePathname();
+
+  // Hide tab bar on the index page (first page)
+  const isIndexPage = pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/';
 
   return (
     <Tabs
@@ -17,7 +21,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         headerShown: false,
-        tabBarStyle: { 
+        tabBarStyle: isIndexPage ? { display: 'none' } : { 
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,

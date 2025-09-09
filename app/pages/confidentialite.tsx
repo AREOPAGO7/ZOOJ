@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import AppLayout from '../app-layout';
@@ -13,6 +14,7 @@ const BRAND_GRAY = "#6C6C6C";
 export default function ConfidentialitePage() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   const [expandedCards, setExpandedCards] = React.useState<{
     [key: string]: boolean;
@@ -31,7 +33,7 @@ export default function ConfidentialitePage() {
 
   return (
     <AppLayout>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Pressable style={styles.backButton} onPress={handleBack}>

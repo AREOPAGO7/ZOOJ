@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { useDarkTheme } from '../contexts/DarkThemeContext';
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -16,23 +17,22 @@ const tabs = [
 ];
 
 export default function BottomNavigation({ activeTab, onTabPress }: BottomNavigationProps) {
+  const { isDarkMode } = useDarkTheme();
+  
   return (
-    <View style={styles.container}>
+    <View className={`flex-row ${isDarkMode ? 'bg-dark-bg border-t border-dark-border' : 'bg-white border-t border-gray-200'} pb-5 pt-2`}>
       {tabs.map((tab) => (
         <Pressable
           key={tab.id}
-          style={styles.tab}
+          className="flex-1 items-center justify-center py-2"
           onPress={() => onTabPress(tab.id)}
         >
           <MaterialCommunityIcons
             name={tab.icon as any}
             size={24}
-            color={activeTab === tab.id ? '#F47CC6' : '#9CA3AF'}
+            color={activeTab === tab.id ? '#F47CC6' : (isDarkMode ? '#CCCCCC' : '#9CA3AF')}
           />
-          <Text style={[
-            styles.tabLabel,
-            { color: activeTab === tab.id ? '#F47CC6' : '#9CA3AF' }
-          ]}>
+          <Text className={`text-xs font-medium mt-1 ${activeTab === tab.id ? (isDarkMode ? 'text-white' : 'text-secondary') : (isDarkMode ? 'text-dark-text-secondary' : 'text-gray-400')}`}>
             {tab.label}
           </Text>
         </Pressable>
@@ -41,24 +41,3 @@ export default function BottomNavigation({ activeTab, onTabPress }: BottomNaviga
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingBottom: 20, // Extra padding for home indicator
-    paddingTop: 8,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  tabLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-});

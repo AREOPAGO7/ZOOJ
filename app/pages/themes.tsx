@@ -1,76 +1,66 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useContext } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { ThemeContext } from '../../contexts/ThemeContext';
 import AppLayout from '../app-layout';
-
-const BRAND_GRAY = "#6C6C6C";
-const LIGHT_GRAY = "#F3F4F6";
-const DARK_GRAY = "#374151";
 
 export default function ThemesPage() {
   const router = useRouter();
-  const { theme, setTheme } = useContext(ThemeContext);
+  const { isDarkMode, setDarkMode } = useDarkTheme();
   const { t } = useLanguage();
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    setTheme(newTheme);
+  const handleThemeChange = (isDark: boolean) => {
+    setDarkMode(isDark);
   };
 
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-white'}`}>
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
+        <View className="flex-row items-center justify-between pt-5 pb-5 px-5 border-b border-gray-200 dark:border-dark-border">
+          <Pressable className="p-2" onPress={handleBack}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? "#FFFFFF" : "#6C6C6C"} />
           </Pressable>
-          <Text style={styles.headerTitle}>{t('themes.title')}</Text>
-          <View style={styles.headerSpacer} />
+          <Text className={`text-xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-gray-800'}`}>{t('themes.title')}</Text>
+          <View className="w-10" />
         </View>
 
         {/* Main Content */}
-        <View style={styles.mainContent}>
+        <View className="flex-1 px-5 pt-5">
           {/* Light Mode Option */}
           <Pressable 
-            style={styles.themeCard} 
-            onPress={() => handleThemeChange('light')}
+            className={`flex-row items-center ${isDarkMode ? 'bg-dark-surface' : 'bg-gray-100'} rounded-xl py-5 px-5 mb-4`}
+            onPress={() => handleThemeChange(false)}
           >
-            <View style={styles.radioContainer}>
-              <View style={[
-                styles.radioButton, 
-                theme === 'light' && styles.radioButtonSelected
-              ]}>
-                {theme === 'light' && (
-                  <View style={styles.radioButtonInner} />
+            <View className="mr-4">
+              <View className={`w-5 h-5 rounded-full border-2 ${isDarkMode ? 'border-gray-400' : 'border-gray-500'} ${!isDarkMode ? 'border-primary' : ''} justify-center items-center`}>
+                {!isDarkMode && (
+                  <View className="w-2.5 h-2.5 rounded-full bg-primary" />
                 )}
               </View>
             </View>
-            <Text style={styles.themeText}>{t('themes.lightMode')}</Text>
+            <Text className={`text-base ${isDarkMode ? 'text-dark-text' : 'text-gray-800'} font-medium`}>{t('themes.lightMode')}</Text>
           </Pressable>
 
           {/* Dark Mode Option */}
           <Pressable 
-            style={styles.themeCard} 
-            onPress={() => handleThemeChange('dark')}
+            className={`flex-row items-center ${isDarkMode ? 'bg-dark-surface' : 'bg-gray-100'} rounded-xl py-5 px-5 mb-4`}
+            onPress={() => handleThemeChange(true)}
           >
-            <View style={styles.radioContainer}>
-              <View style={[
-                styles.radioButton, 
-                theme === 'dark' && styles.radioButtonSelected
-              ]}>
-                {theme === 'dark' && (
-                  <View style={styles.radioButtonInner} />
+            <View className="mr-4">
+              <View className={`w-5 h-5 rounded-full border-2 ${isDarkMode ? 'border-gray-400' : 'border-gray-500'} ${isDarkMode ? 'border-primary' : ''} justify-center items-center`}>
+                {isDarkMode && (
+                  <View className="w-2.5 h-2.5 rounded-full bg-primary" />
                 )}
               </View>
             </View>
-            <Text style={styles.themeText}>{t('themes.darkMode')}</Text>
+            <Text className={`text-base ${isDarkMode ? 'text-dark-text' : 'text-gray-800'} font-medium`}>{t('themes.darkMode')}</Text>
           </Pressable>
         </View>
       </View>
@@ -78,70 +68,3 @@ export default function ThemesPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: DARK_GRAY,
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  backButton: {
-    padding: 8,
-  },
-  mainContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  themeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: LIGHT_GRAY,
-    borderRadius: 10,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
-  radioContainer: {
-    marginRight: 15,
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: BRAND_GRAY,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioButtonSelected: {
-    borderColor: '#2DB6FF',
-  },
-  radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#2DB6FF',
-  },
-  themeText: {
-    fontSize: 16,
-    color: DARK_GRAY,
-    fontWeight: '500',
-  },
-});

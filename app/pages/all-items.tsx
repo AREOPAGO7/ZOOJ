@@ -2,13 +2,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -64,6 +66,7 @@ export default function AllItemsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { isDarkMode } = useDarkTheme();
   
   const [items, setItems] = useState<ListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -263,7 +266,13 @@ export default function AllItemsPage() {
   };
 
   const renderItem = ({ item }: { item: ListItem }) => (
-    <Pressable style={styles.itemCard} onPress={() => handleItemPress(item)}>
+    <Pressable style={[
+      styles.itemCard, 
+      { 
+        backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+        borderColor: isDarkMode ? '#333333' : '#F0F0F0'
+      }
+    ]} onPress={() => handleItemPress(item)}>
       <View style={[styles.itemIconContainer, { backgroundColor: getItemColor(item.type, item.priority, item.status) }]}>
         <MaterialCommunityIcons 
           name={getItemIcon(item.type) as any} 
@@ -274,9 +283,9 @@ export default function AllItemsPage() {
       
       <View style={styles.itemContent}>
         <View style={styles.itemHeader}>
-          <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-          <View style={styles.itemTypeBadge}>
-            <Text style={styles.itemTypeText}>
+          <Text style={[styles.itemTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]} numberOfLines={1}>{item.title}</Text>
+          <View style={[styles.itemTypeBadge, { backgroundColor: isDarkMode ? '#333333' : '#F0F0F0' }]}>
+            <Text style={[styles.itemTypeText, { color: isDarkMode ? '#CCCCCC' : '#666' }]}>
               {item.type === 'event' ? t('calendar.event') : 
                item.type === 'souvenir' ? t('calendar.souvenir') : t('calendar.todo')}
             </Text>
@@ -285,21 +294,21 @@ export default function AllItemsPage() {
         
         <View style={styles.itemDetails}>
           <View style={styles.itemDetail}>
-            <MaterialCommunityIcons name="calendar" size={16} color="#666" />
-            <Text style={styles.itemDetailText}>{formatDate(item.date)}</Text>
+            <MaterialCommunityIcons name="calendar" size={16} color={isDarkMode ? '#CCCCCC' : '#666'} />
+            <Text style={[styles.itemDetailText, { color: isDarkMode ? '#CCCCCC' : '#666' }]}>{formatDate(item.date)}</Text>
           </View>
           
           {item.time && (
             <View style={styles.itemDetail}>
-              <MaterialCommunityIcons name="clock" size={16} color="#666" />
-              <Text style={styles.itemDetailText}>{formatTime(item.time)}</Text>
+              <MaterialCommunityIcons name="clock" size={16} color={isDarkMode ? '#CCCCCC' : '#666'} />
+              <Text style={[styles.itemDetailText, { color: isDarkMode ? '#CCCCCC' : '#666' }]}>{formatTime(item.time)}</Text>
             </View>
           )}
           
           {item.place && (
             <View style={styles.itemDetail}>
-              <MaterialCommunityIcons name="map-marker" size={16} color="#666" />
-              <Text style={styles.itemDetailText} numberOfLines={1}>{item.place}</Text>
+              <MaterialCommunityIcons name="map-marker" size={16} color={isDarkMode ? '#CCCCCC' : '#666'} />
+              <Text style={[styles.itemDetailText, { color: isDarkMode ? '#CCCCCC' : '#666' }]} numberOfLines={1}>{item.place}</Text>
             </View>
           )}
         </View>
@@ -316,21 +325,32 @@ export default function AllItemsPage() {
         )}
       </View>
       
-      <MaterialCommunityIcons name="chevron-right" size={24} color="#CCC" />
+      <MaterialCommunityIcons name="chevron-right" size={24} color={isDarkMode ? '#666' : '#CCC'} />
     </Pressable>
   );
 
   const renderFilterButton = (filter: 'all' | 'events' | 'souvenirs' | 'todos', labelKey: string, icon: string) => (
     <Pressable
-      style={[styles.filterButton, activeFilter === filter && styles.filterButtonActive]}
+      style={[
+        styles.filterButton, 
+        { 
+          backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA',
+          borderColor: isDarkMode ? '#333333' : '#E0E0E0'
+        },
+        activeFilter === filter && styles.filterButtonActive
+      ]}
       onPress={() => setActiveFilter(filter)}
     >
       <MaterialCommunityIcons 
         name={icon as any} 
         size={20} 
-        color={activeFilter === filter ? 'white' : '#666'} 
+        color={activeFilter === filter ? 'white' : (isDarkMode ? '#CCCCCC' : '#666')} 
       />
-      <Text style={[styles.filterButtonText, activeFilter === filter && styles.filterButtonTextActive]}>
+      <Text style={[
+        styles.filterButtonText, 
+        { color: isDarkMode ? '#CCCCCC' : '#666' },
+        activeFilter === filter && styles.filterButtonTextActive
+      ]}>
         {t(labelKey)}
       </Text>
     </Pressable>
@@ -339,9 +359,9 @@ export default function AllItemsPage() {
   if (isLoading) {
     return (
       <AppLayout>
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }]}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>{t('calendar.loading')}</Text>
+          <Text style={[styles.loadingText, { color: isDarkMode ? '#CCCCCC' : '#666' }]}>{t('calendar.loading')}</Text>
         </View>
       </AppLayout>
     );
@@ -351,22 +371,27 @@ export default function AllItemsPage() {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('calendar.allItems')}</Text>
-          <Text style={styles.subtitle}>
+        <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : '#F0F0F0' }]}>
+          <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('calendar.allItems')}</Text>
+          <Text style={[styles.subtitle, { color: isDarkMode ? '#CCCCCC' : '#666' }]}>
             {filteredItems.length} {filteredItems.length !== 1 ? t('calendar.itemsFoundPlural') : t('calendar.itemsFound')}
           </Text>
         </View>
 
         {/* Filter Buttons */}
-        <View style={styles.filterContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScrollView}
+          contentContainerStyle={styles.filterContainer}
+        >
           {renderFilterButton('all', 'calendar.all', 'view-list')}
           {renderFilterButton('events', 'calendar.events', 'calendar-event')}
           {renderFilterButton('souvenirs', 'calendar.souvenirs', 'camera')}
           {renderFilterButton('todos', 'calendar.todos', 'checkbox-marked-outline')}
-        </View>
+        </ScrollView>
 
         {/* Items List */}
         {filteredItems.length > 0 ? (
@@ -379,13 +404,13 @@ export default function AllItemsPage() {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="inbox-outline" size={64} color="#CCC" />
-            <Text style={styles.emptyTitle}>
+            <MaterialCommunityIcons name="inbox-outline" size={64} color={isDarkMode ? '#666' : '#CCC'} />
+            <Text style={[styles.emptyTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
               {activeFilter === 'all' ? t('calendar.noItems') : 
                activeFilter === 'events' ? t('calendar.noEventsFilter') :
                activeFilter === 'souvenirs' ? t('calendar.noSouvenirsFilter') : t('calendar.noTodosFilter')}
             </Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptySubtitle, { color: isDarkMode ? '#CCCCCC' : '#666' }]}>
               {t('calendar.startCreating')}
             </Text>
           </View>
@@ -398,7 +423,6 @@ export default function AllItemsPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
@@ -407,31 +431,31 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 16,
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 16,
+    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2D2D2D',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+  },
+  filterScrollView: {
+    maxHeight: 60,
   },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 12,
     gap: 12,
+    alignItems: 'center',
   },
   filterButton: {
     flexDirection: 'row',
@@ -439,10 +463,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     gap: 8,
+    minWidth: 100,
+    justifyContent: 'center',
   },
   filterButtonActive: {
     backgroundColor: '#007AFF',
@@ -451,24 +475,22 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#666',
   },
   filterButtonTextActive: {
     color: 'white',
   },
   listContainer: {
     paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 20,
   },
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -495,12 +517,10 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D2D2D',
     flex: 1,
     marginRight: 8,
   },
   itemTypeBadge: {
-    backgroundColor: '#F0F0F0',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -508,7 +528,6 @@ const styles = StyleSheet.create({
   itemTypeText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#666',
   },
   itemDetails: {
     gap: 8,
@@ -520,7 +539,6 @@ const styles = StyleSheet.create({
   },
   itemDetailText: {
     fontSize: 14,
-    color: '#666',
   },
   todoStatus: {
     flexDirection: 'row',
@@ -557,14 +575,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#2D2D2D',
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 22,
   },

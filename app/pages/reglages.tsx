@@ -2,8 +2,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import AppLayout from '../app-layout';
@@ -12,7 +12,7 @@ export default function ReglagesPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
-  const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
 
   // Don't render if not authenticated or profile not completed
@@ -84,10 +84,10 @@ export default function ReglagesPage() {
 
   return (
     <AppLayout>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.title')}</Text>
+        <View className={`px-6 py-4 border-b ${isDarkMode ? 'border-dark-border' : 'border-gray-200'}`} style={styles.header}>
+          <Text className={`text-2xl font-bold text-center ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('settings.title')}</Text>
         </View>
 
         {/* Settings List */}
@@ -95,7 +95,8 @@ export default function ReglagesPage() {
           {settingsOptions.map((option) => (
             <Pressable
               key={option.id}
-              style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              className={`mx-4 my-2 px-4 py-4 rounded-lg border ${isDarkMode ? 'bg-dark-surface border-dark-border' : 'bg-white border-gray-200'}`}
+              style={styles.settingItem}
               onPress={() => handleSettingPress(option.route)}
             >
               <View style={styles.settingLeft}>
@@ -106,12 +107,12 @@ export default function ReglagesPage() {
                     color="#F47CC6" 
                   />
                 </View>
-                <Text style={[styles.settingTitle, { color: colors.text }]}>{option.title}</Text>
+                <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{option.title}</Text>
               </View>
               <MaterialCommunityIcons 
                 name="chevron-right" 
                 size={24} 
-                color={colors.textSecondary} 
+                color={isDarkMode ? '#CCCCCC' : '#7A7A7A'} 
               />
             </Pressable>
           ))}
@@ -122,21 +123,11 @@ export default function ReglagesPage() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // backgroundColor is now dynamic from theme
-  },
   header: {
     alignItems: 'center',
     paddingTop: 20,
     paddingBottom: 30,
     borderBottomWidth: 1,
-    // borderBottomColor is now dynamic from theme
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    // color is now dynamic from theme
   },
   settingsList: {
     flex: 1,
@@ -147,12 +138,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    // backgroundColor is now dynamic from theme
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
     borderWidth: 1,
-    // borderColor is now dynamic from theme
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -170,10 +159,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    // color is now dynamic from theme
   },
 });

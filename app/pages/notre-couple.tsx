@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
@@ -67,6 +68,7 @@ export default function NotreCouplePage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   
   const [coupleId, setCoupleId] = useState<string | null>(null);
@@ -82,6 +84,8 @@ export default function NotreCouplePage() {
   const [anniversaryDate, setAnniversaryDate] = useState('');
   const [answeredQuestionsCount, setAnsweredQuestionsCount] = useState<number>(0);
   const [isUpdatingDate, setIsUpdatingDate] = useState(false);
+  const [coupleStatus, setCoupleStatus] = useState<'en_finance' | 'en_couple' | 'marie' | ''>('');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Function declarations
   const loadCoupleData = async () => {
@@ -92,7 +96,7 @@ export default function NotreCouplePage() {
       // Get couple information
       const { data: couple, error: coupleError } = await supabase
         .from('couples')
-        .select('id, user1_id, user2_id, created_at')
+        .select('id, user1_id, user2_id, created_at, status')
         .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id}`)
         .single();
 
@@ -103,6 +107,11 @@ export default function NotreCouplePage() {
       
       console.log('Found couple:', couple);
       setCoupleId(couple.id);
+      
+      // Set status if present
+      if (couple.status) {
+        setCoupleStatus(couple.status as any);
+      }
       
       // Set the anniversary date from the couple creation date
       if (couple.created_at) {
@@ -224,6 +233,28 @@ export default function NotreCouplePage() {
     }
   };
 
+  const updateCoupleStatus = async (newStatus: 'en_finance' | 'en_couple' | 'marie') => {
+    if (!coupleId) return;
+    try {
+      setIsUpdatingStatus(true);
+      // Optimistic UI
+      setCoupleStatus(newStatus);
+      const { error } = await supabase
+        .from('couples')
+        .update({ status: newStatus })
+        .eq('id', coupleId);
+      if (error) {
+        console.error('Error updating status:', error);
+        Alert.alert(t('ourCouple.error'), 'Impossible de mettre à jour le statut');
+      }
+    } catch (e) {
+      console.error('Status update error:', e);
+      Alert.alert(t('ourCouple.error'), t('ourCouple.unexpectedError'));
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const loadQuizResults = async (coupleId: string) => {
     try {
       console.log('Loading quiz results for couple:', coupleId);
@@ -232,96 +263,82 @@ export default function NotreCouplePage() {
       console.log('2. Quiz Compatibility = (User1 + User2) ÷ 2');
       console.log('3. Global Compatibility = average of all completed quizzes');
       
-      // First, let's check if the quiz_results table exists by trying to list all tables
-      const { data: tables, error: tablesError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public');
-      
-      if (tablesError) {
-        console.log('Could not check tables schema:', tablesError);
-      } else {
-        console.log('Available tables:', tables);
-      }
-      
-             // Get all quiz results for this couple
-       console.log('Attempting to fetch from quiz_results table...');
-       const { data: results, error: resultsError } = await supabase
-         .from('quiz_results')
-         .select(`
-           *,
-           quiz:quizzes(title)
-         `)
-         .eq('couple_id', coupleId);
+      // Get all quiz results for this couple
+      console.log('Attempting to fetch from quiz_results table...');
+      const { data: results, error: resultsError } = await supabase
+        .from('quiz_results')
+        .select(`
+          *,
+          quiz:quizzes(title)
+        `)
+        .eq('couple_id', coupleId);
 
       if (resultsError) {
         console.error('Error fetching quiz results:', resultsError);
         
-        // If the table doesn't exist, let's try to create it or check what's available
-        if (resultsError.message.includes('relation "quiz_results" does not exist')) {
-          console.log('quiz_results table does not exist. Checking quiz_answers table...');
+        // If there's any error accessing quiz_results, fall back to quiz_answers
+        console.log('quiz_results table not accessible. Falling back to quiz_answers table...');
+        
+        // Try to get data from quiz_answers instead
+        console.log('Falling back to quiz_answers table...');
+        const { data: answersData, error: answersError } = await supabase
+          .from('quiz_answers')
+          .select('*')
+          .eq('couple_id', coupleId);
+            
+        if (answersError) {
+          console.error('Error fetching quiz answers:', answersError);
+          setQuizResults([]);
+          return;
+        }
           
-                     // Try to get data from quiz_answers instead
-           console.log('Falling back to quiz_answers table...');
-           const { data: answersData, error: answersError } = await supabase
-             .from('quiz_answers')
-             .select('*')
-             .eq('couple_id', coupleId);
-            
-          if (answersError) {
-            console.error('Error fetching quiz answers:', answersError);
-            setQuizResults([]);
-            return;
-          }
+        console.log('Found quiz answers:', answersData);
+        
+        if (answersData && answersData.length > 0) {
+          // Group by quiz_id and calculate results manually
+          const quizGroups = answersData.reduce((groups: any, answer: any) => {
+            if (!groups[answer.quiz_id]) {
+              groups[answer.quiz_id] = [];
+            }
+            groups[answer.quiz_id].push(answer);
+            return groups;
+          }, {});
           
-          console.log('Found quiz answers:', answersData);
+          console.log('Quiz groups:', quizGroups);
           
-          if (answersData && answersData.length > 0) {
-            // Group by quiz_id and calculate results manually
-            const quizGroups = answersData.reduce((groups: any, answer: any) => {
-              if (!groups[answer.quiz_id]) {
-                groups[answer.quiz_id] = [];
-              }
-              groups[answer.quiz_id].push(answer);
-              return groups;
-            }, {});
+          // Transform answers into quiz results
+          const transformedResults: QuizResult[] = [];
+          
+          Object.keys(quizGroups).forEach(quizId => {
+            const answers = quizGroups[quizId];
+            const userAnswers = answers.filter((a: any) => a.user_id === user?.id);
+            const partnerAnswers = answers.filter((a: any) => a.user_id !== user?.id);
             
-            console.log('Quiz groups:', quizGroups);
-            
-            // Transform answers into quiz results
-            const transformedResults: QuizResult[] = [];
-            
-            Object.keys(quizGroups).forEach(quizId => {
-              const answers = quizGroups[quizId];
-              const userAnswers = answers.filter((a: any) => a.user_id === user?.id);
-              const partnerAnswers = answers.filter((a: any) => a.user_id !== user?.id);
+            if (userAnswers.length > 0 && partnerAnswers.length > 0) {
+              // Calculate exactly as per the formula: User = sum of answers / number of questions
+              const userScore = userAnswers.reduce((sum: number, a: any) => sum + a.answer_value, 0) / userAnswers.length;
+              const partnerScore = partnerAnswers.reduce((sum: number, a: any) => sum + a.answer_value, 0) / partnerAnswers.length;
               
-              if (userAnswers.length > 0 && partnerAnswers.length > 0) {
-                // Calculate exactly as per the formula: User = sum of answers / number of questions
-                const userScore = userAnswers.reduce((sum: number, a: any) => sum + a.answer_value, 0) / userAnswers.length;
-                const partnerScore = partnerAnswers.reduce((sum: number, a: any) => sum + a.answer_value, 0) / partnerAnswers.length;
-                
-                // Quiz compatibility = (User1 + User2) ÷ 2
-                const quizCompatibility = (userScore + partnerScore) / 2;
-                
-                transformedResults.push({
-                  quiz_id: quizId,
-                  quiz_title: `Quiz ${quizId}`,
-                  score: Math.round(quizCompatibility * 33.33), // Convert to percentage (1-3 scale to 0-100%)
-                  user1_percent: Math.round(userScore * 33.33), // Convert to percentage (1-3 scale to 0-100%)
-                  user2_percent: Math.round(partnerScore * 33.33), // Convert to percentage (1-3 scale to 0-100%)
-                  strengths: [] as any[],
-                  weaknesses: [] as any[],
-                  total_questions: userAnswers.length
-                });
-              }
-            });
-            
-            console.log('Transformed results from answers:', transformedResults);
-            setQuizResults(transformedResults);
-            calculateInsights(transformedResults);
-            return;
-          }
+              // Quiz compatibility = (User1 + User2) ÷ 2
+              const quizCompatibility = (userScore + partnerScore) / 2;
+              
+              transformedResults.push({
+                quiz_id: quizId,
+                quiz_title: `Quiz ${quizId}`,
+                score: Math.round(quizCompatibility * 33.33), // Convert to percentage (1-3 scale to 0-100%)
+                user1_percent: Math.round(userScore * 33.33), // Convert to percentage (1-3 scale to 0-100%)
+                user2_percent: Math.round(partnerScore * 33.33), // Convert to percentage (1-3 scale to 0-100%)
+                strengths: [] as any[],
+                weaknesses: [] as any[],
+                total_questions: userAnswers.length
+              });
+            }
+          });
+          
+          console.log('Transformed results from answers:', transformedResults);
+          setQuizResults(transformedResults);
+          calculateInsights(transformedResults);
+          return;
         }
         
         setQuizResults([]);
@@ -336,19 +353,19 @@ export default function NotreCouplePage() {
         return;
       }
 
-             // Transform results - use a default question count since quiz_questions table has issues
-       const transformedResults: QuizResult[] = results.map(result => {
-         return {
-           quiz_id: result.quiz_id,
-           quiz_title: result.quiz?.title || 'Quiz',
-           score: result.score || 0,
-           user1_percent: result.user1_percent || 0,
-           user2_percent: result.user2_percent || 0,
-           strengths: result.strengths || [],
-           weaknesses: result.weaknesses || [],
-           total_questions: 10 // Default question count per quiz
-         };
-       });
+      // Transform results - use a default question count since quiz_questions table has issues
+      const transformedResults: QuizResult[] = results.map(result => {
+        return {
+          quiz_id: result.quiz_id,
+          quiz_title: result.quiz?.title || 'Quiz',
+          score: result.score || 0,
+          user1_percent: result.user1_percent || 0,
+          user2_percent: result.user2_percent || 0,
+          strengths: result.strengths || [],
+          weaknesses: result.weaknesses || [],
+          total_questions: 10 // Default question count per quiz
+        };
+      });
 
       console.log('Transformed results:', transformedResults);
       setQuizResults(transformedResults);
@@ -546,11 +563,9 @@ export default function NotreCouplePage() {
   if (isLoading) {
     return (
       <AppLayout>
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={BRAND_PINK} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('ourCouple.loading')}</Text>
-          </View>
+        <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
+          <ActivityIndicator size="large" color={BRAND_PINK} />
+          <Text className={`text-lg ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'} mt-4`}>{t('ourCouple.loading')}</Text>
         </View>
       </AppLayout>
     );
@@ -558,49 +573,49 @@ export default function NotreCouplePage() {
 
   return (
     <AppLayout>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View className={`flex-row items-center py-4 px-5 border-b ${isDarkMode ? 'border-dark-border' : 'border-border'}`}>
           <MaterialCommunityIcons name="heart-outline" size={32} color={BRAND_PINK} />
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('ourCouple.title')}</Text>
+          <Text className={`text-2xl font-bold ml-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('ourCouple.title')}</Text>
         </View>
         
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
           {/* Couple Overview Card */}
-          <View style={[styles.coupleOverviewCard, { backgroundColor: colors.surface }]}>
+          <View className={`rounded-xl p-6 mb-6 shadow-sm ${isDarkMode ? 'bg-dark-surface' : 'bg-white'}`}>
             {/* Profile Pictures and Hearts */}
-                          <View style={styles.profileSection}>
-                <View style={styles.profilePicture}>
-                  {userProfiles?.user1?.profile_picture ? (
-                    <Image
-                      source={{ uri: userProfiles.user1.profile_picture }}
-                      style={styles.profileImagePlaceholder}
-                    />
-                  ) : (
-                    <View style={[styles.profileImagePlaceholder, { backgroundColor: colors.border }]}>
-                      <MaterialCommunityIcons name="account" size={40} color={BRAND_PINK} />
-                    </View>
-                  )}
-                </View>
-                
-                <View style={styles.heartsContainer}>
-                  <MaterialCommunityIcons name="heart" size={24} color={BRAND_PINK} />
-                  <MaterialCommunityIcons name="heart" size={24} color={BRAND_BLUE} style={styles.overlappingHeart} />
-                </View>
-                
-                <View style={styles.profilePicture}>
-                  {userProfiles?.user2?.profile_picture ? (
-                    <Image
-                      source={{ uri: userProfiles.user2.profile_picture }}
-                      style={styles.profileImagePlaceholder}
-                    />
-                  ) : (
-                    <View style={[styles.profileImagePlaceholder, { backgroundColor: colors.border }]}>
-                      <MaterialCommunityIcons name="account" size={40} color={BRAND_BLUE} />
-                    </View>
-                  )}
-                </View>
+            <View style={styles.profileSection}>
+              <View style={styles.profilePicture}>
+                {userProfiles?.user1?.profile_picture ? (
+                  <Image
+                    source={{ uri: userProfiles.user1.profile_picture }} 
+                    style={styles.profileImagePlaceholder}
+                  />
+                ) : (
+                  <View style={[styles.profileImagePlaceholder, { backgroundColor: colors.border }]}>
+                    <MaterialCommunityIcons name="account" size={40} color={BRAND_PINK} />
+                  </View>
+                )}
               </View>
+              
+              <View style={styles.heartsContainer}>
+                <MaterialCommunityIcons name="heart" size={24} color={BRAND_PINK} />
+                <MaterialCommunityIcons name="heart" size={24} color={BRAND_BLUE} style={styles.overlappingHeart} />
+              </View>
+              
+              <View style={styles.profilePicture}>
+                {userProfiles?.user2?.profile_picture ? (
+                  <Image
+                    source={{ uri: userProfiles.user2.profile_picture }} 
+                    style={styles.profileImagePlaceholder}
+                  />
+                ) : (
+                  <View style={[styles.profileImagePlaceholder, { backgroundColor: colors.border }]}>
+                    <MaterialCommunityIcons name="account" size={40} color={BRAND_BLUE} />
+                  </View>
+                )}
+              </View>
+            </View>
 
             {/* Share Icon */}
             <Pressable style={styles.shareButton}>
@@ -608,9 +623,38 @@ export default function NotreCouplePage() {
             </Pressable>
 
             {/* Names */}
-            <Text style={[styles.coupleNames, { color: colors.text }]}>
+            <Text style={[styles.coupleNames, { color: colors.text }]}> 
               {userNames ? `${userNames.user1} & ${userNames.user2}` : 'Lara & Med'}
             </Text>
+
+            {/* Relationship Status */}
+            <View style={styles.statusContainer}>
+              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Statut</Text>
+              <View style={styles.statusPillsRow}>
+                {(
+                  [
+                    { key: 'en_finance', label: 'En fiançailles' },
+                    { key: 'en_couple', label: 'En couple' },
+                    { key: 'marie', label: 'Marié(e)s' },
+                  ] as const
+                ).map(option => (
+                  <Pressable
+                    key={option.key}
+                    onPress={() => !isUpdatingStatus && updateCoupleStatus(option.key)}
+                    style={[
+                      styles.statusPill,
+                      { borderColor: colors.border, backgroundColor: colors.surface },
+                      coupleStatus === option.key && styles.statusPillActive,
+                      isUpdatingStatus && { opacity: 0.6 },
+                    ]}
+                  >
+                    <Text style={[styles.statusPillText, coupleStatus === option.key && styles.statusPillTextActive]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
 
             {/* Relationship Duration */}
             <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>{t('ourCouple.togetherSince')}</Text>
@@ -653,32 +697,32 @@ export default function NotreCouplePage() {
               })()}
             </View>
 
-                                      {/* Individual Progress Circles */}
-              <View style={styles.progressSection}>
-                <View style={styles.progressCircle}>
-                  <View style={styles.circleOutline}>
-                    <Text style={styles.progressPercentage}>
-                      {personalInsights ? `${personalInsights.averageScore}%` : '0%'}
-                    </Text>
-                  </View>
-                  <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user1 || 'Lara'}</Text>
-                  <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}>
-                    {t('ourCouple.compatibilityBasedOn')} {user1QuizCount} {user1QuizCount > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
+            {/* Individual Progress Circles */}
+            <View style={styles.progressSection}>
+              <View style={styles.progressCircle}>
+                <View style={styles.circleOutline}>
+                  <Text style={styles.progressPercentage}>
+                    {personalInsights ? `${personalInsights.averageScore}%` : '0%'}
                   </Text>
                 </View>
-  
-                                <View style={styles.progressCircle}>
-                   <View style={styles.circleOutline}>
-                     <Text style={styles.progressPercentage}>
-                       {user2CompatibilityScore}%
-                     </Text>
-                   </View>
-                   <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user2 || 'Med'}</Text>
-                   <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}>
-                     {t('ourCouple.compatibilityBasedOn')} {user2QuizCount} {user2QuizCount > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
-                   </Text>
-                 </View>
+                <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user1 || 'Lara'}</Text>
+                <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}> 
+                  {t('ourCouple.compatibilityBasedOn')} {user1QuizCount} {user1QuizCount > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
+                </Text>
               </View>
+
+              <View style={styles.progressCircle}>
+                <View style={styles.circleOutline}>
+                  <Text style={styles.progressPercentage}>
+                    {user2CompatibilityScore}%
+                  </Text>
+                </View>
+                <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user2 || 'Med'}</Text>
+                <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}> 
+                  {t('ourCouple.compatibilityBasedOn')} {user2QuizCount} {user2QuizCount > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
+                </Text>
+              </View>
+            </View>
           </View>
 
           {/* Couple Anniversary Section */}
@@ -703,36 +747,36 @@ export default function NotreCouplePage() {
             </Pressable>
           </View>
 
-                     {/* Statistics Grid */}
-           <View style={styles.statsGrid}>
-             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-               <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
-               <Text style={[styles.statNumber, { color: colors.text }]}>
-                 {answeredQuestionsCount}
-               </Text>
-               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.questionsAnswered')}</Text>
-             </View>
- 
-             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-               <MaterialCommunityIcons name="heart-outline" size={24} color={BRAND_PINK} />
-               <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.pulsesSent')}</Text>
-             </View>
- 
-             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-               <MaterialCommunityIcons name="trophy-outline" size={24} color={BRAND_PINK} />
-               <Text style={[styles.statNumber, { color: colors.text }]}>
-                 {quizResults.length}
-               </Text>
-               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.quizzesCompleted')}</Text>
-             </View>
- 
-             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-               <MaterialCommunityIcons name="image-outline" size={24} color={BRAND_PINK} />
-               <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.sharedMemories')}</Text>
-             </View>
-           </View>
+          {/* Statistics Grid */}
+          <View style={styles.statsGrid}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
+              <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
+              <Text style={[styles.statNumber, { color: colors.text }]}> 
+                {answeredQuestionsCount}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.questionsAnswered')}</Text>
+            </View>
+
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
+              <MaterialCommunityIcons name="heart-outline" size={24} color={BRAND_PINK} />
+              <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.pulsesSent')}</Text>
+            </View>
+
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
+              <MaterialCommunityIcons name="trophy-outline" size={24} color={BRAND_PINK} />
+              <Text style={[styles.statNumber, { color: colors.text }]}> 
+                {quizResults.length}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.quizzesCompleted')}</Text>
+            </View>
+
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
+              <MaterialCommunityIcons name="image-outline" size={24} color={BRAND_PINK} />
+              <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.sharedMemories')}</Text>
+            </View>
+          </View>
 
           {/* Existing Compatibility Dashboard - Moved to Bottom */}
           {coupleInsights && (
@@ -759,8 +803,8 @@ export default function NotreCouplePage() {
               </View>
 
               {/* Communication Style */}
-              <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
-                <View style={styles.cardHeader}>
+              <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                <View style={styles.cardHeader}> 
                   <MaterialCommunityIcons name="message-text" size={24} color={BRAND_BLUE} />
                   <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.communicationStyle')}</Text>
                 </View>
@@ -770,8 +814,8 @@ export default function NotreCouplePage() {
               {/* Strengths and Growth Areas */}
               <View style={styles.insightsGrid}>
                 {/* Strengths */}
-                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
-                  <View style={styles.cardHeader}>
+                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                  <View style={styles.cardHeader}> 
                     <MaterialCommunityIcons name="star" size={24} color="#4CAF50" />
                     <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.strengths')}</Text>
                   </View>
@@ -785,8 +829,8 @@ export default function NotreCouplePage() {
                 </View>
 
                 {/* Growth Areas */}
-                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
-                  <View style={styles.cardHeader}>
+                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                  <View style={styles.cardHeader}> 
                     <MaterialCommunityIcons name="trending-up" size={24} color="#FF9800" />
                     <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.growthAreas')}</Text>
                   </View>
@@ -802,8 +846,8 @@ export default function NotreCouplePage() {
 
               {/* Personal Insights */}
               {personalInsights && (
-                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
-                  <View style={styles.cardHeader}>
+                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                  <View style={styles.cardHeader}> 
                     <MaterialCommunityIcons name="account" size={24} color={BRAND_PINK} />
                     <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.personalInsights')}</Text>
                   </View>
@@ -839,24 +883,24 @@ export default function NotreCouplePage() {
 
               {/* Detailed Quiz Results */}
               {quizResults.length > 0 && (
-                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}>
-                  <View style={styles.cardHeader}>
+                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                  <View style={styles.cardHeader}> 
                     <MaterialCommunityIcons name="chart-line" size={24} color={BRAND_BLUE} />
                     <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.detailedResults')}</Text>
                   </View>
                   
                   {quizResults.map((result, index) => (
-                    <View key={index} style={[styles.quizResultItem, { backgroundColor: colors.border }]}>
+                    <View key={index} style={[styles.quizResultItem, { backgroundColor: colors.border }]}> 
                       <View style={styles.quizResultHeader}>
                         <Text style={[styles.quizTitle, { color: colors.text }]}>{result.quiz_title}</Text>
                         <View style={styles.quizScore}>
-                          <Text style={[styles.quizScoreText, { color: getScoreColor(result.score) }]}>
+                          <Text style={[styles.quizScoreText, { color: getScoreColor(result.score) }]}> 
                             {result.score}%
                           </Text>
                         </View>
                       </View>
                       
-                      <View style={styles.quizDetails}>
+                      <View style={styles.quizDetails}> 
                         <View style={styles.quizDetail}>
                           <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{userNames?.user1 || t('ourCouple.you')}:</Text>
                           <Text style={[styles.detailValue, { color: colors.text }]}>{result.user1_percent}%</Text>
@@ -875,10 +919,10 @@ export default function NotreCouplePage() {
 
           {/* No Data State */}
           {quizResults.length === 0 && (
-            <View style={[styles.noDataCard, { backgroundColor: colors.surface }]}>
+            <View style={[styles.noDataCard, { backgroundColor: colors.surface }]}> 
               <MaterialCommunityIcons name="heart-outline" size={48} color={BRAND_GRAY} />
               <Text style={[styles.noDataTitle, { color: colors.text }]}>{t('ourCouple.noQuizCompleted')}</Text>
-              <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
+              <Text style={[styles.noDataText, { color: colors.textSecondary }]}> 
                 {t('ourCouple.noQuizMessage')}
               </Text>
             </View>
@@ -973,6 +1017,36 @@ const styles = StyleSheet.create({
     // color is now dynamic from theme
     textAlign: 'center',
     marginBottom: 10,
+  },
+  statusContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  statusLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  statusPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  statusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  statusPillActive: {
+    backgroundColor: '#FFE0F0',
+    borderColor: '#FFC1DD',
+  },
+  statusPillText: {
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  statusPillTextActive: {
+    color: '#9D174D',
   },
   durationLabel: {
     fontSize: 14,

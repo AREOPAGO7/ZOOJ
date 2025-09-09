@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
+import { GameStats, gameStatsService } from '../../lib/gameStatsService';
+import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
 // Connect 4 game types
@@ -19,43 +20,14 @@ interface GameState {
   gamePhase: 'playing' | 'gameOver';
   winner?: Player;
   lastMove?: { row: number; col: number };
+  moveCount: number;
+  gameStartTime: number;
 }
 
 // Game constants
 const ROWS = 6;
 const COLS = 7;
 const WIN_LENGTH = 4;
-
-// AsyncStorage functions
-const GAME_STATE_KEY = 'connect4_game_state';
-
-const saveGameState = async (gameState: GameState) => {
-  try {
-    await AsyncStorage.setItem(GAME_STATE_KEY, JSON.stringify(gameState));
-  } catch (error) {
-    console.error('Error saving game state:', error);
-  }
-};
-
-const loadGameState = async (): Promise<GameState | null> => {
-  try {
-    const savedState = await AsyncStorage.getItem(GAME_STATE_KEY);
-    if (savedState) {
-      return JSON.parse(savedState);
-    }
-  } catch (error) {
-    console.error('Error loading game state:', error);
-  }
-  return null;
-};
-
-const clearGameState = async () => {
-  try {
-    await AsyncStorage.removeItem(GAME_STATE_KEY);
-  } catch (error) {
-    console.error('Error clearing game state:', error);
-  }
-};
 
 // Game logic functions
 const createEmptyBoard = (): Board => {
@@ -166,6 +138,8 @@ export default function Puissance4Page() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [animatingPiece, setAnimatingPiece] = useState<{ row: number; col: number } | null>(null);
+  const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [gameStats, setGameStats] = useState<any>(null);
   const animatedValue = useState(new Animated.Value(0))[0];
 
   // Initialize new game
@@ -175,22 +149,65 @@ export default function Puissance4Page() {
       currentPlayer: 'red',
       gameStatus: t('connect4.yourTurn'),
       gamePhase: 'playing',
+      moveCount: 0,
+      gameStartTime: Date.now(),
     };
   }, [t]);
 
-  // Load game state on mount
-  useEffect(() => {
-    const loadGame = async () => {
-      const savedState = await loadGameState();
-      if (savedState) {
-        setGameState(savedState);
-      } else {
-        setGameState(initializeGame());
+  // Get couple ID
+  const getCoupleId = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data: couple, error } = await supabase
+        .from('couples')
+        .select('id, user1_id, user2_id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .single();
+
+      if (couple) {
+        setCoupleId(couple.id);
+        return couple;
       }
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Error getting couple ID:', error);
+    }
+    return null;
+  }, [user]);
+
+  // Load game statistics
+  const loadGameStats = useCallback(async () => {
+    if (!coupleId) return;
+    
+    try {
+      const stats = await gameStatsService.getCoupleGameStats(coupleId);
+      setGameStats(stats);
+    } catch (error) {
+      console.error('Error loading game stats:', error);
+    }
+  }, [coupleId]);
+
+  // Initialize game on mount
+  useEffect(() => {
+    const initialize = async () => {
+      await getCoupleId();
+      const timer = setTimeout(() => {
+        setGameState(initializeGame());
+        setIsLoading(false);
+      }, 100);
+      
+      return () => clearTimeout(timer);
     };
-    loadGame();
-  }, [initializeGame]);
+    
+    initialize();
+  }, [initializeGame, getCoupleId]);
+
+  // Load stats when couple ID is available
+  useEffect(() => {
+    if (coupleId) {
+      loadGameStats();
+    }
+  }, [coupleId, loadGameStats]);
 
   // Update game status when language changes
   useEffect(() => {
@@ -216,26 +233,54 @@ export default function Puissance4Page() {
     }
   }, [t, gameState, isLoading]);
 
-  // Save game state whenever it changes
-  useEffect(() => {
-    if (!isLoading && gameState) {
-      saveGameState(gameState);
-    }
-  }, [gameState, isLoading]);
-
   // Bot turn effect
   useEffect(() => {
     if (!gameState || gameState.gamePhase === 'gameOver' || isLoading) return;
     
     if (gameState.currentPlayer === 'yellow') {
       const timer = setTimeout(() => {
-        const botCol = getBotMove(gameState.board);
-        makeMove(botCol);
+        try {
+          const botCol = getBotMove(gameState.board);
+          makeMove(botCol);
+        } catch (error) {
+          console.error('Bot move error:', error);
+        }
       }, 1000);
       
       return () => clearTimeout(timer);
     }
   }, [gameState, isLoading]);
+
+  // Save game statistics
+  const saveGameStats = useCallback(async (gameState: GameState, couple: any) => {
+    if (!couple || !coupleId) return;
+
+    try {
+      const gameDuration = Math.floor((Date.now() - gameState.gameStartTime) / 1000);
+      const winnerId = gameState.winner === 'red' ? couple.user1_id : 
+                      gameState.winner === 'yellow' ? couple.user2_id : undefined;
+
+      const stats: GameStats = {
+        couple_id: coupleId,
+        game_type: 'connect4',
+        player1_id: couple.user1_id,
+        player2_id: couple.user2_id,
+        winner_id: winnerId,
+        is_draw: gameState.winner === null,
+        game_duration: gameDuration,
+        player1_score: gameState.winner === 'red' ? 1 : 0,
+        player2_score: gameState.winner === 'yellow' ? 1 : 0,
+        connect4_moves: gameState.moveCount,
+        connect4_winning_move: gameState.winner ? gameState.moveCount : undefined,
+      };
+
+      await gameStatsService.saveGameStats(stats);
+      // Reload stats after saving
+      loadGameStats();
+    } catch (error) {
+      console.error('Error saving game stats:', error);
+    }
+  }, [coupleId, loadGameStats]);
 
   const makeMove = useCallback((col: number) => {
     if (!gameState || gameState.gamePhase === 'gameOver') return;
@@ -260,42 +305,49 @@ export default function Puissance4Page() {
     const isWin = checkWin(newBoard, row, col, gameState.currentPlayer);
     const isFull = isBoardFull(newBoard);
 
-    let newGameState: GameState;
+    let newGameState: GameState = {
+      ...gameState,
+      board: newBoard,
+      moveCount: gameState.moveCount + 1,
+      lastMove: { row, col },
+    };
 
     if (isWin) {
       newGameState = {
-        ...gameState,
-        board: newBoard,
+        ...newGameState,
         gamePhase: 'gameOver',
         winner: gameState.currentPlayer,
         gameStatus: gameState.currentPlayer === 'red' ? t('connect4.youWin') : t('connect4.botWins'),
-        lastMove: { row, col },
       };
     } else if (isFull) {
       newGameState = {
-        ...gameState,
-        board: newBoard,
+        ...newGameState,
         gamePhase: 'gameOver',
         gameStatus: t('connect4.draw'),
-        lastMove: { row, col },
       };
     } else {
       const nextPlayer = gameState.currentPlayer === 'red' ? 'yellow' : 'red';
       newGameState = {
-        ...gameState,
-        board: newBoard,
+        ...newGameState,
         currentPlayer: nextPlayer,
         gameStatus: nextPlayer === 'red' ? t('connect4.yourTurn') : t('connect4.botTurn'),
-        lastMove: { row, col },
       };
     }
 
     setGameState(newGameState);
-  }, [gameState, animatedValue]);
+
+    // Save stats if game is over
+    if (newGameState.gamePhase === 'gameOver') {
+      getCoupleId().then(couple => {
+        if (couple) {
+          saveGameStats(newGameState, couple);
+        }
+      });
+    }
+  }, [gameState, animatedValue, t, getCoupleId, saveGameStats]);
 
   const resetGame = useCallback(() => {
     setGameState(initializeGame());
-    clearGameState();
   }, [initializeGame]);
 
   // Don't render if not authenticated or profile not completed
@@ -395,6 +447,39 @@ export default function Puissance4Page() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Game Statistics */}
+          {gameStats && (
+            <View style={styles.statsContainer}>
+              <Text style={styles.statsTitle}>Statistiques du Couple</Text>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.total_games_played || 0}</Text>
+                  <Text style={styles.statLabel}>Parties jouées</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.connect4_games || 0}</Text>
+                  <Text style={styles.statLabel}>Puissance 4</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player1_wins || 0}</Text>
+                  <Text style={styles.statLabel}>Victoires Joueur 1</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player2_wins || 0}</Text>
+                  <Text style={styles.statLabel}>Victoires Joueur 2</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player1_win_rate || 0}%</Text>
+                  <Text style={styles.statLabel}>Taux de victoire J1</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{gameStats.player2_win_rate || 0}%</Text>
+                  <Text style={styles.statLabel}>Taux de victoire J2</Text>
+                </View>
+              </View>
+            </View>
+          )}
           
           {/* Instructions */}
           <View style={styles.instructions}>
@@ -586,5 +671,47 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  statsContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  statsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });

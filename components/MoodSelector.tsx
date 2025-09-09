@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useDarkTheme } from '../contexts/DarkThemeContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface MoodOption {
@@ -30,6 +31,7 @@ export const MoodSelector: React.FC<MoodSelectorProps> = ({
   currentMood
 }) => {
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const [selectedMood, setSelectedMood] = useState<string | undefined>(currentMood);
 
   const handleMoodSelect = (moodType: 'joyeux' | 'content' | 'neutre' | 'triste' | 'enerve') => {
@@ -46,32 +48,32 @@ export const MoodSelector: React.FC<MoodSelectorProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.modalContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.background }]}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>
+            <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
               Comment vous sentez-vous ?
             </Text>
             <Pressable onPress={onClose} style={styles.closeButton}>
-              <Text style={[styles.closeButtonText, { color: colors.textSecondary }]}>✕</Text>
+              <Text style={[styles.closeButtonText, { color: isDarkMode ? '#FFFFFF' : colors.textSecondary }]}>✕</Text>
             </Pressable>
           </View>
 
           {/* Mood Options */}
-          <View style={styles.moodOptionsContainer}>
+          <View style={[styles.moodOptionsContainer, { backgroundColor: isDarkMode ? '#333333' : '#F8F0FF' }]}>
             {moodOptions.map((option) => (
               <Pressable
                 key={option.type}
                 style={[
                   styles.moodOption,
-                  selectedMood === option.type && styles.selectedMoodOption
+                  selectedMood === option.type && [styles.selectedMoodOption, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)' }]
                 ]}
                 onPress={() => handleMoodSelect(option.type)}
               >
                 <Text style={styles.moodEmoji}>{option.emoji}</Text>
                 <Text style={[
                   styles.moodLabel,
-                  { color: colors.text },
+                  { color: isDarkMode ? '#FFFFFF' : colors.text },
                   selectedMood === option.type && { color: colors.primary }
                 ]}>
                   {option.label}
@@ -135,7 +137,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 20,
-    backgroundColor: '#F8F0FF',
     borderRadius: 12,
   },
   moodOption: {
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
     minWidth: 50,
   },
   selectedMoodOption: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    // Background color is now set dynamically in the component
   },
   moodEmoji: {
     fontSize: 32,

@@ -100,6 +100,7 @@ export default function App() {
   // Interests state
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [isInterestsLoading, setIsInterestsLoading] = useState(false)
+  const [showJoinSection, setShowJoinSection] = useState(false)
 
   // Check if user is authenticated and redirect accordingly
   useEffect(() => {
@@ -791,9 +792,7 @@ export default function App() {
                 <Text style={{ color: colors.textSecondary }}>
                   Vous avez déjà un compte? <Text style={{ color: colors.primary }}>Se Connecter</Text>
                 </Text>
-                <Text style={{ color: colors.textSecondary, marginTop: 6 }}>
-                  Vous avez reçu un code? <Text style={{ color: colors.primary }}>Cliquez ici</Text>
-                </Text>
+                
               </View>
             </>
           )}
@@ -849,9 +848,7 @@ export default function App() {
               </View>
 
               <View style={{ alignItems: "center", marginTop: 8 }}>
-                <Text style={{ color: "#9A9A9A" }}>
-                  Vous avez reçu un code? <Text style={{ color: BRAND_BLUE }}>Cliquez ici</Text>
-                </Text>
+               
               </View>
             </>
           )}
@@ -1244,40 +1241,50 @@ export default function App() {
                         </Pressable>
                     </View>
 
-                      {/* Redeem Code Section */}
-                      <View style={{ marginTop: 32, width: "100%", maxWidth: 300, gap: 16 }}>
-                        <Text style={{ fontSize: 18, fontWeight: "600", color: "#2D2D2D", textAlign: "center" }}>
-                          Rejoindre avec un code
-                        </Text>
-                     
-                        
-                        <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
-                          <TextInput 
-                            placeholder="Mon partenaire" 
-                            value={inviteCode} 
-                            onChangeText={(t) => { setInviteCode(t); setRedeemError(""); setRedeemSuccess("") }} 
-                            style={{ paddingHorizontal: 14, height: 50 }} 
-                            placeholderTextColor="#9A9A9A" 
-                          />
-              </View>
-
-                        {redeemError ? <Text style={{ color: "#FF5A5F", textAlign: "center" }}>{redeemError}</Text> : null}
-                        {redeemSuccess ? <Text style={{ color: "#4CAF50", textAlign: "center" }}>{redeemSuccess}</Text> : null}
-
-              <Pressable
-                          onPress={handleRedeemCode}
-                          disabled={isRedeeming}
-                          style={{ borderRadius: 12, overflow: "hidden", opacity: isRedeeming ? 0.7 : 1 }}
-              >
-                <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
-                            {isRedeeming ? (
-                              <ActivityIndicator color="#FFFFFF" />
-                            ) : (
-                              <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Rejoindre</Text>
-                            )}
-                </LinearGradient>
-              </Pressable>
+                      {/* Toggle join section */}
+                      <View style={{ marginTop: 24, width: "100%", maxWidth: 300, alignItems: 'center' }}>
+                        <Pressable onPress={() => setShowJoinSection(prev => !prev)}>
+                          <Text style={{ color: colors.primary, fontWeight: '600', textDecorationLine: 'underline' }}>
+                            {showJoinSection ? 'Masquer' : "Déjà un code ?"}
+                          </Text>
+                        </Pressable>
                       </View>
+
+                      {/* Redeem Code Section (collapsible) */}
+                      {showJoinSection && (
+                        <View style={{ marginTop: 16, width: "100%", maxWidth: 300, gap: 16 }}>
+                          <Text style={{ fontSize: 18, fontWeight: "600", color: "#2D2D2D", textAlign: "center" }}>
+                            Rejoindre avec un code
+                          </Text>
+
+                          <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
+                            <TextInput 
+                              placeholder="Mon partenaire" 
+                              value={inviteCode} 
+                              onChangeText={(t) => { setInviteCode(t); setRedeemError(""); setRedeemSuccess("") }} 
+                              style={{ paddingHorizontal: 14, height: 50 }} 
+                              placeholderTextColor="#9A9A9A" 
+                            />
+                          </View>
+
+                          {redeemError ? <Text style={{ color: "#FF5A5F", textAlign: "center" }}>{redeemError}</Text> : null}
+                          {redeemSuccess ? <Text style={{ color: "#4CAF50", textAlign: "center" }}>{redeemSuccess}</Text> : null}
+
+                          <Pressable
+                            onPress={handleRedeemCode}
+                            disabled={isRedeeming}
+                            style={{ borderRadius: 12, overflow: "hidden", opacity: isRedeeming ? 0.7 : 1 }}
+                          >
+                            <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
+                              {isRedeeming ? (
+                                <ActivityIndicator color="#FFFFFF" />
+                              ) : (
+                                <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Rejoindre</Text>
+                              )}
+                            </LinearGradient>
+                          </Pressable>
+                        </View>
+                      )}
 
                       {/* Skip Option */}
                       <View style={{ marginTop: 32, alignItems: 'center' }}>

@@ -1,7 +1,8 @@
 import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
+import { useDarkTheme } from '../contexts/DarkThemeContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useProfileCompletion } from '../hooks/useProfileCompletion';
 import { useAuth } from '../lib/auth';
@@ -16,6 +17,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const [activeTab, setActiveTab] = useState('accueil');
 
   // Redirect to login if not authenticated
@@ -42,9 +44,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Show loading while checking auth or profile completion
   if (loading || profileLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`} style={{ paddingTop: '10%' }}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
+        <Text className={`mt-4 ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>Chargement...</Text>
       </View>
     );
   }
@@ -55,8 +57,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.content}>
+    <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`} style={{ paddingTop: '10%' }}>
+      <View className="flex-1">
         {children}
       </View>
       <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
@@ -64,26 +66,3 @@ export default function AppLayout({ children }: AppLayoutProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // backgroundColor: '#FFFFFF', // Removed - now dynamic
-    // Add global top margin for notch safety (5% of screen height)
-    paddingTop: '10%',
-  },
-  content: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    // backgroundColor: '#FFFFFF', // Removed - now dynamic
-    // Add top margin for loading screen too
-    paddingTop: '5%',
-  },
-  loadingText: {
-    marginTop: 16,
-    // color: '#7A7A7A', // Removed - now dynamic
-  },
-});

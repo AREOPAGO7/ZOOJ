@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
@@ -17,6 +18,7 @@ export default function QuestionChatPage() {
   const { user, profile, loading } = useAuth();
   const { questionId } = useLocalSearchParams<{ questionId: string }>();
   const { colors } = useTheme();
+  const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   const [question, setQuestion] = useState<any>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -541,7 +543,7 @@ export default function QuestionChatPage() {
               <Text style={styles.avatarText}>👤</Text>
             </View>
             <View style={styles.answerContent}>
-              <Text style={[styles.answerLabel, { color: '#000' }]}>{t('questionChat.me')}</Text>
+              <Text style={[styles.answerLabel, { color: '#000' }]}>{userName || t('questionChat.me')}</Text>
               <Text style={[styles.answerText, { color: '#000' }]}>
                 {answers.find(a => a.user_id === user!.id)?.answer_text}
               </Text>
@@ -556,7 +558,7 @@ export default function QuestionChatPage() {
               <Text style={styles.avatarText}>👥</Text>
             </View>
             <View style={[styles.answerContent, styles.partnerAnswerContent]}>
-              <Text style={[styles.answerLabel, { color: '#000' }]}>{t('questionChat.myPartner')}</Text>
+              <Text style={[styles.answerLabel, { color: '#000' }]}>{partnerName || t('questionChat.myPartner')}</Text>
               <Text style={[styles.answerText, { color: '#000' }]}>
                 {answers.find(a => a.user_id !== user!.id)?.answer_text}
               </Text>
@@ -596,9 +598,9 @@ export default function QuestionChatPage() {
   // Show loading while checking auth
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
         <ActivityIndicator size="large" color={BRAND_BLUE} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('questionChat.loading')}</Text>
+        <Text style={[styles.loadingText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{t('questionChat.loading')}</Text>
       </View>
     );
   }
@@ -610,9 +612,9 @@ export default function QuestionChatPage() {
 
   return (
     <AppLayout>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
                  {/* Header */}
-         <View style={[styles.header, { borderBottomColor: colors.border }]}>
+         <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
            <Pressable onPress={() => router.back()} style={styles.backButton}>
              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
            </Pressable>
@@ -626,9 +628,9 @@ export default function QuestionChatPage() {
 
         {/* Content */}
         {loadingChat ? (
-          <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+          <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
             <ActivityIndicator size="large" color={BRAND_BLUE} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('questionChat.loading')}</Text>
+            <Text style={[styles.loadingText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{t('questionChat.loading')}</Text>
           </View>
         ) : (
           <>
@@ -677,8 +679,8 @@ export default function QuestionChatPage() {
 
              
 
-                          {/* Input Bar - Only show if question is current */}
-             {threadId && isQuestionCurrent && (
+                          {/* Input Bar - allow chat for past questions too */}
+             {threadId && (
                <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
                  <View style={styles.inputContainer}>
                    <Pressable style={styles.attachButton}>
@@ -688,16 +690,14 @@ export default function QuestionChatPage() {
                        color={colors.textSecondary}
                      />
                    </Pressable>
-                   
                    <TextInput
-                     style={[styles.messageInput, { backgroundColor: colors.background, color: colors.text }]}
+                     style={[styles.messageInput, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.background, color: isDarkMode ? '#FFFFFF' : colors.text }]}
                      placeholder={t('questionChat.message')}
                      value={newMessage}
                      onChangeText={setNewMessage}
                      multiline
                      placeholderTextColor={colors.textSecondary}
                    />
-                   
                    <Pressable
                      style={[styles.sendButton, { backgroundColor: colors.primary }, !newMessage.trim() && styles.sendButtonDisabled]}
                      onPress={handleSendMessage}
