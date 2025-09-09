@@ -1,18 +1,18 @@
 import { useDarkTheme } from '@/contexts/DarkThemeContext'
 import { useNotifications } from '@/contexts/NotificationContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAuth } from '@/lib/auth'
+import { DailyQuestionNotification } from '@/lib/dailyQuestionNotificationService'
 import { Notification } from '@/lib/notificationService'
+import { PulseWithSender, pulseService } from '@/lib/pulseService'
+import { SimpleChatNotification } from '@/lib/simpleChatNotificationService'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import React, { useMemo, useState } from 'react'
 import {
-    Alert,
     FlatList,
-    Modal,
     RefreshControl,
-    ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     View
@@ -33,14 +33,29 @@ const formatRelativeTime = (dateString: string): string => {
 }
 
 const NotificationItem: React.FC<{
-  notification: Notification
+  notification: Notification | SimpleChatNotification | PulseWithSender | DailyQuestionNotification
   onMarkAsRead: (id: string) => void
   onDelete: (id: string) => void
-}> = ({ notification, onMarkAsRead, onDelete }) => {
+  isChatNotification?: boolean
+  isPulse?: boolean
+  isDailyQuestion?: boolean
+}> = ({ notification, onMarkAsRead, onDelete, isChatNotification = false, isPulse = false, isDailyQuestion = false }) => {
   const { colors } = useTheme()
   const { isDarkMode } = useDarkTheme()
 
   const getIconName = () => {
+    if (isPulse) {
+      return 'heart'
+    }
+    
+    if (isDailyQuestion) {
+      return 'help-circle'
+    }
+    
+    if (isChatNotification) {
+      return 'chat'
+    }
+    
     switch (notification.type) {
       case 'event':
         return 'calendar'
@@ -56,6 +71,18 @@ const NotificationItem: React.FC<{
   }
 
   const getIconColor = () => {
+    if (isPulse) {
+      return '#FF69B4' // Hot pink for pulses
+    }
+    
+    if (isDailyQuestion) {
+      return '#FF6B35' // Orange for daily questions
+    }
+    
+    if (isChatNotification) {
+      return '#F47CC6' // Pink for chat notifications
+    }
+    
     switch (notification.type) {
       case 'event':
         return '#2DB6FF' // Blue
@@ -84,26 +111,54 @@ const NotificationItem: React.FC<{
   }
 
   const handlePress = () => {
+    if (isPulse) {
+      // For pulses, check is_read
+      if (!(notification as PulseWithSender).is_read) {
+        onMarkAsRead(notification.id)
+      }
+      return
+    }
+    
+    if (isDailyQuestion) {
+      // For daily question notifications, check is_read
+      if (!(notification as DailyQuestionNotification).is_read) {
+        onMarkAsRead(notification.id)
+      }
+      router.push('/pages/questions')
+      return
+    }
+    
     if (!notification.is_read) {
       onMarkAsRead(notification.id)
     }
     
     // Handle navigation based on notification type
-    switch (notification.type) {
-      case 'event':
-        router.push('/pages/calendrier')
-        break
-      case 'daily_question':
+    
+    if (isChatNotification) {
+      // Navigate to the specific question chat
+      const chatNotification = notification as SimpleChatNotification
+      if (chatNotification.question_id) {
+        router.push(`/pages/question-chat?questionId=${chatNotification.question_id}`)
+      } else {
         router.push('/pages/questions')
-        break
-      case 'quiz_invite':
-        router.push('/pages/quizz')
-        break
-      case 'couple_update':
-        router.push('/pages/notre-couple')
-        break
-      default:
-        break
+      }
+    } else {
+      switch (notification.type) {
+        case 'event':
+          router.push('/pages/calendrier')
+          break
+        case 'daily_question':
+          router.push('/pages/questions')
+          break
+        case 'quiz_invite':
+          router.push('/pages/quizz')
+          break
+        case 'couple_update':
+          router.push('/pages/notre-couple')
+          break
+        default:
+          break
+      }
     }
   }
 
@@ -112,10 +167,8 @@ const NotificationItem: React.FC<{
       style={[
         styles.notificationItem,
         {
-          backgroundColor: notification.is_read 
-            ? (isDarkMode ? '#1A1A1A' : '#FFFFFF') 
-            : (isDarkMode ? '#333333' : '#F8F0FF'),
-          borderLeftColor: getPriorityColor(),
+          backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+          borderLeftColor: getIconColor(),
           borderLeftWidth: 4,
         }
       ]}
@@ -131,195 +184,70 @@ const NotificationItem: React.FC<{
           />
         </View>
         <View style={styles.contentContainer}>
-          <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
-            {notification.title}
+          <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
+            {isPulse 
+              ? `${(notification as PulseWithSender).sender_name} vous a envoyé un pulse`
+              : isDailyQuestion
+                ? 'Question du Jour'
+                : isChatNotification 
+                  ? 'Nouveau message' 
+                  : notification.title
+            }
           </Text>
-          <Text style={[styles.message, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
-            {notification.message}
+          <Text style={[styles.message, { color: isDarkMode ? '#CCCCCC' : '#666666' }]}>
+            {isPulse 
+              ? `${(notification as PulseWithSender).emoji}${(notification as PulseWithSender).message ? ` - ${(notification as PulseWithSender).message}` : ''}`
+              : isDailyQuestion
+                ? (notification as DailyQuestionNotification).question_content
+                : isChatNotification 
+                  ? (notification as SimpleChatNotification).message_preview || 'Nouveau message'
+                  : notification.message
+            }
           </Text>
-          <Text style={[styles.timestamp, { color: isDarkMode ? '#999999' : colors.textTertiary }]}>
+          <Text style={[styles.timestamp, { color: isDarkMode ? '#999999' : '#999999' }]}>
             {formatRelativeTime(notification.created_at)}
           </Text>
-        </View>
-        <View style={styles.actionsContainer}>
-          {!notification.is_read && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: '#2DB6FF' }]}
-              onPress={() => onMarkAsRead(notification.id)}
-            >
-              <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#FF69B4' }]}
-            onPress={() => onDelete(notification.id)}
-          >
-            <MaterialCommunityIcons name="delete" size={16} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
   )
 }
 
-const NotificationSettings: React.FC<{
-  visible: boolean
-  onClose: () => void
-}> = ({ visible, onClose }) => {
-  const { colors } = useTheme()
-  const { isDarkMode } = useDarkTheme()
-  const { notificationSettings, updateNotificationSettings } = useNotifications()
-
-  if (!notificationSettings) return null
-
-  const handleToggle = (key: keyof typeof notificationSettings, value: boolean) => {
-    updateNotificationSettings({ [key]: value })
-  }
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-gray-100'}`}>
-        <View style={[styles.settingsHeader, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
-          <Text style={[styles.settingsTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
-            Paramètres des notifications
-          </Text>
-          <TouchableOpacity onPress={onClose}>
-            <MaterialCommunityIcons name="close" size={24} color={isDarkMode ? '#FFFFFF' : '#2D2D2D'} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.settingsContent}>
-          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
-            <View>
-              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
-                Notifications push
-              </Text>
-              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
-                Recevoir des notifications push
-              </Text>
-            </View>
-            <Switch
-              value={notificationSettings.push_enabled}
-              onValueChange={(value) => handleToggle('push_enabled', value)}
-              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
-            <View>
-              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
-                Événements
-              </Text>
-              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
-                Notifications pour les événements
-              </Text>
-            </View>
-            <Switch
-              value={notificationSettings.events_enabled}
-              onValueChange={(value) => handleToggle('events_enabled', value)}
-              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
-            <View>
-              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
-                Questions quotidiennes
-              </Text>
-              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
-                Notifications pour les questions quotidiennes
-              </Text>
-            </View>
-            <Switch
-              value={notificationSettings.daily_questions_enabled}
-              onValueChange={(value) => handleToggle('daily_questions_enabled', value)}
-              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
-            <View>
-              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
-                Invitations au quiz
-              </Text>
-              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
-                Notifications pour les invitations au quiz
-              </Text>
-            </View>
-            <Switch
-              value={notificationSettings.quiz_invites_enabled}
-              onValueChange={(value) => handleToggle('quiz_invites_enabled', value)}
-              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
-            <View>
-              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
-                Mises à jour du couple
-              </Text>
-              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
-                Notifications pour les mises à jour du couple
-              </Text>
-            </View>
-            <Switch
-              value={notificationSettings.couple_updates_enabled}
-              onValueChange={(value) => handleToggle('couple_updates_enabled', value)}
-              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
-            <View>
-              <Text style={[styles.settingLabel, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
-                Notifications générales
-              </Text>
-              <Text style={[styles.settingDescription, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>
-                Autres notifications importantes
-              </Text>
-            </View>
-            <Switch
-              value={notificationSettings.general_notifications_enabled}
-              onValueChange={(value) => handleToggle('general_notifications_enabled', value)}
-              trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#2DB6FF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  )
-}
 
 export default function NotificationsPage() {
+  const { user } = useAuth()
   const { colors } = useTheme()
   const { isDarkMode } = useDarkTheme()
   const {
     notifications,
+    chatNotifications,
+    dailyQuestionNotifications,
     unreadCount,
+    chatUnreadCount,
+    dailyQuestionUnreadCount,
     isLoading,
     refreshNotifications,
     markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    deleteAllNotifications
+    markChatAsRead,
+    markDailyQuestionAsRead,
+    deleteNotification
   } = useNotifications()
-  const [settingsVisible, setSettingsVisible] = useState(false)
+  const [pulses, setPulses] = useState<PulseWithSender[]>([])
+  const [isLoadingPulses, setIsLoadingPulses] = useState(false)
+
+  // Force refresh notifications when page loads
+  React.useEffect(() => {
+    refreshNotifications()
+  }, [])
+  
+  // Calculate pulse unread count
+  const pulseUnreadCount = pulses.filter(pulse => !pulse.is_read).length
 
   // Group notifications by date
   const groupedNotifications = useMemo(() => {
-    const groups: { [key: string]: Notification[] } = {}
+    const groups: { [key: string]: (Notification | SimpleChatNotification | PulseWithSender | DailyQuestionNotification)[] } = {}
     
+    // Add regular notifications
     notifications.forEach(notification => {
       const date = new Date(notification.created_at)
       const today = new Date()
@@ -358,34 +286,166 @@ export default function NotificationsPage() {
       groups[groupKey].push(notification)
     })
     
-    return groups
-  }, [notifications])
-
-  const handleDeleteAll = () => {
-    Alert.alert(
-      'Supprimer toutes les notifications',
-      'Êtes-vous sûr de vouloir supprimer toutes les notifications ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: deleteAllNotifications
+    // Add chat notifications
+    chatNotifications.forEach(notification => {
+      const date = new Date(notification.created_at)
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      
+      let groupKey: string
+      
+      if (date.toDateString() === today.toDateString()) {
+        groupKey = 'Aujourd\'hui'
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        groupKey = 'Hier'
+      } else {
+        const diffTime = Math.abs(today.getTime() - date.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        if (diffDays < 7) {
+          groupKey = `Il y a ${diffDays} jours`
+        } else if (diffDays < 14) {
+          groupKey = 'Il y a 1 semaine'
+        } else if (diffDays < 30) {
+          const weeks = Math.floor(diffDays / 7)
+          groupKey = `Il y a ${weeks} semaines`
+        } else if (diffDays < 365) {
+          const months = Math.floor(diffDays / 30)
+          groupKey = `Il y a ${months} mois`
+        } else {
+          const years = Math.floor(diffDays / 365)
+          groupKey = `Il y a ${years} an${years > 1 ? 's' : ''}`
         }
-      ]
-    )
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = []
+      }
+      groups[groupKey].push(notification)
+    })
+    
+    // Add daily question notifications
+    dailyQuestionNotifications.forEach(notification => {
+      const date = new Date(notification.created_at)
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      
+      let groupKey: string
+      
+      if (date.toDateString() === today.toDateString()) {
+        groupKey = 'Aujourd\'hui'
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        groupKey = 'Hier'
+      } else {
+        const diffTime = Math.abs(today.getTime() - date.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        if (diffDays < 7) {
+          groupKey = `Il y a ${diffDays} jours`
+        } else if (diffDays < 14) {
+          groupKey = 'Il y a 1 semaine'
+        } else if (diffDays < 30) {
+          const weeks = Math.floor(diffDays / 7)
+          groupKey = `Il y a ${weeks} semaines`
+        } else if (diffDays < 365) {
+          const months = Math.floor(diffDays / 30)
+          groupKey = `Il y a ${months} mois`
+        } else {
+          const years = Math.floor(diffDays / 365)
+          groupKey = `Il y a ${years} an${years > 1 ? 's' : ''}`
+        }
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = []
+      }
+      groups[groupKey].push(notification)
+    })
+    
+    // Add pulses
+    pulses.forEach(pulse => {
+      const date = new Date(pulse.created_at)
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      
+      let groupKey: string
+      
+      if (date.toDateString() === today.toDateString()) {
+        groupKey = 'Aujourd\'hui'
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        groupKey = 'Hier'
+      } else {
+        const diffTime = Math.abs(today.getTime() - date.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        if (diffDays < 7) {
+          groupKey = `Il y a ${diffDays} jours`
+        } else if (diffDays < 14) {
+          groupKey = 'Il y a 1 semaine'
+        } else if (diffDays < 30) {
+          const weeks = Math.floor(diffDays / 7)
+          groupKey = `Il y a ${weeks} semaines`
+        } else if (diffDays < 365) {
+          const months = Math.floor(diffDays / 30)
+          groupKey = `Il y a ${months} mois`
+        } else {
+          const years = Math.floor(diffDays / 365)
+          groupKey = `Il y a ${years} an${years > 1 ? 's' : ''}`
+        }
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = []
+      }
+      groups[groupKey].push(pulse)
+    })
+    
+    return groups
+  }, [notifications, chatNotifications, pulses])
+
+  // Fetch pulses
+  const fetchPulses = async () => {
+    if (!user?.id) return
+    
+    setIsLoadingPulses(true)
+    try {
+      const { data, error } = await pulseService.getAllPulses(user.id)
+      if (error) {
+        console.error('Error fetching pulses:', error)
+        return
+      }
+      setPulses(data || [])
+    } catch (error) {
+      console.error('Error fetching pulses:', error)
+    } finally {
+      setIsLoadingPulses(false)
+    }
   }
 
-  const handleMarkAllAsRead = () => {
-    Alert.alert(
-      'Marquer comme lu',
-      'Marquer toutes les notifications comme lues ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Marquer', onPress: markAllAsRead }
-      ]
-    )
+  // Fetch pulses on component mount
+  React.useEffect(() => {
+    fetchPulses()
+  }, [])
+
+  // Handle pulse deletion
+  const handleDeletePulse = async (pulseId: string) => {
+    try {
+      const { error } = await pulseService.deletePulse(pulseId)
+      if (error) {
+        console.error('Error deleting pulse:', error)
+        return
+      }
+      // Remove pulse from local state
+      setPulses(prev => prev.filter(p => p.id !== pulseId))
+    } catch (error) {
+      console.error('Error deleting pulse:', error)
+    }
   }
+
+
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -411,19 +471,53 @@ export default function NotificationsPage() {
     </View>
   )
 
-  const renderNotificationGroup = ({ item }: { item: { key: string; data: Notification[] } }) => (
-    <View style={styles.groupContainer}>
-      <Text style={[styles.groupTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{item.key}</Text>
-      {item.data.map((notification) => (
-        <NotificationItem
-          key={notification.id}
-          notification={notification}
-          onMarkAsRead={markAsRead}
-          onDelete={deleteNotification}
-        />
-      ))}
-    </View>
-  )
+  const renderNotificationGroup = ({ item }: { item: { key: string; data: (Notification | SimpleChatNotification | PulseWithSender | DailyQuestionNotification)[] } }) => {
+    return (
+      <View style={styles.groupContainer}>
+        <Text style={[styles.groupTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{item.key}</Text>
+        {item.data.map((notification) => {
+          const isChat = 'couple_id' in notification && 'sender_id' in notification;
+          const isPulse = 'emoji' in notification;
+          const isDailyQuestion = 'question_content' in notification;
+          
+          return (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              onMarkAsRead={(id) => {
+                // Check if it's a chat notification by looking for couple_id property
+                const notification = [...notifications, ...chatNotifications, ...dailyQuestionNotifications, ...pulses].find(n => n.id === id)
+                if (notification && 'couple_id' in notification && 'sender_id' in notification) {
+                  markChatAsRead(id)
+                } else if (notification && 'question_content' in notification) {
+                  markDailyQuestionAsRead(id)
+                } else if (notification && 'emoji' in notification) {
+                  // Handle pulse marking as read
+                  setPulses(prev => prev.map(p => p.id === id ? { ...p, is_read: true } : p))
+                } else {
+                  markAsRead(id)
+                }
+              }}
+              onDelete={(id) => {
+                // Check if it's a pulse by looking for emoji property
+                const notification = [...notifications, ...chatNotifications, ...dailyQuestionNotifications, ...pulses].find(n => n.id === id)
+                if (notification && 'emoji' in notification) {
+                  handleDeletePulse(id)
+                } else if (notification && 'question_content' in notification) {
+                  // Daily question notifications cannot be deleted (they're global)
+                } else {
+                  deleteNotification(id)
+                }
+              }}
+              isChatNotification={isChat}
+              isPulse={isPulse}
+              isDailyQuestion={isDailyQuestion}
+            />
+          );
+        })}
+      </View>
+    );
+  }
 
   return (
     <AppLayout>
@@ -439,43 +533,21 @@ export default function NotificationsPage() {
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
             Notifications
-            {unreadCount > 0 && (
+            {(unreadCount + chatUnreadCount + dailyQuestionUnreadCount + pulseUnreadCount) > 0 && (
               <Text style={[styles.unreadCount, { color: '#2DB6FF' }]}>
-                {' '}({unreadCount})
+                {' '}({unreadCount + chatUnreadCount + dailyQuestionUnreadCount + pulseUnreadCount})
               </Text>
             )}
           </Text>
-          <TouchableOpacity onPress={() => setSettingsVisible(true)}>
-            <MaterialCommunityIcons name="cog" size={24} color={isDarkMode ? '#FFFFFF' : '#2D2D2D'} />
+          <TouchableOpacity 
+            onPress={refreshNotifications}
+            style={{ marginRight: 15 }}
+          >
+            <MaterialCommunityIcons name="refresh" size={24} color={isDarkMode ? '#FFFFFF' : '#2D2D2D'} />
           </TouchableOpacity>
         </View>
 
-        {/* Actions */}
-        {notifications.length > 0 && (
-          <View style={[styles.actions, { 
-            backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF', 
-            borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' 
-          }]}>
-            <TouchableOpacity
-              style={[styles.headerActionButton, { backgroundColor: '#2DB6FF' }]}
-              onPress={handleMarkAllAsRead}
-            >
-              <MaterialCommunityIcons name="check-all" size={16} color="#FFFFFF" />
-              <Text style={[styles.headerActionButtonText, { color: '#FFFFFF' }]}>
-                Tout marquer comme lu
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerActionButton, { backgroundColor: '#FF69B4' }]}
-              onPress={handleDeleteAll}
-            >
-              <MaterialCommunityIcons name="delete-sweep" size={16} color="#FFFFFF" />
-              <Text style={[styles.headerActionButtonText, { color: '#FFFFFF' }]}>
-                Tout supprimer
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+
 
         {/* Notifications List */}
         <FlatList
@@ -495,11 +567,6 @@ export default function NotificationsPage() {
           showsVerticalScrollIndicator={false}
         />
 
-        {/* Settings Modal */}
-        <NotificationSettings
-          visible={settingsVisible}
-          onClose={() => setSettingsVisible(false)}
-        />
       </View>
     </AppLayout>
   )
@@ -523,25 +590,6 @@ const styles = StyleSheet.create({
   },
   unreadCount: {
     fontWeight: '400',
-  },
-  actions: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    gap: 12,
-  },
-  headerActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
-  },
-  headerActionButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   listContainer: {
     flexGrow: 1,
@@ -582,17 +630,6 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 12,
   },
-  actionsContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -628,40 +665,5 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginLeft: 16,
     marginTop: 8,
-  },
-  settingsContainer: {
-    flex: 1,
-  },
-  settingsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  settingsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  settingsContent: {
-    flex: 1,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 14,
-    opacity: 0.7,
   },
 })

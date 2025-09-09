@@ -1,12 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
 import { ChatMessage, questionService } from '../../lib/questionService';
+import { simpleChatNotificationService } from '../../lib/simpleChatNotificationService';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
@@ -16,6 +18,7 @@ const BRAND_PINK = "#F47CC6";
 export default function QuestionChatPage() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const { questionId } = useLocalSearchParams<{ questionId: string }>();
   const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
@@ -35,7 +38,11 @@ export default function QuestionChatPage() {
   const [userName, setUserName] = useState<string>('');
   const [isQuestionCurrent, setIsQuestionCurrent] = useState<boolean>(false);
   const [partnerProfilePicture, setPartnerProfilePicture] = useState<string | null>(null);
+  const [isPageVisible, setIsPageVisible] = useState(true);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [coupleId, setCoupleId] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
+
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -43,6 +50,73 @@ export default function QuestionChatPage() {
       router.replace('/');
     }
   }, [user, loading, router]);
+
+  // Track page visibility for notifications
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        setIsPageVisible(true);
+        // Update database to mark user as viewing chat
+        updateChatViewerStatus(true);
+      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+        setIsPageVisible(false);
+        // Update database to mark user as not viewing chat
+        updateChatViewerStatus(false);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [threadId, user?.id]);
+
+  // Mark user as viewing when component mounts
+  useEffect(() => {
+    if (threadId && user?.id) {
+      updateChatViewerStatus(true);
+    }
+  }, [threadId, user?.id]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Mark user as not viewing when component unmounts
+      if (threadId && user?.id) {
+        updateChatViewerStatus(false);
+      }
+    };
+  }, [threadId, user?.id]);
+
+  // Function to update chat viewer status in database
+  const updateChatViewerStatus = async (isViewing: boolean) => {
+    if (!threadId || !user?.id) {
+      return;
+    }
+    
+    try {
+      if (isViewing) {
+        // Insert or update viewer status
+        await supabase
+          .from('chat_viewers')
+          .upsert({
+            thread_id: threadId,
+            user_id: user.id,
+            is_viewing: true,
+            last_seen: new Date().toISOString()
+          }, {
+            onConflict: 'thread_id,user_id'
+          });
+      } else {
+        // Mark as not viewing
+        await supabase
+          .from('chat_viewers')
+          .update({ is_viewing: false })
+          .eq('thread_id', threadId)
+          .eq('user_id', user.id);
+      }
+    } catch (error) {
+      // Silent error handling
+    }
+  };
 
   // Load chat data
   useEffect(() => {
@@ -55,7 +129,6 @@ export default function QuestionChatPage() {
   useEffect(() => {
     if (!threadId) return;
 
-    console.log('Setting up Supabase Realtime subscription for thread:', threadId);
 
     // Use Supabase's built-in real-time service
     const subscription = supabase
@@ -68,39 +141,24 @@ export default function QuestionChatPage() {
           table: 'chat_messages',
           filter: `thread_id=eq.${threadId}`
         },
-        (payload) => {
-          console.log('New message received via Realtime:', payload.new);
+        async (payload) => {
           const newMessage = payload.new as ChatMessage;
           
           // Only add the message if it's not from the current user (to avoid duplicates)
           if (newMessage.sender_id !== user!.id) {
-            console.log('Adding new message from partner:', newMessage);
             setMessages(prev => [...prev, newMessage]);
+            
             // Scroll to bottom for new messages
             setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
-          } else {
-            console.log('Ignoring own message in subscription');
           }
         }
       )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to Supabase Realtime');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.log('❌ Realtime channel subscription error');
-        } else if (status === 'TIMED_OUT') {
-          console.log('⏰ Realtime subscription timed out');
-        } else if (status === 'CLOSED') {
-          console.log('🔒 Realtime subscription closed');
-        } 
-      });
+      .subscribe();
 
     // Cleanup subscription on unmount
     return () => {
-      console.log('Cleaning up Realtime subscription for thread:', threadId);
       subscription.unsubscribe();
     };
   }, [threadId, user]);
@@ -217,16 +275,21 @@ export default function QuestionChatPage() {
         return;
       }
 
+      // Set couple ID
+      setCoupleId(coupleData.id);
+
       // Get names directly from couple data (which includes profile joins)
       if (coupleData.user1 && coupleData.user2) {
         if (coupleData.user1_id === user!.id) {
           setUserName(coupleData.user1.name || 'Moi');
           setPartnerName(coupleData.user2.name || 'Mon partenaire');
           setPartnerProfilePicture(coupleData.user2.profile_picture);
+          setPartnerId(coupleData.user2_id);
         } else {
           setUserName(coupleData.user2.name || 'Moi');
           setPartnerName(coupleData.user1.name || 'Mon partenaire');
           setPartnerProfilePicture(coupleData.user1.profile_picture);
+          setPartnerId(coupleData.user1_id);
         }
       }
 
@@ -455,8 +518,39 @@ export default function QuestionChatPage() {
       }
 
       if (newMsg) {
-        console.log('Message sent successfully:', newMsg);
         setMessages(prev => [...prev, newMsg]);
+        
+        // Create notification for the partner (receiver)
+        if (partnerId && coupleId) {
+          try {
+            console.log('Creating simple chat notification with data:', {
+              sender_id: user!.id,
+              couple_id: coupleId,
+              message_preview: messageText.substring(0, 100),
+              question_id: questionId
+            });
+            
+            const notificationData = {
+              sender_id: user!.id, // Current user is the sender
+              couple_id: coupleId, // Couple ID for filtering
+              message_preview: messageText.substring(0, 100),
+              question_id: questionId
+            };
+            
+            const result = await simpleChatNotificationService.createNotification(notificationData);
+            console.log('Simple chat notification creation result:', result);
+            
+            // Refresh notifications to show the new chat notification
+            if (result.data && !result.error) {
+              refreshNotifications();
+            }
+          } catch (error) {
+            console.error('Error creating simple chat notification:', error);
+          }
+        } else {
+          console.log('No partnerId or coupleId found, cannot create notification');
+        }
+        
         // Scroll to bottom
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
@@ -640,15 +734,6 @@ export default function QuestionChatPage() {
                  {question?.content || 'Les couples devraient-ils partager leurs mots de passe ?'}
                </Text>
                
-               {/* Question Status Indicator */}
-               {!isQuestionCurrent && (
-                 <View style={styles.questionStatusContainer}>
-                   <MaterialCommunityIcons name="clock-outline" size={16} color="#F59E0B" />
-                   <Text style={styles.questionStatusText}>
-                     {t('questionChat.questionClosed')}
-                   </Text>
-                 </View>
-               )}
                
                {renderAnswers()}
 
@@ -679,7 +764,8 @@ export default function QuestionChatPage() {
 
              
 
-                          {/* Input Bar - allow chat for past questions too */}
+
+             {/* Input Bar - allow chat for past questions too */}
              {threadId && (
                <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
                  <View style={styles.inputContainer}>
@@ -1052,5 +1138,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
     marginTop: 8,
+  },
+  testButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  testButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

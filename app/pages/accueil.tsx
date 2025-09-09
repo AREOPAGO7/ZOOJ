@@ -673,6 +673,34 @@ export default function AccueilPage() {
             )}
           </View>
         </View>
+
+        {/* Games Section */}
+        <View className="mb-8">
+          <Text className={`text-xl font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>{t('home.games')}</Text>
+          <Pressable 
+            className={`${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-2xl p-5`}
+            onPress={() => router.push('/pages/jeux')}
+          >
+            <View className="flex-row items-center">
+              <View className="w-12 h-12 bg-primary rounded-full justify-center items-center mr-4">
+                <MaterialCommunityIcons name="gamepad-variant" size={24} color="#FFFFFF" />
+              </View>
+              <View className="flex-1">
+                <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-1`}>
+                  {t('home.playWithPartner')}
+                </Text>
+                <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
+                  {t('home.gamesDescription')}
+                </Text>
+              </View>
+              <MaterialCommunityIcons 
+                name="chevron-right" 
+                size={24} 
+                color={isDarkMode ? "#CCCCCC" : "#7A7A7A"} 
+              />
+            </View>
+          </Pressable>
+        </View>
        
       </ScrollView>
 

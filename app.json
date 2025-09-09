@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "ZOOJ",
+    "owner": "zooj",
     "slug": "ZOOJ",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -42,7 +43,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "ca37e130-cb1d-4e00-9840-ea574b84eaf7"
+        "projectId": "56dae0b6-1ca7-4b8c-80f2-3712cef05abe"
       }
     }
   }

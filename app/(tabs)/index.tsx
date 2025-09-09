@@ -347,12 +347,21 @@ export default function App() {
   const pickImageFromGallery = async () => {
     console.log('pickImageFromGallery called');
     try {
+      // Request media library permissions for mobile
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission refusée', 'Permission d\'accès à la galerie requise');
+        return;
+      }
+
       console.log('Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        exif: false, // Disable EXIF data for privacy
+        base64: false, // Don't include base64 to reduce memory usage
       });
 
       console.log('Image picker result:', result);
@@ -385,6 +394,8 @@ export default function App() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        exif: false, // Disable EXIF data for privacy
+        base64: false, // Don't include base64 to reduce memory usage
       });
 
       console.log('Camera result:', result);
@@ -408,20 +419,23 @@ export default function App() {
       const formData = new FormData();
       
       // Platform-specific file handling
+      let fileData: File | any;
+      
       if (Platform.OS === 'web') {
-        // For web, fetch the image and create a blob
+        // For web, we need to fetch the image and create a File object
         const response = await fetch(imageUri);
         const blob = await response.blob();
-        formData.append('file', blob, 'profile.jpg');
+        fileData = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
       } else {
-        // For native platforms
-        const fileData = {
+        // For mobile platforms
+        fileData = {
           uri: imageUri,
           type: 'image/jpeg',
           name: 'profile.jpg',
         };
-        formData.append('file', fileData as any);
       }
+      
+      formData.append('file', fileData as any);
 
       formData.append('cloud_name', CLOUDINARY_CONFIG.cloudName);
       formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
@@ -442,14 +456,22 @@ export default function App() {
 
       const data = await response.json();
       if (data.secure_url) {
-        setProfilePicture(data.secure_url);
-        console.log('Profile picture uploaded successfully:', data.secure_url);
+        // Fix Cloudinary URL by removing trailing slash if present
+        const cleanUrl = data.secure_url.endsWith('/') 
+          ? data.secure_url.slice(0, -1) 
+          : data.secure_url;
+        
+        // Store the Cloudinary URL
+        setProfilePicture(cleanUrl);
+        console.log('Profile picture uploaded successfully:', cleanUrl);
+        // Show success feedback
+        Alert.alert('Succès', 'Photo de profil mise à jour avec succès!');
       } else {
         throw new Error('Upload failed - no secure_url in response');
       }
     } catch (error) {
       console.error('Profile picture upload error:', error);
-      Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil');
+      Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil. Veuillez réessayer.');
     } finally {
       setIsUploadingPicture(false);
     }
@@ -788,12 +810,6 @@ export default function App() {
                 </LinearGradient>
               </Pressable>
 
-              <View style={{ alignItems: "center", marginTop: 16 }}>
-                <Text style={{ color: colors.textSecondary }}>
-                  Vous avez déjà un compte? <Text style={{ color: colors.primary }}>Se Connecter</Text>
-                </Text>
-                
-              </View>
             </>
           )}
 
@@ -920,87 +936,117 @@ export default function App() {
                   </View>
                   <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 8 }} />
 
-                  <View style={{ alignItems: "center", marginTop: 8, marginBottom: 8 }}>
-                    <Pressable
-                      onPress={() => {
-                        console.log('Profile picture pressed!');
-                        // Show a simple action sheet instead of Alert.alert
-                        const options = ['Appareil photo', 'Galerie', 'Annuler'];
-                        const cancelButtonIndex = 2;
-                        
-                        // For now, let's test with a simple approach
-                        if (confirm('Voulez-vous prendre une photo ou choisir depuis la galerie?')) {
-                          console.log('User confirmed, opening gallery...');
-                          pickImageFromGallery();
-                        }
-                      }}
-                      style={({ pressed }) => [
-                        {
-                          width: 140,
-                          height: 140,
-                          borderRadius: 70,
-                          backgroundColor: pressed ? colors.border : colors.surface,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          overflow: "hidden",
-                          borderWidth: 2,
-                          borderColor: profilePicture ? colors.primary : colors.border,
-                        }
-                      ]}
-                    >
+                  <View style={{ alignItems: "center", marginTop: 8, marginBottom: 16 }}>
+                    {/* Profile Picture Section - Same as mon-profil.tsx */}
+                    <View style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: 60,
+                      backgroundColor: '#F3F4F6',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      position: 'relative',
+                    }}>
                       {profilePicture ? (
-                        <Image
-                          source={{ uri: profilePicture }}
+                        <Image 
+                          source={{ uri: profilePicture }} 
                           style={{
-                            width: "100%",
-                            height: "100%",
-                            borderRadius: 68,
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: 60,
                           }}
+                          resizeMode="cover"
                         />
                       ) : (
-                        <MaterialCommunityIcons name="camera-outline" size={42} color={colors.textSecondary} />
+                        <View style={{
+                          width: '100%',
+                          height: '100%',
+                          borderRadius: 60,
+                          backgroundColor: '#E0E0E0',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                          <Text style={{
+                            fontSize: 40,
+                            fontWeight: 'bold',
+                            color: '#9CA3AF',
+                          }}>
+                            {name.charAt(0).toUpperCase() || '?'}
+                          </Text>
+                        </View>
                       )}
                       
-                      {isUploadingPicture ? (
-                        <View
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: "rgba(0,0,0,0.5)",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            borderRadius: 68,
-                          }}
-                        >
-                          <ActivityIndicator size="small" color="#FFFFFF" />
-                        </View>
-                      ) : (
-                                                  <View
-                            style={{
-                              position: "absolute",
-                              right: 18,
-                              bottom: 10,
-                              width: 28,
-                              height: 28,
-                              borderRadius: 14,
-                              backgroundColor: profilePicture ? colors.primary : colors.secondary,
-                              alignItems: "center",
-                              justifyContent: "center",
-                              borderWidth: 3,
-                              borderColor: "#FFFFFF",
-                            }}
-                          >
-                          <MaterialCommunityIcons 
-                            name={profilePicture ? "pencil" : "plus"} 
-                            size={16} 
-                            color="#FFFFFF" 
-                          />
+                      {/* Upload overlay when uploading */}
+                      {isUploadingPicture && (
+                        <View style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          borderRadius: 60,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                          <ActivityIndicator size="large" color="#FFFFFF" />
                         </View>
                       )}
-                    </Pressable>
+                      
+                      <Pressable 
+                        style={[
+                          {
+                            position: 'absolute',
+                            bottom: 0,
+                            right: 0,
+                            backgroundColor: colors.primary,
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            borderWidth: 2,
+                            borderColor: '#FFFFFF',
+                          },
+                          isUploadingPicture && { opacity: 0.7 }
+                        ]} 
+                        onPress={() => {
+                          console.log('Profile picture pressed!');
+                          // Show action sheet for mobile compatibility
+                          Alert.alert(
+                            'Photo de profil',
+                            'Voulez-vous prendre une photo ou choisir depuis la galerie?',
+                            [
+                              {
+                                text: 'Appareil photo',
+                                onPress: () => takePhotoWithCamera()
+                              },
+                              {
+                                text: 'Galerie',
+                                onPress: () => pickImageFromGallery()
+                              },
+                              {
+                                text: 'Annuler',
+                                style: 'cancel'
+                              }
+                            ],
+                            { cancelable: true }
+                          );
+                        }}
+                        disabled={isUploadingPicture}
+                      >
+                        <MaterialCommunityIcons name="camera" size={20} color="#FFFFFF" />
+                      </Pressable>
+                    </View>
+                    
+                    <Text style={{
+                      fontSize: 14,
+                      color: colors.textSecondary,
+                      marginTop: 10,
+                      textAlign: 'center',
+                    }}>
+                      {isUploadingPicture ? 'Upload...' : 'Appuyez pour changer la photo'}
+                    </Text>
                   </View>
 
                   <View style={{ gap: 12 }}>

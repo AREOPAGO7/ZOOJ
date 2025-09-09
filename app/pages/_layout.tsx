@@ -11,6 +11,9 @@ export default function PagesLayout() {
       <Stack.Screen name="answer-question" />
       <Stack.Screen name="question-chat" />
       <Stack.Screen name="item-details" />
+      <Stack.Screen name="todo-details" />
+      <Stack.Screen name="todo-list" />
+      <Stack.Screen name="create-todo" />
     </Stack>
   );
 }

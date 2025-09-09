@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -6,34 +7,34 @@ import {
     ActivityIndicator,
     Alert,
     Image,
-    Modal,
     Platform,
-    Pressable,
     ScrollView,
-    StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
 interface CalendarEvent {
   id: string;
+  couple_id: string;
   title: string;
   event_date: string;
   event_time: string;
   place: string;
   description: string;
+  alarmable: boolean;
   created_at: string;
 }
 
 interface CalendarSouvenir {
   id: string;
+  couple_id: string;
   title: string;
   memory_date: string;
   memory_time: string;
@@ -43,52 +44,35 @@ interface CalendarSouvenir {
   created_at: string;
 }
 
-interface CalendarTodo {
-  id: string;
-  title: string;
-  description: string;
-  due_date: string;
-  priority: 'urgent' | 'normal' | 'peut_attendre';
-  status: 'a_faire' | 'en_cours' | 'termine';
-  created_at: string;
-}
-
-type CalendarItemType = 'event' | 'souvenir' | 'todo';
+type CalendarItemType = 'event' | 'souvenir';
 
 export default function ItemDetailsPage() {
   const router = useRouter();
   const { itemType, itemId, itemData } = useLocalSearchParams();
   const { user } = useAuth();
-  const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   
-  const [item, setItem] = useState<CalendarEvent | CalendarSouvenir | CalendarTodo | null>(null);
+  const [item, setItem] = useState<CalendarEvent | CalendarSouvenir | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [editingField, setEditingField] = useState<string | null>(null);
 
-  // Edit form states
+  // Edit states
+  const [editItemType, setEditItemType] = useState<'event' | 'souvenir'>('event');
   const [editTitle, setEditTitle] = useState('');
   const [editDate, setEditDate] = useState(new Date());
   const [editTime, setEditTime] = useState(new Date());
   const [editPlace, setEditPlace] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editPriority, setEditPriority] = useState<'urgent' | 'normal' | 'peut_attendre'>('normal');
-  const [editStatus, setEditStatus] = useState<'a_faire' | 'en_cours' | 'termine'>('a_faire');
-  
-  // Type toggle state
-  const [editItemType, setEditItemType] = useState<'event' | 'souvenir'>('event');
-  
-  // Image state
   const [editImage, setEditImage] = useState<string | null>(null);
-  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [editAlarmable, setEditAlarmable] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
-  // State for place suggestions
+  // Place suggestions
   const [placeSuggestions, setPlaceSuggestions] = useState<Array<{
     display_name: string;
     lat: string;
@@ -96,51 +80,29 @@ export default function ItemDetailsPage() {
     type: string;
   }>>([]);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
+  const [showPlaceSuggestions, setShowPlaceSuggestions] = useState(false);
+  const [lastSearchTime, setLastSearchTime] = useState(0);
 
-  // Get couple ID when component mounts
-  useEffect(() => {
-    if (user) {
-      getCoupleId();
-    }
-  }, [user]);
+  // Image upload states
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Load item data when couple ID is available
-  useEffect(() => {
-    if (coupleId && itemId && itemType) {
-      loadItemData();
-    }
-  }, [coupleId, itemId, itemType]);
-
-  // Initialize edit form when item loads
-  useEffect(() => {
-    if (item) {
-      initializeEditForm();
-    }
-  }, [item]);
-
-  const getCoupleId = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('couples')
-        .select('id')
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single();
-
-      if (error) throw error;
-      setCoupleId(data.id);
-    } catch (error) {
-      console.error('Error getting couple ID:', error);
-      Alert.alert(t('calendar.error'), 'Impossible de récupérer l\'ID du couple');
-    }
+  // Cloudinary configuration
+  const CLOUDINARY_CONFIG = {
+    cloudName: 'dtivjmfgj',
+    apiKey: '579167569966336',
+    apiSecret: 'MV7tzxkgAr_xBLuLQnpPNrxuhA0',
+    uploadPreset: 'ZOOJAPP'
   };
 
-  const loadItemData = async () => {
-    if (!coupleId || !itemId || !itemType) return;
-    
-    setIsLoading(true);
+  useEffect(() => {
+    if (itemId) {
+      fetchItem();
+    }
+  }, [itemId]);
+
+  const fetchItem = async () => {
     try {
+    setIsLoading(true);
       let result;
       let tableName: string;
 
@@ -152,440 +114,255 @@ export default function ItemDetailsPage() {
         case 'souvenir':
           tableName = 'calendar_souvenirs';
           break;
-        case 'todo':
-          tableName = 'calendar_todos';
-          break;
         default:
-          throw new Error('Type d\'élément invalide');
+          throw new Error('Type d\'élément invalide - todos are handled by todo-details page');
       }
 
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
         .eq('id', itemId)
-        .eq('couple_id', coupleId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching item:', error);
+        Alert.alert('Erreur', 'Impossible de charger l\'élément');
+        return;
+      }
+
+      if (data) {
       setItem(data);
+        setEditItemType(itemType as 'event' | 'souvenir');
+        setEditTitle(data.title);
+        setEditDescription(data.description || '');
+        setEditPlace(data.place || '');
+        
+        // Set date and time based on item type
+        if (itemType === 'event') {
+          setEditDate(new Date(data.event_date));
+          setEditTime(new Date(`2000-01-01T${data.event_time}`));
+          setEditAlarmable(data.alarmable || true);
+        } else if (itemType === 'souvenir') {
+          setEditDate(new Date(data.memory_date));
+          setEditTime(new Date(`2000-01-01T${data.memory_time}`));
+          setEditImage(data.image_url || null);
+        }
+      }
     } catch (error) {
-      console.error('Error loading item data:', error);
-      Alert.alert(t('calendar.error'), 'Impossible de charger les détails de l\'élément');
+      console.error('Error fetching item:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const initializeEditForm = () => {
+  const handleSave = async () => {
     if (!item) return;
     
-    setEditTitle(item.title);
-    setEditDescription('description' in item ? item.description : '');
-    setEditPlace('place' in item ? item.place : '');
-    
-    // Set item type based on current item
-    if ('event_date' in item) {
-      setEditItemType('event');
-    } else if ('memory_date' in item) {
-      setEditItemType('souvenir');
+    if (!editTitle.trim()) {
+      Alert.alert('Erreur', 'Le titre est requis');
+      return;
     }
-    
-    // Set date and time based on item type
-    if ('event_date' in item && 'event_time' in item) {
-      const eventDate = new Date(item.event_date);
-      setEditDate(eventDate);
-      
-      const [hours, minutes] = item.event_time.split(':');
-      const timeDate = new Date();
-      timeDate.setHours(parseInt(hours), parseInt(minutes));
-      setEditTime(timeDate);
-    } else if ('memory_date' in item && 'memory_time' in item) {
-      const memoryDate = new Date(item.memory_date);
-      setEditDate(memoryDate);
-      
-      const [hours, minutes] = item.memory_time.split(':');
-      const timeDate = new Date();
-      timeDate.setHours(parseInt(hours), parseInt(minutes));
-      setEditTime(timeDate);
-    } else if ('due_date' in item) {
-      const dueDate = new Date(item.due_date);
-      setEditDate(dueDate);
-    }
-    
-    // Set image if it's a souvenir
-    if ('image_url' in item && item.image_url) {
-      setEditImage(item.image_url);
-    }
-    
-    if ('priority' in item) {
-      setEditPriority(item.priority);
-    }
-    if ('status' in item) {
-      setEditStatus(item.status);
-    }
-  };
-
-  const startEditing = () => {
-    setIsEditing(true);
-  };
-
-  const cancelEditing = () => {
-    setIsEditing(false);
-    initializeEditForm(); // Reset to original values
-  };
-
-  const saveChanges = async () => {
-    if (!item || !coupleId) return;
     
     try {
       setIsSaving(true);
       
-      // Handle image upload first if there's a new image and it's a souvenir
-      let finalImageUrl = editImage;
-      if (editItemType === 'souvenir' && editImage && !editImage.includes('cloudinary.com')) {
-        console.log('Uploading image to Cloudinary...');
-        const cloudinaryUrl = await uploadToCloudinary(editImage);
-        if (cloudinaryUrl) {
-          finalImageUrl = cloudinaryUrl;
-          console.log('Image uploaded successfully:', cloudinaryUrl);
-        } else {
-          Alert.alert(t('calendar.error'), 'Impossible de télécharger l\'image. Veuillez réessayer.');
-          setIsSaving(false);
-          return;
-        }
-      }
+      const itemData = {
+        couple_id: item.couple_id,
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        place: editPlace.trim(),
+      };
 
-      // If type has changed, we need to delete the old item and create a new one
+      // If type changed, delete from old table and insert into new table
       if (editItemType !== itemType) {
-        // Delete the old item
-        let oldTableName: string;
-        switch (itemType) {
-          case 'event':
-            oldTableName = 'calendar_events';
-            break;
-          case 'souvenir':
-            oldTableName = 'calendar_souvenirs';
-            break;
-          default:
-            throw new Error('Type d\'élément invalide');
-        }
-
+        // Delete from old table
+        const oldTableName = itemType === 'event' ? 'calendar_events' : 'calendar_souvenirs';
         const { error: deleteError } = await supabase
           .from(oldTableName)
           .delete()
-          .eq('id', item.id)
-          .eq('couple_id', coupleId);
+          .eq('id', item.id);
 
-        if (deleteError) throw deleteError;
-
-        // Create new item in the new table
-        let newTableName: string;
-        let newItemData: any = {
-          title: editTitle,
-          description: editDescription,
-          place: editPlace,
-          couple_id: coupleId,
-        };
-
-        if (editItemType === 'event') {
-          newTableName = 'calendar_events';
-          newItemData.event_date = editDate.toISOString().split('T')[0];
-          newItemData.event_time = editTime.toTimeString().split(' ')[0];
-        } else {
-          newTableName = 'calendar_souvenirs';
-          newItemData.memory_date = editDate.toISOString().split('T')[0];
-          newItemData.memory_time = editTime.toTimeString().split(' ')[0];
-          newItemData.image_url = finalImageUrl;
+        if (deleteError) {
+          console.error('Error deleting old item:', deleteError);
+          Alert.alert('Erreur', 'Impossible de supprimer l\'ancien élément');
+          return;
         }
 
-        const { data: newItem, error: createError } = await supabase
+        // Insert into new table
+        const newTableName = editItemType === 'event' ? 'calendar_events' : 'calendar_souvenirs';
+        let insertData: any = { ...itemData };
+
+        if (editItemType === 'event') {
+          insertData.event_date = editDate.toISOString().split('T')[0];
+          insertData.event_time = editTime.toTimeString().split(' ')[0];
+          insertData.alarmable = editAlarmable;
+        } else {
+          insertData.memory_date = editDate.toISOString().split('T')[0];
+          insertData.memory_time = editTime.toTimeString().split(' ')[0];
+          insertData.image_url = editImage;
+        }
+
+        const { data: newData, error: insertError } = await supabase
           .from(newTableName)
-          .insert(newItemData)
+          .insert(insertData)
           .select()
           .single();
 
-        if (createError) throw createError;
-
-        setItem(newItem);
-        setIsEditing(false);
-        Alert.alert(t('calendar.success'), 'Élément converti et sauvegardé');
+        if (insertError) {
+          console.error('Error inserting new item:', insertError);
+          Alert.alert('Erreur', 'Impossible de créer le nouvel élément');
         return;
       }
 
-      // Regular update if type hasn't changed
-      let updateData: any = {
-        title: editTitle,
-        description: editDescription,
-        place: editPlace,
-      };
+        setItem(newData);
+        setIsEditing(false);
+        Alert.alert(
+          '✅ Succès', 
+          `L'élément "${newData.title}" a été converti de ${itemType === 'event' ? 'événement' : 'souvenir'} en ${editItemType === 'event' ? 'événement' : 'souvenir'}.`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        // Update in same table
+        let updateData: any = { ...itemData };
 
-      if (editItemType === 'event') {
+        if (itemType === 'event') {
         updateData.event_date = editDate.toISOString().split('T')[0];
         updateData.event_time = editTime.toTimeString().split(' ')[0];
-      } else {
+          updateData.alarmable = editAlarmable;
+        } else if (itemType === 'souvenir') {
         updateData.memory_date = editDate.toISOString().split('T')[0];
         updateData.memory_time = editTime.toTimeString().split(' ')[0];
-        updateData.image_url = finalImageUrl;
-      }
+          updateData.image_url = editImage;
+        }
 
+        const tableName = itemType === 'event' ? 'calendar_events' : 'calendar_souvenirs';
+      const { data, error } = await supabase
+        .from(tableName)
+        .update(updateData)
+        .eq('id', item.id)
+        .select()
+        .single();
+
+        if (error) {
+          console.error('Error updating item:', error);
+          Alert.alert('Erreur', 'Impossible de sauvegarder les modifications');
+          return;
+        }
+
+        if (data) {
+      setItem(data);
+      setIsEditing(false);
+          Alert.alert(
+            '✅ Succès', 
+            `${itemType === 'event' ? 'L\'événement' : 'Le souvenir'} "${data.title}" a été mis à jour avec succès.`,
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error updating item:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Supprimer l\'élément',
+      `Êtes-vous sûr de vouloir supprimer "${item.title}" ?\n\nCette action est irréversible et supprimera définitivement cet ${itemType === 'event' ? 'événement' : 'souvenir'} de votre calendrier.`,
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+        {
+          text: 'Supprimer définitivement',
+          style: 'destructive',
+          onPress: confirmDelete,
+        },
+      ]
+    );
+  };
+
+  const confirmDelete = async () => {
+    if (!item) return;
+
+    try {
+      setIsDeleting(true);
+      
       let tableName: string;
-      switch (editItemType) {
+      switch (itemType) {
         case 'event':
           tableName = 'calendar_events';
           break;
         case 'souvenir':
           tableName = 'calendar_souvenirs';
           break;
-        default:
+      default:
           throw new Error('Type d\'élément invalide');
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from(tableName)
-        .update(updateData)
-        .eq('id', item.id)
-        .eq('couple_id', coupleId)
-        .select()
-        .single();
+        .delete()
+        .eq('id', item.id);
 
-      if (error) throw error;
-      
-      setItem(data);
-      setIsEditing(false);
-      Alert.alert(t('calendar.success'), 'Modifications sauvegardées');
+      if (error) {
+        console.error('Error deleting item:', error);
+        Alert.alert('Erreur', 'Impossible de supprimer l\'élément');
+      return;
+    }
+    
+      Alert.alert(
+        '✅ Supprimé', 
+        `${itemType === 'event' ? 'L\'événement' : 'Le souvenir'} "${item.title}" a été supprimé avec succès.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
     } catch (error) {
-      console.error('Error updating item:', error);
-      Alert.alert(t('calendar.error'), 'Impossible de sauvegarder les modifications');
+      console.error('Error deleting item:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue');
     } finally {
-      setIsSaving(false);
+      setIsDeleting(false);
     }
   };
 
-  // Format date for display
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const options: Intl.DateTimeFormatOptions = {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('fr-FR', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
-    };
-    return date.toLocaleDateString('fr-FR', options);
+      day: 'numeric',
+    });
   };
 
-  // Format time for display
-  const formatTime = (timeStr: string) => {
-    const [hours, minutes] = timeStr.split(':');
-    const timeDate = new Date();
-    timeDate.setHours(parseInt(hours), parseInt(minutes));
-    
-    const timeOptions: Intl.DateTimeFormatOptions = {
+  const formatTime = (time: Date) => {
+    return time.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
-      minute: '2-digit'
-    };
-    
-    return timeDate.toLocaleTimeString('fr-FR', timeOptions);
-  };
-
-  // Get priority color
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return '#ff4444';
-      case 'normal':
-        return '#ffaa00';
-      case 'peut_attendre':
-        return '#44aa44';
-      default:
-        return '#666666';
-    }
-  };
-
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'termine':
-        return '#44aa44';
-      case 'en_cours':
-        return '#ffaa00';
-      case 'a_faire':
-        return '#ff4444';
-      default:
-        return '#666666';
-    }
-  };
-
-
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (event.type === 'dismissed') {
-      setShowDatePicker(false);
-      return;
-    }
-    
-    if (selectedDate) {
-      setEditDate(selectedDate);
-    }
-  };
-
-  const handleTimeChange = (event: any, selectedTime?: Date) => {
-    if (event.type === 'dismissed') {
-      setShowTimePicker(false);
-      return;
-    }
-    
-    if (selectedTime) {
-      setEditTime(selectedTime);
-    }
-  };
-
-  // Helper function to get days in month for custom date picker
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    
-    const days = [];
-    
-    // Add empty days for padding at the start
-    for (let i = 0; i < firstDay.getDay(); i++) {
-      days.push(null);
-    }
-    
-    // Add all days in the month
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i));
-    }
-    
-    return days;
-  };
-
-  // Image picker functions - store local URI first, upload later
-  const pickImageFromGallery = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      minute: '2-digit',
     });
-
-    if (!result.canceled && result.assets[0]) {
-      // Store the local URI temporarily, will upload when saving
-      setEditImage(result.assets[0].uri);
-    }
   };
 
-  const takePhotoWithCamera = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(t('calendar.error'), 'Permission d\'accès à la caméra refusée');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      // Store the local URI temporarily, will upload when saving
-      setEditImage(result.assets[0].uri);
-    }
-  };
-
-    // Upload to Cloudinary when saving
-  const uploadToCloudinary = async (imageUri: string): Promise<string | null> => {
-    try {
-      // Check if it's already a Cloudinary URL
-      if (imageUri.includes('cloudinary.com')) {
-        return imageUri;
-      }
-
-      // Hardcoded values for testing
-      const cloudName = 'dtivjmfgj';
-      const apiKey = '579167569966336';
-      const apiSecret = 'MV7tzxkgAr_xBLuLQnpPNrxuhA0';
-
-      // Use upload preset approach (you need to create this in Cloudinary dashboard)
-      const formData = new FormData();
-      
-      // Handle file differently for web vs native
-      if (Platform.OS === 'web') {
-        // For web, we need to fetch the image and create a blob
-        try {
-          const response = await fetch(imageUri);
-          const blob = await response.blob();
-          formData.append('file', blob, 'upload.jpg');
-        } catch (fetchError) {
-          console.error('Error fetching image for web:', fetchError);
-          // Fallback to direct URI
-          formData.append('file', imageUri);
-        }
-      } else {
-        // For native platforms
-        const fileData = {
-          uri: imageUri,
-          type: 'image/jpeg',
-          name: 'upload.jpg',
-        };
-        formData.append('file', fileData as any);
-      }
-      
-      console.log('File data being sent:', formData);
-      console.log('Image URI:', imageUri);
-      
-      formData.append('cloud_name', cloudName);
-      formData.append('upload_preset', 'ZOOJAPP'); // ⚠️ Use your preset name here
-
-      console.log('Uploading to Cloudinary with:', {
-        cloudName,
-        apiKey
-      });
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Cloudinary response error:', response.status, errorText);
-        
-        if (response.status === 400 && errorText.includes('Upload preset not found')) {
-          throw new Error('Upload preset not found. Please create an upload preset named "zooj_uploads" in your Cloudinary dashboard.');
-        }
-        
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Cloudinary response:', data);
-      
-      if (data.secure_url) {
-        return data.secure_url;
-      } else {
-        console.error('Cloudinary response:', data);
-        throw new Error('Upload failed - no secure_url in response');
-      }
-    } catch (error) {
-      console.error('Cloudinary upload error:', error);
-      Alert.alert(t('calendar.error'), 'Impossible de télécharger l\'image sur Cloudinary. Vérifiez votre configuration.');
-      return null;
-    }
-  };
-
-  // Real place search using OpenStreetMap Nominatim API
+  // Place search using OpenStreetMap Nominatim API
   const searchPlaces = async (query: string) => {
     if (!query.trim() || query.length < 3) {
       setPlaceSuggestions([]);
+      setShowPlaceSuggestions(false);
       return;
     }
+    
+    // Rate limiting: only search if at least 1 second has passed since last search
+    const now = Date.now();
+    if (now - lastSearchTime < 1000) {
+      return;
+    }
+    setLastSearchTime(now);
 
     setIsLoadingPlaces(true);
     try {
@@ -599,43 +376,161 @@ export default function ItemDetailsPage() {
         `accept-language=fr&` +
         `countrycodes=ma&` +
         `viewbox=-13.0,27.0,-0.5,36.0&` + // Morocco bounding box
-        `bounded=1`
+        `bounded=1`,
+        {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'ZOOJ-CoupleApp/1.0 (https://zooj.app)',
+            'Accept': 'application/json',
+            'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+          },
+        }
       );
 
       if (response.ok) {
         const data = await response.json();
         setPlaceSuggestions(data);
+        setShowPlaceSuggestions(true);
       } else {
-        console.error('Place search failed:', response.status);
-        setPlaceSuggestions([]);
+        console.error('Place search failed:', response.status, response.statusText);
+        // Show a simple fallback message
+        setPlaceSuggestions([{
+          display_name: `"${query}" (recherche manuelle)`,
+          lat: '',
+          lon: '',
+          type: 'fallback'
+        }]);
+        setShowPlaceSuggestions(true);
       }
     } catch (error) {
       console.error('Error searching places:', error);
-      setPlaceSuggestions([]);
+      // Show a simple fallback message
+      setPlaceSuggestions([{
+        display_name: `"${query}" (recherche manuelle)`,
+        lat: '',
+        lon: '',
+        type: 'fallback'
+      }]);
+      setShowPlaceSuggestions(true);
     } finally {
       setIsLoadingPlaces(false);
-    } 
+    }
   };
 
-  // Debounced search to avoid too many API calls
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (editPlace.length >= 3) {
-        searchPlaces(editPlace);
-      } else {
-        setPlaceSuggestions([]);
-      }
-    }, 300); // 300ms delay
+  const selectPlace = (place: any) => {
+    setEditPlace(place.display_name);
+    setShowPlaceSuggestions(false);
+    setPlaceSuggestions([]);
+  };
 
-    return () => clearTimeout(timeoutId);
-  }, [editPlace]);
+  // Image picker function
+  const pickImage = async (source: 'camera' | 'gallery') => {
+    try {
+      let result;
+      if (source === 'camera') {
+        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+        if (permissionResult.granted === false) {
+          Alert.alert('Permission requise', 'Permission d\'accès à la caméra requise pour prendre une photo.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+      } else {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+          Alert.alert('Permission requise', 'Permission d\'accès à la galerie requise pour sélectionner une photo.');
+      return;
+    }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+      }
+
+    if (!result.canceled && result.assets[0]) {
+        await uploadImageToCloudinary(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Erreur', 'Erreur lors de la sélection de l\'image.');
+    }
+  };
+
+  // Upload image to Cloudinary
+  const uploadImageToCloudinary = async (imageUri: string) => {
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      
+      // Handle different platforms
+      let fileData;
+      if (Platform.OS === 'web') {
+        // For web platform
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
+        fileData = new File([blob], 'souvenir.jpg', { type: 'image/jpeg' });
+      } else {
+        // For mobile platforms
+        fileData = {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: 'souvenir.jpg',
+        };
+      }
+      
+      formData.append('file', fileData as any);
+      formData.append('cloud_name', CLOUDINARY_CONFIG.cloudName);
+      formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Cloudinary response error:', response.status, errorText);
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.secure_url) {
+        // Fix Cloudinary URL by removing trailing slash if present
+        const cleanUrl = data.secure_url.endsWith('/') 
+          ? data.secure_url.slice(0, -1) 
+          : data.secure_url;
+        
+        // Store the Cloudinary URL
+        setEditImage(cleanUrl);
+        Alert.alert('Succès', 'Image uploadée avec succès!');
+      } else {
+        throw new Error('No secure URL returned from Cloudinary');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Erreur', 'Erreur lors de l\'upload de l\'image.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   if (isLoading) {
     return (
       <AppLayout>
         <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('calendar.loading')}</Text>
+          <Text className={`mt-4 ${isDarkMode ? 'text-white' : 'text-gray-600'}`}>
+            Chargement de l'élément...
+          </Text>
         </View>
       </AppLayout>
     );
@@ -645,10 +540,22 @@ export default function ItemDetailsPage() {
     return (
       <AppLayout>
         <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
-          <Text style={[styles.errorText, { color: colors.text }]}>Élément non trouvé</Text>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Retour</Text>
-          </Pressable>
+          <MaterialCommunityIcons 
+            name="file-document-outline" 
+            size={64} 
+            color={isDarkMode ? '#666' : '#999'} 
+          />
+          <Text className={`mt-4 text-lg ${isDarkMode ? 'text-white' : 'text-gray-600'}`}>
+            Élément non trouvé
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className={`mt-4 px-6 py-3 rounded-lg ${isDarkMode ? 'bg-dark-card' : 'bg-blue-500'}`}
+          >
+            <Text className={`${isDarkMode ? 'text-white' : 'text-white'} font-medium`}>
+              Retour
+            </Text>
+          </TouchableOpacity>
         </View>
       </AppLayout>
     );
@@ -656,1160 +563,827 @@ export default function ItemDetailsPage() {
 
   return (
     <AppLayout>
-      <ScrollView className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
-              <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Détails</Text>
-            </View>
-            
-            {/* Edit Button */}
-            <Pressable style={styles.editButton} onPress={startEditing}>
-              <MaterialCommunityIcons name="pencil" size={20} color="white" />
-              <Text style={styles.editButtonText}>{t('modifier')}</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Title */}
-          {isEditing ? (
-            <View style={styles.editField}>
-              <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.titleField')}:</Text>
-              <TextInput
-                className={`w-full px-4 py-3 rounded-lg border ${isDarkMode ? 'bg-dark-surface border-dark-border text-dark-text' : 'bg-white border-gray-300 text-text'}`}
-                style={styles.textInput}
-                value={editTitle}
-                onChangeText={setEditTitle}
-                placeholder="Donnez un nom à votre moment"
-                placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
+      <ScrollView 
+        style={{
+          flex: 1,
+          backgroundColor: isDarkMode ? '#1A1A1A' : '#F5F5F5'
+        }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: 300
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header matching the exact UI from images */}
+        <View style={{
+          paddingHorizontal: 20,
+          paddingVertical: 16,
+          backgroundColor: '#FFFFFF',
+          borderBottomWidth: 1,
+          borderBottomColor: '#E5E5E5'
+        }}>
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative'
+          }}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                position: 'absolute',
+                left: 0,
+                padding: 8
+              }}
+            >
+              <MaterialCommunityIcons 
+                name="arrow-left" 
+                size={24} 
+                color="#000000" 
               />
-            </View>
-          ) : (
-            <>
-              <View style={styles.formField}>
-                <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.titleField')}</Text>
-                <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <Text className={`text-base ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{item.title}</Text>
-                </View>
-              </View>
-              
-              {/* Image Display - Only for souvenirs in view mode */}
-              {'image_url' in item && item.image_url && !isEditing && (
-                <View style={styles.formField}>
-                  <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Photos</Text>
-                  <View style={styles.imageDisplayContainer}>
-                    <Image 
-                      source={{ uri: item.image_url }} 
-                      style={styles.displayImage}
-                      resizeMode="cover"
-                    />
+            </TouchableOpacity>
+            
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: '#000000'
+            }}>
+              {isEditing ? (editItemType === 'event' ? 'Événement' : 'Souvenir') : (itemType === 'event' ? `Détails de l'évènement` : `Détails du souvenir`)}
+            </Text>
                   </View>
                 </View>
-              )}
-            </>
-          )}
-           
-           {/* Type Toggle - Only show in edit mode */}
-           {isEditing && (
-             <View style={styles.typeToggleContainer}>
-               <Text className={`text-base font-medium mb-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Type du moment partagé</Text>
-               <View style={styles.typeToggleButtons}>
-                 <Pressable
-                   style={[
-                     styles.typeToggleButton,
-                     { backgroundColor: colors.surface, borderColor: colors.border },
-                     editItemType === 'event' && styles.typeToggleButtonSelected
-                   ]}
-                   onPress={() => setEditItemType('event')}
+
+        {/* Content matching the exact UI from images */}
+        <View style={{ padding: 20 }}>
+          {/* Type Selection - Always visible */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{
+              fontSize: 16,
+              fontWeight: '600',
+              color: isDarkMode ? '#FFFFFF' : '#000000',
+              marginBottom: 12
+            }}>
+              Type du moment partagé
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (isEditing) {
+                    setEditItemType('event');
+                  } else {
+                    // Switch to event type
+                    setEditItemType('event');
+                    setIsEditing(true);
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: (isEditing ? editItemType : itemType) === 'event' ? '#87CEEB' : '#E5E5E5',
+                  backgroundColor: (isEditing ? editItemType : itemType) === 'event' ? '#E6F3FF' : '#FFFFFF'
+                }}
                  >
                    <MaterialCommunityIcons 
                      name="calendar" 
                      size={20} 
-                     color={editItemType === 'event' ? 'white' : colors.text} 
-                   />
-                   <Text className={`text-sm font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} ${editItemType === 'event' ? 'text-white' : ''}`}>
+                  color={(isEditing ? editItemType : itemType) === 'event' ? '#4682B4' : '#999999'} 
+                />
+                <Text style={{
+                  marginLeft: 8,
+                  fontSize: 16,
+                  fontWeight: '500',
+                  color: (isEditing ? editItemType : itemType) === 'event' ? '#4682B4' : '#999999'
+                }}>
                      Evènement
                    </Text>
-                 </Pressable>
-                 
-                 <Pressable
-                   style={[
-                     styles.typeToggleButton,
-                     { backgroundColor: colors.surface, borderColor: colors.border },
-                     editItemType === 'souvenir' && styles.typeToggleButtonSelected
-                   ]}
-                   onPress={() => setEditItemType('souvenir')}
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => {
+                  if (isEditing) {
+                    setEditItemType('souvenir');
+                  } else {
+                    // Switch to souvenir type
+                    setEditItemType('souvenir');
+                    setIsEditing(true);
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: (isEditing ? editItemType : itemType) === 'souvenir' ? '#FFB6C1' : '#E5E5E5',
+                  backgroundColor: (isEditing ? editItemType : itemType) === 'souvenir' ? '#FFE4E1' : '#FFFFFF'
+                }}
                  >
                    <MaterialCommunityIcons 
                      name="heart" 
                      size={20} 
-                     color={editItemType === 'souvenir' ? 'white' : colors.text} 
-                   />
-                   <Text className={`text-sm font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} ${editItemType === 'souvenir' ? 'text-white' : ''}`}>
+                  color={(isEditing ? editItemType : itemType) === 'souvenir' ? '#DC143C' : '#999999'} 
+                />
+                <Text style={{
+                  marginLeft: 8,
+                  fontSize: 16,
+                  fontWeight: '500',
+                  color: (isEditing ? editItemType : itemType) === 'souvenir' ? '#DC143C' : '#999999'
+                }}>
                      Souvenir
                    </Text>
-                 </Pressable>
+              </TouchableOpacity>
                </View>
              </View>
-           )}
-           
-                       {/* Date and Time */}
+
+          {/* Title */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{
+              fontSize: 16,
+              fontWeight: '600',
+              color: isDarkMode ? '#FFFFFF' : '#000000',
+              marginBottom: 12
+            }}>
+              Titre
+            </Text>
             {isEditing ? (
-              <View style={styles.dateTimeContainer}>
-                <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.dateTime')}</Text>
-                <View style={styles.dateTimeRow}>
-                  <View style={styles.dateTimeField}>
-                    <Text className={`text-sm mb-1 ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>{t('calendar.dateTime')}</Text>
-                    <Pressable 
-                      style={[styles.dateTimeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              <TextInput
+                value={editTitle}
+                onChangeText={setEditTitle}
+                placeholder="Donnez un nom à votre moment"
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                  backgroundColor: '#FFFFFF',
+                  fontSize: 16,
+                  color: '#000000'
+                }}
+                placeholderTextColor="#999999"
+              />
+            ) : (
+              <Text style={{
+                fontSize: 18,
+                fontWeight: '600',
+                color: isDarkMode ? '#FFFFFF' : '#000000'
+              }}>
+                {item.title}
+              </Text>
+            )}
+          </View>
+
+          {/* Date */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{
+              fontSize: 16,
+              fontWeight: '600',
+              color: isDarkMode ? '#FFFFFF' : '#000000',
+              marginBottom: 12
+            }}>
+              Date
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {/* Date Input */}
+              <View style={{ flex: 1 }}>
+            {isEditing ? (
+                  <TouchableOpacity
                       onPress={() => setShowDatePicker(true)}
-                    >
-                      <Text style={[styles.dateTimeButtonText, { color: colors.text }]}>
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#E5E5E5',
+                      backgroundColor: '#FFFFFF'
+                    }}
+                  >
+                    <MaterialCommunityIcons 
+                      name="calendar" 
+                      size={20} 
+                      color="#999999" 
+                    />
+                    <Text style={{
+                      marginLeft: 8,
+                      fontSize: 16,
+                      color: '#000000'
+                    }}>
                         {editDate.toLocaleDateString('fr-FR')}
                       </Text>
-                      <MaterialCommunityIcons name="calendar" size={20} color="#2DB6FF" />
-                    </Pressable>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#E5E5E5',
+                    backgroundColor: '#FFFFFF'
+                  }}>
+                    <MaterialCommunityIcons 
+                      name="calendar" 
+                      size={20} 
+                      color="#999999" 
+                    />
+                    <Text style={{
+                      marginLeft: 8,
+                      fontSize: 16,
+                      color: '#000000'
+                    }}>
+                      {itemType === 'event' ? formatDate(new Date((item as CalendarEvent).event_date)) : formatDate(new Date((item as CalendarSouvenir).memory_date))}
+                    </Text>
                   </View>
-                  <View style={styles.dateTimeSpacer} />
-                  <View style={styles.dateTimeField}>
-                    <Text style={[styles.dateTimeSubLabel, { color: colors.textSecondary }]}>Heure</Text>
-                    <Pressable 
-                      style={[styles.dateTimeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      onPress={() => setShowTimePicker(true)}
-                    >
-                      <Text style={[styles.dateTimeButtonText, { color: colors.text }]}>
-                        {editTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
-                      <MaterialCommunityIcons name="clock" size={20} color="#2DB6FF" />
-                    </Pressable>
-                  </View>
-                </View>
+                )}
               </View>
-           ) : (
-             <View style={styles.formField}>
-               <Text style={[styles.formLabel, { color: colors.text }]}>{t('calendar.dateTime')}</Text>
-               <View style={styles.dateTimeContainer}>
-                 {('event_date' in item && 'event_time' in item) ? (
-                   <>
-                     <View style={[styles.dateTimeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                       <MaterialCommunityIcons name="calendar" size={20} color={colors.textSecondary} />
-                       <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                         {formatDate(item.event_date)}
+              
+              {/* Time Input */}
+              <View style={{ flex: 1 }}>
+                {isEditing ? (
+                  <TouchableOpacity
+                      onPress={() => setShowTimePicker(true)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#E5E5E5',
+                      backgroundColor: '#FFFFFF'
+                    }}
+                  >
+                    <MaterialCommunityIcons 
+                      name="clock" 
+                      size={20} 
+                      color="#999999" 
+                    />
+                    <Text style={{
+                      marginLeft: 8,
+                      fontSize: 16,
+                      color: '#000000'
+                    }}>
+                      {formatTime(editTime)}
+                      </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#E5E5E5',
+                    backgroundColor: '#FFFFFF'
+                  }}>
+                    <MaterialCommunityIcons 
+                      name="clock" 
+                      size={20} 
+                      color="#999999" 
+                    />
+                    <Text style={{
+                      marginLeft: 8,
+                      fontSize: 16,
+                      color: '#000000'
+                    }}>
+                      {itemType === 'event' ? (item as CalendarEvent).event_time : (item as CalendarSouvenir).memory_time}
                        </Text>
                      </View>
-                     <View style={[styles.dateTimeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                       <MaterialCommunityIcons name="clock" size={20} color={colors.textSecondary} />
-                       <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                         {formatTime(item.event_time)}
-                       </Text>
+                )}
                      </View>
-                   </>
-                 ) : ('memory_date' in item && 'memory_time' in item) ? (
-                   <>
-                     <View style={[styles.dateTimeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                       <MaterialCommunityIcons name="calendar" size={20} color={colors.textSecondary} />
-                       <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                         {formatDate(item.memory_date)}
-                       </Text>
                      </View>
-                     <View style={[styles.dateTimeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                       <MaterialCommunityIcons name="clock" size={20} color={colors.textSecondary} />
-                       <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                         {formatTime(item.memory_time)}
-                       </Text>
+            
+            {/* Date/Time Pickers */}
+            {showDatePicker && (
+              <DateTimePicker
+                value={editDate}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    setEditDate(selectedDate);
+                  }
+                }}
+              />
+            )}
+            
+            {showTimePicker && (
+              <DateTimePicker
+                value={editTime}
+                mode="time"
+                display="default"
+                onChange={(event, selectedTime) => {
+                  setShowTimePicker(false);
+                  if (selectedTime) {
+                    setEditTime(selectedTime);
+                  }
+                }}
+              />
+            )}
                      </View>
-                   </>
-                 ) : null}
-               </View>
-             </View>
-           )}
 
            {/* Place */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{
+              fontSize: 16,
+              fontWeight: '600',
+              color: isDarkMode ? '#FFFFFF' : '#000000',
+              marginBottom: 12
+            }}>
+              Lieu
+            </Text>
            {isEditing ? (
-             <View style={styles.editField}>
-               <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.place')}:</Text>
-               <View style={styles.placeInputContainer}>
+              <View>
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                  backgroundColor: '#FFFFFF'
+                }}>
                  <TextInput
-                   className={`w-full px-4 py-3 rounded-lg border ${isDarkMode ? 'bg-dark-surface border-dark-border text-dark-text' : 'bg-white border-gray-300 text-text'}`}
-                   style={styles.textInput}
                    value={editPlace}
-                   onChangeText={setEditPlace}
-                   placeholder="Rechercher un lieu (ex: Safi, Cores Safi, Hassan 2 rue...)"
-                   placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
-                 />
-                 <MaterialCommunityIcons name="map-marker" size={20} color={isDarkMode ? '#CCCCCC' : '#7A7A7A'} />
-               </View>
-               
-               {/* Place suggestions */}
-               {editPlace.length >= 3 && (
-                 <View className={`${isDarkMode ? 'bg-dark-surface border-dark-border' : 'bg-white border-gray-300'}`} style={[styles.placeSuggestions]}>
-                   <Text className={`px-3 py-2 text-sm font-medium border-b ${isDarkMode ? 'text-white bg-dark-bg border-dark-border' : 'text-text bg-background border-border'}`}>
-                     {isLoadingPlaces ? t('calendar.searching') : t('calendar.placesFound')}
-                   </Text>
+                    onChangeText={(text) => {
+                      setEditPlace(text);
+                      searchPlaces(text);
+                    }}
+                    placeholder="Rechercher un lieu"
+                    style={{
+                      flex: 1,
+                      fontSize: 16,
+                      color: '#000000'
+                    }}
+                    placeholderTextColor="#999999"
+                  />
                    {isLoadingPlaces ? (
-                     <View style={styles.placeSuggestionsList}>
-                       <View style={styles.placeSuggestionItem}>
-                         <ActivityIndicator size="small" color="#007AFF" />
-                         <Text style={[styles.placeSuggestionText, { color: colors.text }]}>Recherche...</Text>
+                    <ActivityIndicator size="small" color="#999999" />
+                  ) : (
+                    <MaterialCommunityIcons 
+                      name="map-marker" 
+                      size={20} 
+                      color="#999999" 
+                    />
+                  )}
                        </View>
-                     </View>
-                   ) : placeSuggestions.length > 0 ? (
-                     <View style={styles.placeSuggestionsList}>
+                
+                {/* Place Suggestions */}
+                {showPlaceSuggestions && placeSuggestions.length > 0 && (
+                  <View style={{
+                    marginTop: 4,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#E5E5E5',
+                    backgroundColor: '#FFFFFF',
+                    maxHeight: 200,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 3
+                  }}>
+                    <ScrollView style={{ maxHeight: 200 }}>
                        {placeSuggestions.map((place, index) => (
-                         <Pressable
+                        <TouchableOpacity
                            key={index}
-                           style={[styles.placeSuggestionItem, { borderBottomColor: colors.border }]}
-                           onPress={() => setEditPlace(place.display_name)}
-                         >
-                           <MaterialCommunityIcons name="map-marker" size={16} color="#007AFF" />
-                           <View style={styles.placeSuggestionContent}>
-                             <Text style={[styles.placeSuggestionText, { color: colors.text }]}>
-                               {place.display_name.split(',')[0]} {/* Show first part of address */}
+                          onPress={() => selectPlace(place)}
+                          style={{
+                            paddingHorizontal: 16,
+                            paddingVertical: 12,
+                            borderBottomWidth: index < placeSuggestions.length - 1 ? 1 : 0,
+                            borderBottomColor: '#E5E5E5'
+                          }}
+                        >
+                          <Text style={{
+                            fontSize: 14,
+                            color: '#000000',
+                            lineHeight: 18
+                          }}>
+                            {place.display_name}
                              </Text>
-                             <Text style={[styles.placeSuggestionSubtext, { color: colors.textSecondary }]}>
-                               {place.display_name.split(',').slice(1, 3).join(', ')} {/* Show city/area */}
-                             </Text>
-                           </View>
-                         </Pressable>
-                       ))}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                      </View>
-                   ) : editPlace.length >= 3 ? (
-                     <View style={styles.placeSuggestionsList}>
-                       <Text style={[styles.placeSuggestionText, { color: colors.text }]}>Aucun lieu trouvé</Text>
+                )}
                      </View>
-                   ) : null}
+            ) : (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                backgroundColor: '#FFFFFF'
+              }}>
+                <Text style={{
+                  flex: 1,
+                  fontSize: 16,
+                  color: '#000000'
+                }}>
+                  {item.place || 'Aucun lieu spécifié'}
+                </Text>
+                <MaterialCommunityIcons 
+                  name="map-marker" 
+                  size={20} 
+                  color="#999999" 
+                />
                  </View>
                )}
              </View>
-           ) : (
-             'place' in item && (
-               <View style={styles.formField}>
-                 <Text style={[styles.formLabel, { color: colors.text }]}>{t('calendar.place')}</Text>
-                 <View style={styles.placeInputContainer}>
-                   <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                     <Text style={[styles.infoText, { color: colors.text }]}>{item.place}</Text>
-                   </View>
-                   <MaterialCommunityIcons name="map-marker" size={20} color={colors.textSecondary} />
-                 </View>
-               </View>
-             )
-           )}
 
-           {/* Photos - Only show for souvenirs in edit mode */}
-           {isEditing && editItemType === 'souvenir' && (
-             <View style={styles.editField}>
-               <Text style={[styles.editLabel, { color: colors.text }]}>Photos</Text>
-               <View style={styles.imageContainer}>
-                 {editImage ? (
-                   <Image source={{ uri: editImage }} style={styles.selectedImage} />
-                 ) : (
-                   <View style={[styles.imagePlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                     <MaterialCommunityIcons name="image" size={48} color={colors.textSecondary} />
-                     <Text style={[styles.imagePlaceholderText, { color: colors.textSecondary }]}>
-                       Ajouter une image pour ce souvenir
-                     </Text>
+          {/* Alarm Toggle (for events only) */}
+          {editItemType === 'event' && isEditing && (
+            <View style={{ marginBottom: 24 }}>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 12
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons 
+                    name="bell" 
+                    size={20} 
+                    color="#999999" 
+                  />
+                  <Text style={{
+                    marginLeft: 8,
+                    fontSize: 16,
+                    color: isDarkMode ? '#FFFFFF' : '#000000'
+                  }}>
+                    Alarme
+                             </Text>
                    </View>
-                 )}
-                 <View style={styles.imageButtons}>
-                   <Pressable style={styles.cameraButton} onPress={takePhotoWithCamera}>
-                     <MaterialCommunityIcons name="camera" size={20} color="white" />
-                     <Text style={styles.imageButtonText}>Camera</Text>
-                   </Pressable>
-                   <Pressable style={styles.galleryButton} onPress={pickImageFromGallery}>
-                     <MaterialCommunityIcons name="image" size={20} color="white" />
-                     <Text style={styles.imageButtonText}>Gallery</Text>
-                   </Pressable>
+                <TouchableOpacity
+                  onPress={() => setEditAlarmable(!editAlarmable)}
+                  style={{
+                    width: 50,
+                    height: 30,
+                    borderRadius: 15,
+                    backgroundColor: editAlarmable ? '#007AFF' : '#E5E5E5',
+                    justifyContent: 'center',
+                    alignItems: editAlarmable ? 'flex-end' : 'flex-start',
+                    paddingHorizontal: 2
+                  }}
+                >
+                  <View style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 13,
+                    backgroundColor: '#FFFFFF',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 2,
+                    elevation: 2
+                  }} />
+                </TouchableOpacity>
                  </View>
+              <Text style={{
+                fontSize: 14,
+                color: '#999999',
+                marginTop: 4
+              }}>
+                Rappel (vous recevez une notification avant 3 heures)
+              </Text>
                </View>
-             </View>
-           )}
+          )}
+
+          {/* Photos (for souvenirs only) */}
+          {editItemType === 'souvenir' && isEditing && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: isDarkMode ? '#FFFFFF' : '#000000',
+                marginBottom: 12
+              }}>
+                Photos
+              </Text>
+              {editImage ? (
+                <View style={{
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  borderWidth: 2,
+                  borderColor: '#FFB6C1',
+                  backgroundColor: '#FFFFFF',
+                  aspectRatio: 16/9,
+                  maxHeight: 80
+                }}>
+                  <Image 
+                    source={{ uri: editImage }} 
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      resizeMode: 'cover'
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setEditImage(null)}
+                    style={{
+                      position: 'absolute',
+                      top: 4,
+                      right: 4,
+                      backgroundColor: 'rgba(0,0,0,0.6)',
+                      borderRadius: 12,
+                      width: 24,
+                      height: 24,
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <MaterialCommunityIcons name="close" size={12} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{
+                  height: 120,
+                  borderRadius: 8,
+                  borderWidth: 2,
+                  borderColor: '#FFB6C1',
+                  borderStyle: 'dashed',
+                  backgroundColor: '#FFE4E1',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {isUploadingImage ? (
+                    <ActivityIndicator size="large" color="#FFB6C1" />
+                  ) : (
+                    <>
+                      <MaterialCommunityIcons 
+                        name="image" 
+                        size={32} 
+                        color="#FFB6C1" 
+                      />
+                      <Text style={{
+                        marginTop: 8,
+                        fontSize: 14,
+                        color: '#DC143C',
+                        textAlign: 'center'
+                      }}>
+                        Ajouter une image pour ce souvenir
+                      </Text>
+                      <View style={{ flexDirection: 'row', marginTop: 12, gap: 12 }}>
+                        <TouchableOpacity 
+                          onPress={() => pickImage('camera')}
+                          disabled={isUploadingImage}
+                          style={{
+                            paddingHorizontal: 16,
+                            paddingVertical: 8,
+                            borderRadius: 20,
+                            backgroundColor: '#FFB6C1',
+                            borderWidth: 1,
+                            borderColor: '#DC143C',
+                            opacity: isUploadingImage ? 0.6 : 1
+                          }}
+                        >
+                          <Text style={{ color: '#DC143C', fontSize: 12, fontWeight: '600' }}>
+                            📷 Camera
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          onPress={() => pickImage('gallery')}
+                          disabled={isUploadingImage}
+                          style={{
+                            paddingHorizontal: 16,
+                            paddingVertical: 8,
+                            borderRadius: 20,
+                            backgroundColor: '#87CEEB',
+                            borderWidth: 1,
+                            borderColor: '#4682B4',
+                            opacity: isUploadingImage ? 0.6 : 1
+                          }}
+                        >
+                          <Text style={{ color: '#4682B4', fontSize: 12, fontWeight: '600' }}>
+                            🖼️ Gallery
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
 
            {/* Description */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{
+              fontSize: 16,
+              fontWeight: '600',
+              color: isDarkMode ? '#FFFFFF' : '#000000',
+              marginBottom: 12
+            }}>
+              Description
+            </Text>
            {isEditing ? (
-             <View style={styles.editField}>
-               <Text className={`text-base font-medium mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.description')}:</Text>
                <TextInput
-                 className={`w-full px-4 py-3 rounded-lg border ${isDarkMode ? 'bg-dark-surface border-dark-border text-dark-text' : 'bg-white border-gray-300 text-text'}`}
-                 style={[styles.textInput, styles.textArea]}
                  value={editDescription}
                  onChangeText={setEditDescription}
-                 placeholder={t('calendar.description')}
-                 placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
+                placeholder="Ajoutez une note (facultatif)"
                  multiline
                  numberOfLines={4}
-               />
-             </View>
-           ) : (
-             'description' in item && (
-               <View style={styles.formField}>
-                 <Text style={[styles.formLabel, { color: colors.text }]}>{t('calendar.description')}</Text>
-                 <View style={[styles.infoDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                   <Text style={[styles.infoText, { color: colors.text }]}>{item.description}</Text>
-                 </View>
-               </View>
-             )
-           )}
-
-
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                  backgroundColor: '#FFFFFF',
+                  fontSize: 16,
+                  color: '#000000',
+                  textAlignVertical: 'top',
+                  minHeight: 80
+                }}
+                placeholderTextColor="#999999"
+              />
+            ) : (
+              <Text style={{
+                fontSize: 16,
+                lineHeight: 24,
+                color: isDarkMode ? '#CCCCCC' : '#666666'
+              }}>
+                {item.description || 'Aucune description'}
+              </Text>
+            )}
          </View>
 
-        {/* Edit Actions */}
-        {isEditing && (
-          <View style={styles.editActions}>
-            <Pressable style={styles.cancelButton} onPress={cancelEditing}>
-              <Text style={styles.cancelButtonText}>{t('calendar.cancel')}</Text>
-            </Pressable>
-                         <Pressable 
-               style={[styles.saveButtonGradient, isSaving && styles.saveButtonDisabled]} 
-               onPress={saveChanges}
-               disabled={isSaving}
-             >
-               {isSaving ? (
-                 <View style={styles.saveButtonLoading}>
-                   <ActivityIndicator size="small" color="white" />
-                   <Text style={styles.saveButtonText}>{t('calendar.save')}...</Text>
+          {/* Image Card (for souvenirs only) */}
+          {itemType === 'souvenir' && (
+            <View className={`p-5 rounded-xl mb-4 ${
+              isDarkMode ? 'bg-dark-card border border-dark-border' : 'bg-white border border-gray-200'
+            }`}>
+              <View className="flex-row items-center mb-3">
+                <MaterialCommunityIcons 
+                  name="image" 
+                  size={20} 
+                  color={isDarkMode ? '#60A5FA' : '#2563EB'} 
+                />
+                <Text className={`ml-2 text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Image
+                </Text>
+              </View>
+              {(item as CalendarSouvenir).image_url ? (
+                <View style={{
+                  width: '100%',
+                  aspectRatio: 16/9,
+                  maxHeight: 80,
+                  borderRadius: 8,
+                  overflow: 'hidden'
+                }}>
+                  <Image
+                    source={{ uri: (item as CalendarSouvenir).image_url }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      resizeMode: 'cover'
+                    }}
+                  />
                  </View>
                ) : (
-                 <Text style={styles.saveButtonText}>{t('calendar.save')}</Text>
-               )}
-             </Pressable>
+                <View style={{
+                  width: '100%',
+                  aspectRatio: 16/9,
+                  maxHeight: 80,
+                  borderRadius: 8,
+                  borderWidth: 2,
+                  borderStyle: 'dashed',
+                  borderColor: isDarkMode ? '#666' : '#999',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+                  <MaterialCommunityIcons 
+                    name="image-outline" 
+                    size={20} 
+                    color={isDarkMode ? '#666' : '#999'} 
+                  />
+                  <Text className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Aucune image
+                  </Text>
+                </View>
+              )}
           </View>
         )}
 
-        {/* Back Button */}
-        <View style={styles.backButtonContainer}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Retour au calendrier</Text>
-          </Pressable>
+          {/* Metadata Card */}
         </View>
+            
+        {/* Action Buttons */}
+        {isEditing && (
+          <View style={{ padding: 20, marginBottom: 80 }}>
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={isSaving}
+              style={{
+     paddingVertical: 16,
+     borderRadius: 12,
+                backgroundColor: '#87CEEB',
+                shadowColor: '#87CEEB',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6
+              }}
+            >
+              {isSaving ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator size="small" color="white" />
+                  <Text style={{
+                    marginLeft: 8,
+    color: 'white',
+    fontWeight: '600',
+                    fontSize: 16
+                  }}>Sauvegarde...</Text>
+                </View>
+              ) : (
+                <Text style={{
+    color: 'white',
+    fontWeight: '600',
+                  fontSize: 16,
+                  textAlign: 'center'
+                }}>Sauvegarder</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* View Mode Action Buttons */}
+        {!isEditing && (
+          <View style={{ padding: 20, marginBottom: 80 }}>
+            <TouchableOpacity
+              onPress={() => setIsEditing(true)}
+              style={{
+       paddingVertical: 16,
+       borderRadius: 12,
+                backgroundColor: '#87CEEB',
+                marginBottom: 12,
+                shadowColor: '#87CEEB',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6
+              }}
+            >
+              <Text style={{
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+                textAlign: 'center'
+              }}>Modifier {itemType === 'event' ? 'l\'événement' : 'le souvenir'}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={handleDelete}
+              disabled={isDeleting}
+              style={{
+                paddingVertical: 16,
+     borderRadius: 12,
+     borderWidth: 1,
+                borderColor: '#FFB6C1',
+                backgroundColor: '#FFFFFF'
+              }}
+            >
+              {isDeleting ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator size="small" color="#DC143C" />
+                  <Text style={{
+     marginLeft: 8,
+                    color: '#DC143C',
+                    fontWeight: '600',
+                    fontSize: 16
+                  }}>Suppression...</Text>
+                </View>
+              ) : (
+                <Text style={{
+                  color: '#DC143C',
+                  fontWeight: '600',
+     fontSize: 16,
+                  textAlign: 'center'
+                }}>Supprimer {itemType === 'event' ? 'l\'événement' : 'le souvenir'}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
       </ScrollView>
-
-      {/* Custom Date Picker Modal */}
-      <Modal
-        visible={showDatePicker}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.customPickerOverlay}>
-          <View style={styles.customPickerContainer}>
-            <View style={styles.customPickerHeader}>
-              <Text style={styles.customPickerTitle}>Sélectionner une date</Text>
-              <Pressable
-                style={styles.customPickerCloseButton}
-                onPress={() => setShowDatePicker(false)}
-              >
-                <MaterialCommunityIcons name="close" size={24} color="#2D2D2D" />
-              </Pressable>
-            </View>
-            
-            <View style={styles.customPickerContent}>
-              <View style={styles.monthSelector}>
-                <Pressable
-                  style={styles.monthButton}
-                  onPress={() => {
-                    const newDate = new Date(editDate);
-                    newDate.setMonth(newDate.getMonth() - 1);
-                    setEditDate(newDate);
-                  }}
-                >
-                  <MaterialCommunityIcons name="chevron-left" size={24} color="#2DB6FF" />
-                </Pressable>
-                
-                <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                  {editDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
-                </Text>
-                
-                <Pressable
-                  style={styles.monthButton}
-                  onPress={() => {
-                    const newDate = new Date(editDate);
-                    newDate.setMonth(newDate.getMonth() + 1);
-                    setEditDate(newDate);
-                  }}
-                >
-                  <MaterialCommunityIcons name="chevron-right" size={24} color="#2DB6FF" />
-                </Pressable>
-              </View>
-              
-              <View style={styles.customPickerDaysOfWeek}>
-                {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, index) => (
-                  <Text key={index} style={styles.customPickerDayOfWeek}>{day}</Text>
-                ))}
-              </View>
-              
-              <View style={styles.customPickerGrid}>
-                {getDaysInMonth(editDate).map((day, index) => {
-                  if (!day) return <View key={index} style={styles.customPickerEmptyDay} />;
-                  
-                  const isSelected = day.toDateString() === editDate.toDateString();
-                  const isToday = day.toDateString() === new Date().toDateString();
-                  
-                  return (
-                    <Pressable
-                      key={index}
-                      style={[
-                        styles.customPickerDay,
-                        isSelected && styles.customPickerSelectedDay,
-                        isToday && styles.customPickerTodayDay
-                      ]}
-                      onPress={() => {
-                        setEditDate(day);
-                        setShowDatePicker(false);
-                      }}
-                    >
-                      <Text style={[
-                        styles.customPickerDayNumber,
-                        isSelected && styles.customPickerSelectedDayText,
-                        isToday && styles.customPickerTodayDayText
-                      ]}>
-                        {day.getDate()}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Custom Time Picker Modal */}
-      <Modal
-        visible={showTimePicker}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.customPickerOverlay}>
-          <View style={styles.customPickerContainer}>
-            <View style={styles.customPickerHeader}>
-              <Text style={styles.customPickerTitle}>Sélectionner une heure</Text>
-              <Pressable
-                style={styles.customPickerCloseButton}
-                onPress={() => setShowTimePicker(false)}
-              >
-                <MaterialCommunityIcons name="close" size={24} color="#2D2D2D" />
-              </Pressable>
-            </View>
-            
-            <View style={styles.customPickerContent}>
-              <View style={styles.timeSelector}>
-                <View style={styles.timeColumn}>
-                  <Text style={styles.timeLabel}>Heures</Text>
-                  <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <Pressable
-                        key={i}
-                        style={[
-                          styles.timeOption,
-                          editTime.getHours() === i && styles.timeOptionSelected
-                        ]}
-                        onPress={() => {
-                          const newTime = new Date(editTime);
-                          newTime.setHours(i);
-                          setEditTime(newTime);
-                        }}
-                      >
-                        <Text style={[
-                          styles.timeOptionText,
-                          editTime.getHours() === i && styles.timeOptionTextSelected
-                        ]}>
-                          {i.toString().padStart(2, '0')}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-                
-                <View style={styles.timeColumn}>
-                  <Text style={styles.timeLabel}>Minutes</Text>
-                  <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
-                    {Array.from({ length: 60 }, (_, i) => (
-                      <Pressable
-                        key={i}
-                        style={[
-                          styles.timeOption,
-                          editTime.getMinutes() === i && styles.timeOptionSelected
-                        ]}
-                        onPress={() => {
-                          const newTime = new Date(editTime);
-                          newTime.setMinutes(i);
-                          setEditTime(newTime);
-                        }}
-                      >
-                        <Text style={[
-                          styles.timeOptionText,
-                          editTime.getMinutes() === i && styles.timeOptionTextSelected
-                        ]}>
-                          {i.toString().padStart(2, '0')}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-              
-              <Pressable
-                style={styles.timeConfirmButton}
-                onPress={() => setShowTimePicker(false)}
-              >
-                <Text style={styles.timeConfirmButtonText}>Confirmer</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </AppLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-     header: {
-     marginBottom: 16,
-     paddingTop: 10,
-     paddingHorizontal: 20,
-   },
-   headerContent: {
-     flexDirection: 'row',
-     justifyContent: 'space-between',
-     alignItems: 'center',
-   },
-   headerLeft: {
-     alignItems: 'center',
-     flex: 1,
-   },
-   headerTitle: {
-     fontSize: 28,
-     marginLeft: -170,
-     fontWeight: '700',
-     color: '#2D2D2D',
-   },
-
-     editButton: {
-     backgroundColor: '#2DB6FF',
-     flexDirection: 'row',
-     alignItems: 'center',
-     paddingHorizontal: 16,
-     paddingVertical: 8,
-     borderRadius: 20,
-   },
-  editButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-     itemCard: {
-     backgroundColor: 'white',
-     padding: 24,
-     borderRadius: 20,
-     marginBottom: 24,
-     marginHorizontal: 16,
-     shadowColor: '#000',
-     shadowOffset: {
-       width: 0,
-       height: 4,
-     },
-     shadowOpacity: 0.1,
-     shadowRadius: 8,
-     elevation: 8,
-   },
-  
-     dateTimeContainer: {
-     marginBottom: 12,
-   },
-
-   dateTimeRow: {
-     flexDirection: 'row',
-     gap: 12,
-   },
-   dateTimeField: {
-     flex: 1,
-   },
-   dateTimeSpacer: {
-     width: 16,
-   },
-   dateTimeSubLabel: {
-     fontSize: 14,
-     fontWeight: '500',
-     color: '#666',
-     marginBottom: 8,
-   },
-  
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 8,
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#555',
-    marginLeft: 12,
-  },
-  statusContainer: {
-    marginBottom: 20,
-    paddingHorizontal: 8,
-  },
-  statusItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statusLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statusValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-
-
-  
-  // Edit styles
-  editField: {
-    marginBottom: 16,
-  },
-  editLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: 'white',
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  dateTimeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f8f9fa',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  dateTimeButtonText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  pickerContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  priorityButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: 'white',
-  },
-  priorityButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  priorityButtonText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  priorityButtonTextSelected: {
-    color: 'white',
-  },
-  statusButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: 'white',
-  },
-  statusButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  statusButtonText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  statusButtonTextSelected: {
-    color: 'white',
-  },
-  editActions: {
-    width: '100%',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    // justifyContent: 'space-between',
-    marginBottom: 20,
-    gap: 10,
-  },
-     cancelButton: {
-     backgroundColor: '#6c757d',
-     paddingVertical: 16,
-     paddingHorizontal: 24,
-     borderRadius: 12,
-     alignItems: 'center',
-     minWidth: 130,
-   },
-  cancelButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: '#6c757d',
-     paddingVertical: 16,
-     paddingHorizontal: 24,
-     borderRadius: 12,
-     alignItems: 'center',
-     maxWidth: 200,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-          backButtonContainer: {
-       paddingHorizontal: 20,
-       marginTop: 16,
-       marginBottom: 10,
-     },
-     backButton: {
-       backgroundColor: '#2DB6FF',
-       paddingVertical: 16,
-       paddingHorizontal: 24,
-       borderRadius: 12,
-       alignItems: 'center',
-     },
-  backButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  
-  // Custom Picker styles
-  customPickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  customPickerContainer: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    width: '90%',
-    maxWidth: 400,
-    maxHeight: '80%',
-  },
-  customPickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  customPickerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2D2D2D',
-  },
-  customPickerCloseButton: {
-    padding: 4,
-  },
-  customPickerContent: {
-    padding: 20,
-  },
-  monthSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  monthButton: {
-    padding: 8,
-  },
-  monthText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D2D2D',
-  },
-  customPickerDaysOfWeek: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 15,
-  },
-  customPickerDayOfWeek: {
-    width: 40,
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  customPickerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-  },
-  customPickerDay: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 2,
-    borderRadius: 20,
-  },
-     customPickerSelectedDay: {
-     backgroundColor: '#2DB6FF',
-   },
-   customPickerTodayDay: {
-     borderWidth: 2,
-     borderColor: '#2DB6FF',
-   },
-  customPickerDayNumber: {
-    fontSize: 16,
-    color: '#2D2D2D',
-  },
-  customPickerSelectedDayText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-     customPickerTodayDayText: {
-     color: '#2DB6FF',
-     fontWeight: 'bold',
-   },
-  customPickerEmptyDay: {
-    width: 40,
-    height: 40,
-    margin: 2,
-  },
-  timeSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-  },
-  timeColumn: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  timeLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    marginBottom: 15,
-  },
-  timeScrollView: {
-    height: 200,
-    width: 80,
-  },
-  timeOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginVertical: 2,
-    alignItems: 'center',
-  },
-     timeOptionSelected: {
-     backgroundColor: '#2DB6FF',
-   },
-  timeOptionText: {
-    fontSize: 16,
-    color: '#2D2D2D',
-  },
-  timeOptionTextSelected: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-     timeConfirmButton: {
-     backgroundColor: '#2DB6FF',
-     paddingVertical: 12,
-     paddingHorizontal: 24,
-     borderRadius: 8,
-     alignItems: 'center',
-   },
-  timeConfirmButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Type toggle styles
-  typeToggleContainer: {
-    marginBottom: 20,
-  },
-  typeToggleLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    marginBottom: 12,
-  },
-  typeToggleButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  typeToggleButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    backgroundColor: 'white',
-    gap: 8,
-  },
-  typeToggleButtonSelected: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#E5E5E5',
-  },
-  typeToggleButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2D2D2D',
-  },
-  typeToggleButtonTextSelected: {
-    color: '#2D2D2D',
-  },
-
-     // Form styles (matching calendrier)
-   formField: {
-     marginBottom: 12,
-   },
-   formLabel: {
-     fontSize: 16,
-     fontWeight: '600',
-     color: '#424242',
-     marginBottom: 8,
-   },
-   infoDisplay: {
-     borderWidth: 1,
-     borderColor: '#F0F0F0',
-     borderRadius: 12,
-     paddingHorizontal: 16,
-     paddingVertical: 14,
-     backgroundColor: '#FFFFFF',
-     flex: 1,
-   },
-   placeInputContainer: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     gap: 12,
-   },
-   placeSuggestions: {
-     marginTop: 8,
-     backgroundColor: '#FFFFFF',
-     borderRadius: 8,
-     borderWidth: 1,
-     borderColor: '#E0E0E0',
-     overflow: 'hidden',
-   },
-   placeSuggestionsTitle: {
-     fontSize: 14,
-     fontWeight: '600',
-     color: '#2D2D2D',
-     paddingHorizontal: 12,
-     paddingVertical: 8,
-     backgroundColor: '#F8F9FA',
-     borderBottomWidth: 1,
-     borderBottomColor: '#E0E0E0',
-   },
-   placeSuggestionsList: {
-     maxHeight: 200,
-   },
-   placeSuggestionItem: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     paddingHorizontal: 12,
-     paddingVertical: 10,
-     borderBottomWidth: 1,
-     borderBottomColor: '#F0F0F0',
-   },
-   placeSuggestionContent: {
-     flex: 1,
-     marginLeft: 8,
-   },
-   placeSuggestionText: {
-     fontSize: 14,
-     color: '#2D2D2D',
-     fontWeight: '500',
-   },
-   placeSuggestionSubtext: {
-     fontSize: 12,
-     color: '#666',
-     marginTop: 2,
-   },
-   dateTimeInput: {
-     flex: 1,
-     flexDirection: 'row',
-     alignItems: 'center',
-     backgroundColor: '#FFFFFF',
-     borderWidth: 1,
-     borderColor: '#E0E0E0',
-     borderRadius: 12,
-     paddingHorizontal: 16,
-     paddingVertical: 14,
-     minHeight: 48,
-     shadowColor: '#000',
-     shadowOffset: { width: 0, height: 1 },
-     shadowOpacity: 0.05,
-     shadowRadius: 2,
-     elevation: 1,
-     justifyContent: 'space-between',
-     marginBottom: 15,
-   },
-   dateTimeText: {
-     fontSize: 16,
-     color: '#2D2D2D',
-     fontWeight: '500',
-     flex: 1,
-     marginLeft: 12,
-   },
-   
-   // Image styles
-   imageContainer: {
-     marginTop: 8,
-   },
-   imageDisplayContainer: {
-     marginTop: 20,
-     marginBottom: 24,
-     borderRadius: 16,
-     overflow: 'hidden',
-     shadowColor: '#000',
-     shadowOffset: {
-       width: 0,
-       height: 2,
-     },
-     shadowOpacity: 0.1,
-     shadowRadius: 4,
-     elevation: 4,
-   },
-   displayImage: {
-     width: '100%',
-     height: 250,
-     borderRadius: 16,
-   },
-  imagePlaceholder: {
-    borderWidth: 2,
-    borderColor: '#E5E5E5',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 40,
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
-    marginBottom: 16,
-  },
-  imagePlaceholderText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  selectedImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  imageButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-     cameraButton: {
-     flex: 1,
-     flexDirection: 'row',
-     alignItems: 'center',
-     justifyContent: 'center',
-     backgroundColor: '#F47CC6',
-     paddingVertical: 12,
-     paddingHorizontal: 16,
-     borderRadius: 8,
-     gap: 8,
-   },
-   galleryButton: {
-     flex: 1,
-     flexDirection: 'row',
-     alignItems: 'center',
-     justifyContent: 'center',
-     backgroundColor: '#2DB6FF',
-     paddingVertical: 12,
-     paddingHorizontal: 16,
-     borderRadius: 8,
-     gap: 8,
-   },
-  imageButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-     // Gradient save button
-   saveButtonGradient: {
-     backgroundColor: '#2DB6FF',
-     paddingVertical: 16,
-     paddingHorizontal: 24,
-     borderRadius: 12,
-     alignItems: 'center',
-     minWidth: 120,
-     // Note: For true gradient, you'd need a gradient library
-     // This is a solid blue that matches the design
-   },
-   saveButtonDisabled: {
-     backgroundColor: '#ccc',
-     opacity: 0.7,
-   },
-   saveButtonLoading: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     gap: 8,
-   },
-});

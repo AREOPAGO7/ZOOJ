@@ -7,6 +7,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
+import { CoupleGameStats, gameStatsService } from '../../lib/gameStatsService';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
@@ -28,6 +29,119 @@ import AppLayout from '../app-layout';
 const BRAND_BLUE = "#2DB6FF";
 const BRAND_PINK = "#F47CC6";
 const BRAND_GRAY = "#6C6C6C";
+
+// Game Statistics Component
+interface GameStatisticsSectionProps {
+  coupleId: string | null;
+  userNames: { user1: string; user2: string } | null;
+  colors: any;
+  isDarkMode: boolean;
+  t: (key: string) => string;
+}
+
+const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({ 
+  coupleId, 
+  userNames, 
+  colors, 
+  isDarkMode, 
+  t 
+}) => {
+  const [gameStats, setGameStats] = useState<CoupleGameStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadGameStats = async () => {
+      if (!coupleId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const stats = await gameStatsService.getCoupleGameStats(coupleId);
+        setGameStats(stats);
+      } catch (error) {
+        console.error('Error loading game stats:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadGameStats();
+  }, [coupleId]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.gameStatsSection, { backgroundColor: colors.surface }]}>
+        <View style={styles.gameStatsHeader}>
+          <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
+          <Text style={[styles.gameStatsTitle, { color: colors.text }]}>Statistiques de Jeux</Text>
+        </View>
+        <ActivityIndicator size="small" color={BRAND_PINK} />
+      </View>
+    );
+  }
+
+  if (!gameStats || gameStats.total_games_played === 0) {
+    return (
+      <View style={[styles.gameStatsSection, { backgroundColor: colors.surface }]}>
+        <View style={styles.gameStatsHeader}>
+          <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
+          <Text style={[styles.gameStatsTitle, { color: colors.text }]}>Statistiques de Jeux</Text>
+        </View>
+        <Text style={[styles.noGameStatsText, { color: colors.textSecondary }]}>
+          Aucune partie jouée pour le moment
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.gameStatsSection, { backgroundColor: colors.surface }]}>
+      <View style={styles.gameStatsHeader}>
+        <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
+        <Text style={[styles.gameStatsTitle, { color: colors.text }]}>Statistiques de Jeux</Text>
+      </View>
+      
+      <View style={styles.gameStatsGrid}>
+        <View style={styles.gameStatItem}>
+          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.total_games_played || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>Parties jouées</Text>
+        </View>
+        
+        <View style={styles.gameStatItem}>
+          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.chess_games || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>Échecs</Text>
+        </View>
+        
+        <View style={styles.gameStatItem}>
+          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.pong_games || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>Pong</Text>
+        </View>
+        
+        <View style={styles.gameStatItem}>
+          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.player1_wins || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>
+            Victoires {userNames?.user1 || 'Joueur 1'}
+          </Text>
+        </View>
+        
+        <View style={styles.gameStatItem}>
+          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.player2_wins || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>
+            Victoires {userNames?.user2 || 'Joueur 2'}
+          </Text>
+        </View>
+        
+        <View style={styles.gameStatItem}>
+          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.player1_win_rate || 0}%</Text>
+          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>
+            Taux de victoire {userNames?.user1 || 'J1'}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+};
 
 interface QuizResult {
   quiz_id: string;
@@ -580,9 +694,13 @@ export default function NotreCouplePage() {
           <Text className={`text-2xl font-bold ml-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('ourCouple.title')}</Text>
         </View>
         
-        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          className="flex-1 px-5" 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
           {/* Couple Overview Card */}
-          <View className={`rounded-xl p-6 mb-6 shadow-sm ${isDarkMode ? 'bg-dark-surface' : 'bg-white'}`}>
+          <View className={`rounded-xl p-4 mb-4 shadow-sm ${isDarkMode ? 'bg-dark-surface' : 'bg-white'}`}>
             {/* Profile Pictures and Hearts */}
             <View style={styles.profileSection}>
               <View style={styles.profilePicture}>
@@ -748,7 +866,7 @@ export default function NotreCouplePage() {
           </View>
 
           {/* Statistics Grid */}
-          <View style={styles.statsGrid}>
+          <View style={[styles.statsGrid, { marginBottom: 20 }]}>
             <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
               <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
               <Text style={[styles.statNumber, { color: colors.text }]}> 
@@ -916,6 +1034,15 @@ export default function NotreCouplePage() {
               )}
             </View>
           )}
+
+          {/* Game Statistics Section */}
+          <GameStatisticsSection 
+            coupleId={coupleId}
+            userNames={userNames}
+            colors={colors}
+            isDarkMode={isDarkMode}
+            t={t}
+          />
 
           {/* No Data State */}
           {quizResults.length === 0 && (
@@ -1106,7 +1233,7 @@ const styles = StyleSheet.create({
 
   // Anniversary Section Styles
   anniversarySection: {
-    marginBottom: 20,
+    marginBottom: 15,
   },
   anniversaryHeader: {
     flexDirection: 'row',
@@ -1153,14 +1280,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   statCard: {
     width: '48%',
     // backgroundColor is now dynamic from theme
     borderRadius: 15,
-    padding: 20,
-    marginBottom: 15,
+    padding: 16,
+    marginBottom: 12,
     alignItems: 'center',
     elevation: 2,
     shadowColor: '#000',
@@ -1183,19 +1310,19 @@ const styles = StyleSheet.create({
 
   // Compatibility Section Styles
   compatibilitySection: {
-    marginTop: 20,
+    marginTop: 10,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     // color is now dynamic from theme
-    marginBottom: 20,
+    marginBottom: 15,
     textAlign: 'center',
   },
   compatibilityCard: {
     borderRadius: 15,
     overflow: 'hidden',
-    marginBottom: 20,
+    marginBottom: 15,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1203,7 +1330,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   compatibilityGradient: {
-    padding: 20,
+    padding: 16,
     borderRadius: 15,
   },
   compatibilityTitle: {
@@ -1233,8 +1360,8 @@ const styles = StyleSheet.create({
   insightCard: {
     // backgroundColor is now dynamic from theme
     borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
+    padding: 16,
+    marginBottom: 15,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -1260,7 +1387,7 @@ const styles = StyleSheet.create({
   insightsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 5,
   },
   insightItem: {
     fontSize: 14,
@@ -1352,5 +1479,55 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     // color is now dynamic from theme
     marginTop: 15,
+  },
+  // Game Statistics Styles
+  gameStatsSection: {
+    borderRadius: 15,
+    padding: 16,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  gameStatsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  gameStatsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 10,
+  },
+  gameStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gameStatItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  gameStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  gameStatLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  noGameStatsText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

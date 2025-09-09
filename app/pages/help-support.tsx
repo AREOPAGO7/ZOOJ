@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import AppLayout from '../app-layout';
 
@@ -46,7 +46,11 @@ export default function HelpSupportPage() {
         </View>
 
         {/* Main Content */}
-        <View style={styles.mainContent}>
+        <ScrollView 
+          style={styles.mainContent}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Contact Us Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('helpSupport.contactUs')}</Text>
@@ -115,7 +119,7 @@ export default function HelpSupportPage() {
               </View>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
     </AppLayout>
   );
@@ -149,8 +153,11 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 40,
   },
   section: {
     marginBottom: 30,

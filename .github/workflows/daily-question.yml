@@ -1,48 +1,114 @@
 name: Daily Question
 
 on:
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch:
   schedule:
-    - cron: '0 8 * * *'  # Daily at 08:00 UTC
+    - cron: '0 8 * * *'
 
 jobs:
   insert-question:
-    runs-on: ubuntu-latest 
- 
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq curl
 
-      - name: Insert daily question
+      - name: Insert daily question and notification
         env:
-          SUPABASE_URL: 'https://xrgwsykeswhdtqwsyrbh.supabase.co'
-          SUPABASE_SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZ3dzeWtlc3doZHRxd3N5cmJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MTA5MjEsImV4cCI6MjA3MTE4NjkyMX0.jituJbUd0KWkElsn5-Laf96_GBjTjAPDa5kRFdO5xr0'
+          SUPABASE_URL: 'https://uvdwymweuwfrzdqmhsjh.supabase.co'
+          SUPABASE_SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2ZHd5bXdldXdmcnpkcW1oc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwOTMxNDQsImV4cCI6MjA3MjY2OTE0NH0.9upekTjCGOSNUH0QyoCHE_TH4k34IznM_f4iSs2Rgb8'
         run: |
           #!/usr/bin/env bash
-          echo "Selecting a random question..."
-
-          RANDOM_QUESTION_ID=$(curl -s \
+          echo "Fetching all question IDs..."
+          RESPONSE_JSON=$(curl -s \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            "$SUPABASE_URL/rest/v1/questions?select=id&order=random()&limit=1" \
-            | jq -r '.[0].id')
+            "$SUPABASE_URL/rest/v1/questions?select=id")
 
-          if [ -z "$RANDOM_QUESTION_ID" ] || [ "$RANDOM_QUESTION_ID" = "null" ]; then
-            echo "No question found!"
+          echo "Supabase response:"
+          echo "$RESPONSE_JSON"
+
+          # Parse only if valid JSON array
+          RANDOM_QUESTION_ID=$(echo "$RESPONSE_JSON" | jq -r 'if type=="array" then .[].id else empty end' | shuf -n1)
+
+          if [ -z "$RANDOM_QUESTION_ID" ]; then
+            echo "No question found or Supabase returned error!"
             exit 1
           fi
 
           echo "Random question selected: $RANDOM_QUESTION_ID"
 
-          RESPONSE=$(curl -s -X POST \
+          # Get question content for the notification
+          echo "Fetching question content..."
+          QUESTION_RESPONSE=$(curl -s \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            "$SUPABASE_URL/rest/v1/questions?id=eq.$RANDOM_QUESTION_ID&select=content")
+
+          echo "Question response:"
+          echo "$QUESTION_RESPONSE"
+
+          # Extract question content
+          QUESTION_CONTENT=$(echo "$QUESTION_RESPONSE" | jq -r 'if type=="array" and length>0 then .[0].content else empty end')
+
+          if [ -z "$QUESTION_CONTENT" ]; then
+            echo "No question content found!"
+            exit 1
+          fi
+
+          echo "Question content: $QUESTION_CONTENT"
+
+          # Insert daily question
+          echo "Inserting daily question..."
+          DAILY_QUESTION_RESPONSE=$(curl -s -X POST \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
             -d "{ \"question_id\": \"$RANDOM_QUESTION_ID\", \"couple_id\": null, \"scheduled_for\": \"$(date +%Y-%m-%d)\" }" \
-            "$SUPABASE_URL/rest/v1/daily_questions?return=representation")
+            "$SUPABASE_URL/rest/v1/daily_questions")
 
           echo "Inserted daily question response:"
-          echo "$RESPONSE"
+          echo "$DAILY_QUESTION_RESPONSE"
+
+          # Extract daily question ID from response
+          DAILY_QUESTION_ID=$(echo "$DAILY_QUESTION_RESPONSE" | jq -r 'if type=="array" and length>0 then .[0].id else empty end')
+
+          if [ -z "$DAILY_QUESTION_ID" ]; then
+            echo "Failed to get daily question ID from response!"
+            exit 1
+          fi
+
+          echo "Daily question ID: $DAILY_QUESTION_ID"
+
+          # Create global notification for all users
+          echo "Creating global notification..."
+          NOTIFICATION_RESPONSE=$(curl -s -X POST \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d "{ 
+              \"couple_id\": null, 
+              \"daily_question_id\": \"$DAILY_QUESTION_ID\", 
+              \"question_id\": \"$RANDOM_QUESTION_ID\", 
+              \"question_content\": \"$QUESTION_CONTENT\", 
+              \"scheduled_for\": \"$(date +%Y-%m-%d)\",
+              \"is_read\": false,
+              \"is_deleted\": false
+            }" \
+            "$SUPABASE_URL/rest/v1/daily_question_notifications")
+
+          echo "Created notification response:"
+          echo "$NOTIFICATION_RESPONSE"
+
+          if echo "$NOTIFICATION_RESPONSE" | jq -e '.error' > /dev/null; then
+            echo "Error creating notification:"
+            echo "$NOTIFICATION_RESPONSE" | jq '.error'
+            exit 1
+          fi
+
+          echo "✅ Daily question and notification created successfully!"

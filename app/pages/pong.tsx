@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
@@ -97,6 +98,7 @@ export default function PongPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { t } = useLanguage();
+  const { isDarkMode } = useDarkTheme();
   const router = useRouter();
 
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -445,8 +447,8 @@ export default function PongPage() {
   if (isLoading || !gameState) {
     return (
       <AppLayout>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chargement...</Text>
+        <View className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
+          <Text className={`text-lg ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>Chargement...</Text>
         </View>
       </AppLayout>
     );
@@ -454,22 +456,24 @@ export default function PongPage() {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
+        <View className={`flex-row items-center justify-between pt-5 pb-5 px-5 border-b ${isDarkMode ? 'border-dark-border' : 'border-gray-200'}`}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color="#000000" />
+            <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Pong</Text>
+          <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Pong</Text>
           <TouchableOpacity onPress={resetGame} style={styles.resetButton}>
-            <MaterialCommunityIcons name="refresh" size={24} color="#000000" />
+            <MaterialCommunityIcons name="refresh" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
         </View>
         
         <View style={styles.gameContainer}>
           {/* Game Status */}
           <View style={styles.gameInfo}>
-            <Text style={styles.statusText}>{gameState.gameStatus}</Text>
-            <Text style={styles.scoreText}>
+            <Text className={`text-lg font-semibold text-center mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
+              {gameState.gameStatus}
+            </Text>
+            <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
               Vous: {gameState.playerScore} - Bot: {gameState.botScore}
             </Text>
           </View>
@@ -543,38 +547,6 @@ export default function PongPage() {
             )}
           </View>
 
-          {/* Game Statistics */}
-          {gameStats && (
-            <View style={styles.statsContainer}>
-              <Text style={styles.statsTitle}>Statistiques du Couple</Text>
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.total_games_played || 0}</Text>
-                  <Text style={styles.statLabel}>Parties jouées</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.pong_games || 0}</Text>
-                  <Text style={styles.statLabel}>Pong</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.player1_wins || 0}</Text>
-                  <Text style={styles.statLabel}>Victoires Joueur 1</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.player2_wins || 0}</Text>
-                  <Text style={styles.statLabel}>Victoires Joueur 2</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.player1_win_rate || 0}%</Text>
-                  <Text style={styles.statLabel}>Taux de victoire J1</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.player2_win_rate || 0}%</Text>
-                  <Text style={styles.statLabel}>Taux de victoire J2</Text>
-                </View>
-              </View>
-            </View>
-          )}
           
           {/* Touch Controls */}
           {gameState.isPlaying && (
@@ -594,9 +566,9 @@ export default function PongPage() {
                 <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
               </TouchableOpacity>
               
-              <View style={styles.touchArea}>
-                <Text style={styles.touchAreaText}>Zone de contrôle</Text>
-                <Text style={styles.touchAreaSubtext}>Touchez ici pour déplacer</Text>
+              <View style={[styles.touchArea, { backgroundColor: isDarkMode ? '#374151' : '#F3F4F6' }]}>
+                <Text className={`text-xs font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Zone de contrôle</Text>
+                <Text className={`text-xs mt-0.5 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>Touchez ici pour déplacer</Text>
               </View>
               
               <TouchableOpacity 
@@ -618,7 +590,7 @@ export default function PongPage() {
           
           {/* Instructions */}
           <View style={styles.instructions}>
-            <Text style={styles.instructionText}>
+            <Text className={`text-sm text-center italic ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
               {gameState.isPlaying 
                 ? t('pong.instructions') 
                 : t('pong.instructions')
@@ -838,47 +810,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6B7280',
     marginTop: 2,
-  },
-  statsContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  statsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  statItem: {
-    width: '48%',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
   },
 });

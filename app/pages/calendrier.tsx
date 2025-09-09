@@ -2,11 +2,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  View
+    Alert,
+    Pressable,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { CreateItemModal } from '../../components/CreateItemModal';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
@@ -255,14 +256,23 @@ export default function CalendrierPage() {
   const openItemDetails = (item: any, type: CalendarItemType) => {
     setSelectedItem({ ...item, type });
     // Navigate to details page instead of opening modal
-    router.push({
-      pathname: '/pages/item-details',
-      params: { 
-        itemType: type,
-        itemId: item.id,
-        itemData: JSON.stringify(item)
-      }
-    });
+    if (type === 'todo') {
+      router.push({
+        pathname: '/pages/todo-details',
+        params: { 
+          todoId: item.id
+        }
+      });
+    } else {
+      router.push({
+        pathname: '/pages/item-details',
+        params: { 
+          itemType: type,
+          itemId: item.id,
+          itemData: JSON.stringify(item)
+        }
+      });
+    }
   };
 
   const updateItemDate = async (item: any, newDate: Date, newTime: Date) => {
@@ -671,7 +681,22 @@ export default function CalendrierPage() {
         {/* Active Todos */}
         {todos.filter(todo => todo.status !== 'termine').length > 0 && (
           <View style={calendarStyles.section}>
-            <Text className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.activeTasks')}</Text>
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.activeTasks')}</Text>
+              <TouchableOpacity
+                onPress={() => router.push('/pages/todo-list')}
+                className="flex-row items-center"
+              >
+                <Text className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  Voir tout
+                </Text>
+                <MaterialCommunityIcons 
+                  name="chevron-right" 
+                  size={16} 
+                  color={isDarkMode ? '#60A5FA' : '#2563EB'} 
+                />
+              </TouchableOpacity>
+            </View>
             {todos
               .filter(todo => todo.status !== 'termine')
               .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())

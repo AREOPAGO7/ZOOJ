@@ -255,14 +255,23 @@ export default function AllItemsPage() {
   };
 
   const handleItemPress = (item: ListItem) => {
-    router.push({
-      pathname: '/pages/item-details',
-      params: {
-        itemType: item.type,
-        itemId: item.id,
-        itemData: JSON.stringify(item.originalItem)
-      }
-    });
+    if (item.type === 'todo') {
+      router.push({
+        pathname: '/pages/todo-details',
+        params: {
+          todoId: item.id
+        }
+      });
+    } else {
+      router.push({
+        pathname: '/pages/item-details',
+        params: {
+          itemType: item.type,
+          itemId: item.id,
+          itemData: JSON.stringify(item.originalItem)
+        }
+      });
+    }
   };
 
   const renderItem = ({ item }: { item: ListItem }) => (

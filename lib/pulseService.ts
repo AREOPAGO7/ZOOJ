@@ -221,6 +221,25 @@ export class PulseService {
       return { data: null, error };
     }
   }
+
+  // Delete a specific pulse
+  async deletePulse(pulseId: string): Promise<{ data: any; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('pulses')
+        .delete()
+        .eq('id', pulseId);
+
+      if (error) {
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
 }
 
 // Export singleton instance

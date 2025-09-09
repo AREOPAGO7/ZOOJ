@@ -31,6 +31,9 @@
       "noQuestionAvailable": "Aucune question du jour disponible",
       "loadingQuestion": "Chargement de la question...",
       "loading": "Chargement...",
+      "games": "Jeux",
+      "playWithPartner": "Jouez avec votre partenaire",
+      "gamesDescription": "Amusez-vous ensemble avec nos jeux de couple",
       "pulseOptions": {
         "flower": "Fleur",
         "heart": "Cœur",
@@ -538,6 +541,9 @@
       "noQuestionAvailable": "No daily question available",
       "loadingQuestion": "Loading question...",
       "loading": "Loading...",
+      "games": "Games",
+      "playWithPartner": "Play with your partner",
+      "gamesDescription": "Have fun together with our couple games",
       "pulseOptions": {
         "flower": "Flower",
         "heart": "Heart",
@@ -1045,6 +1051,9 @@
       "noQuestionAvailable": "لا يوجد سؤال يومي متاح",
       "loadingQuestion": "جاري تحميل السؤال...",
       "loading": "جاري التحميل...",
+      "games": "الألعاب",
+      "playWithPartner": "العب مع شريكك",
+      "gamesDescription": "استمتعوا معاً بألعابنا للزوجين",
       "pulseOptions": {
         "flower": "زهرة",
         "heart": "قلب",

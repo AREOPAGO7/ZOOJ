@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
@@ -304,6 +305,7 @@ export default function EchecsPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { t } = useLanguage();
+  const { isDarkMode } = useDarkTheme();
   const router = useRouter();
 
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -540,8 +542,8 @@ export default function EchecsPage() {
   if (isLoading || !gameState) {
     return (
       <AppLayout>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chargement...</Text>
+        <View className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
+          <Text className={`text-lg ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>Chargement...</Text>
         </View>
       </AppLayout>
     );
@@ -549,29 +551,31 @@ export default function EchecsPage() {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
+        <View className={`flex-row items-center justify-between pt-5 pb-5 px-5 border-b ${isDarkMode ? 'border-dark-border' : 'border-gray-200'}`}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color="#000000" />
+            <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Échecs</Text>
+          <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Échecs</Text>
           <TouchableOpacity onPress={resetGame} style={styles.resetButton}>
-            <MaterialCommunityIcons name="refresh" size={24} color="#000000" />
+            <MaterialCommunityIcons name="refresh" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
         </View>
         
         <View style={styles.gameContainer}>
           {/* Game Status */}
           <View style={styles.gameInfo}>
-            <Text style={styles.statusText}>{gameState.gameStatus}</Text>
+            <Text className={`text-lg font-semibold text-center mb-4 ${isDarkMode ? 'text-white' : 'text-text'}`}>
+              {gameState.gameStatus}
+            </Text>
             <View style={styles.playerInfo}>
               <View style={styles.playerIndicator}>
-                <Text style={styles.playerPiece}>♔</Text>
-                <Text style={styles.playerText}>Vous</Text>
+                <Text style={[styles.playerPiece, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>♔</Text>
+                <Text className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>Vous</Text>
               </View>
               <View style={styles.playerIndicator}>
-                <Text style={styles.playerPiece}>♚</Text>
-                <Text style={styles.playerText}>Bot</Text>
+                <Text style={[styles.playerPiece, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>♚</Text>
+                <Text className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>Bot</Text>
               </View>
             </View>
           </View>
@@ -634,42 +638,10 @@ export default function EchecsPage() {
             )}
           </View>
 
-          {/* Game Statistics */}
-          {gameStats && (
-            <View style={styles.statsContainer}>
-              <Text style={styles.statsTitle}>Statistiques du Couple</Text>
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.total_games_played || 0}</Text>
-                  <Text style={styles.statLabel}>Parties jouées</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.chess_games || 0}</Text>
-                  <Text style={styles.statLabel}>Échecs</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.player1_wins || 0}</Text>
-                  <Text style={styles.statLabel}>Victoires Joueur 1</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.player2_wins || 0}</Text>
-                  <Text style={styles.statLabel}>Victoires Joueur 2</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.player1_win_rate || 0}%</Text>
-                  <Text style={styles.statLabel}>Taux de victoire J1</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{gameStats.player2_win_rate || 0}%</Text>
-                  <Text style={styles.statLabel}>Taux de victoire J2</Text>
-                </View>
-              </View>
-            </View>
-          )}
           
           {/* Instructions */}
           <View style={styles.instructions}>
-            <Text style={styles.instructionText}>
+            <Text className={`text-sm text-center italic ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>
               {gameState.gamePhase === 'playing' 
                 ? 'Touchez une pièce pour voir les mouvements possibles' 
                 : "Partie terminée"
@@ -758,8 +730,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   board: {
-    width: 320,
-    height: 320,
+    width: 360,
+    height: 360,
     borderWidth: 2,
     borderColor: '#8B4513',
   },
@@ -831,47 +803,5 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     fontStyle: 'italic',
-  },
-  statsContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 6,
-    padding: 8,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  statsTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  statItem: {
-    width: '48%',
-    alignItems: 'center',
-    marginBottom: 6,
-    paddingVertical: 4,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  statValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 8,
-    color: '#6B7280',
-    textAlign: 'center',
   },
 });

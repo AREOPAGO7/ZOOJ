@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
@@ -19,7 +20,7 @@ interface GameItem {
 
 
 
-const StarRating = ({ rating }: { rating: number }) => {
+const StarRating = ({ rating, isDarkMode }: { rating: number; isDarkMode: boolean }) => {
   const stars = [];
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 !== 0;
@@ -39,7 +40,7 @@ const StarRating = ({ rating }: { rating: number }) => {
   const emptyStars = 5 - Math.ceil(rating);
   for (let i = 0; i < emptyStars; i++) {
     stars.push(
-      <MaterialCommunityIcons key={`empty-${i}`} name="star-outline" size={16} color="#D1D5DB" />
+      <MaterialCommunityIcons key={`empty-${i}`} name="star-outline" size={16} color={isDarkMode ? '#6B7280' : '#D1D5DB'} />
     );
   }
 
@@ -50,6 +51,7 @@ export default function JeuxPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { t } = useLanguage();
+  const { isDarkMode } = useDarkTheme();
   const router = useRouter();
 
   // Don't render if not authenticated or profile not completed
@@ -69,15 +71,6 @@ export default function JeuxPage() {
       route: '/pages/echecs'
     },
     {
-      id: '2',
-      title: t('games.uno'),
-      players: t('games.players'),
-      rating: 4.5,
-      icon: 'cards',
-      color: '#F47CC6',
-      route: '/pages/uno'
-    },
-    {
       id: '3',
       title: t('games.pong'),
       players: t('games.players'),
@@ -85,15 +78,6 @@ export default function JeuxPage() {
       icon: 'gamepad-variant',
       color: '#F47CC6',
       route: '/pages/pong'
-    },
-    {
-      id: '4',
-      title: t('games.connect4'),
-      players: t('games.players'),
-      rating: 4.5,
-      icon: 'puzzle',
-      color: '#F47CC6',
-      route: '/pages/puissance-4'
     }
   ];
 
@@ -101,30 +85,26 @@ export default function JeuxPage() {
     router.push(route as any);
   };
 
-  const handleInvitePartner = () => {
-    // TODO: Implement invite functionality
-    console.log('Invite partner');
-  };
 
   return (
     <AppLayout>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color="#000000" />
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
+        <View className={`flex-row items-center justify-between pt-5 pb-5 px-5 border-b ${isDarkMode ? 'border-dark-border' : 'border-gray-200'}`}>
+          <TouchableOpacity onPress={() => router.back()} className="p-2">
+            <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('games.playWithPartner')}</Text>
-          <TouchableOpacity style={styles.searchButton}>
-            <MaterialCommunityIcons name="magnify" size={24} color="#000000" />
-          </TouchableOpacity>
+          <Text className={`text-lg font-semibold flex-1 text-center ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
+            {t('games.playWithPartner')}
+          </Text>
+          <View className="p-2" />
         </View>
         
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           <View style={styles.gamesGrid}>
             {games.map((game) => (
               <TouchableOpacity
                 key={game.id}
-                style={styles.gameCard}
+                style={[styles.gameCard, { backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF' }]}
                 onPress={() => handleGamePress(game.route)}
                 activeOpacity={0.7}
               >
@@ -132,9 +112,13 @@ export default function JeuxPage() {
                   <View style={[styles.gameIcon, { backgroundColor: game.color }]}>
                     <MaterialCommunityIcons name={game.icon} size={32} color="#FFFFFF" />
                   </View>
-                  <Text style={styles.gameTitle}>{game.title}</Text>
-                  <Text style={styles.gamePlayers}>{game.players}</Text>
-                  <StarRating rating={game.rating} />
+                  <Text style={[styles.gameTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
+                    {game.title}
+                  </Text>
+                  <Text style={[styles.gamePlayers, { color: isDarkMode ? '#9CA3AF' : '#6B7280' }]}>
+                    {game.players}
+                  </Text>
+                  <StarRating rating={game.rating} isDarkMode={isDarkMode} />
                   <TouchableOpacity style={[styles.playButton, { backgroundColor: game.color }]}>
                     <Text style={styles.playButtonText}>{t('common.play')}</Text>
                   </TouchableOpacity>
@@ -143,53 +127,12 @@ export default function JeuxPage() {
             ))}
           </View>
         </ScrollView>
-
-        <View style={styles.invitationBanner}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerTitle}>{t('games.invitePartner')}</Text>
-            <Text style={styles.bannerDescription}>{t('games.playTogether')}</Text>
-            <TouchableOpacity style={styles.inviteButton} onPress={handleInvitePartner}>
-              <MaterialCommunityIcons name="share" size={20} color="#F47CC6" />
-              <Text style={styles.inviteButtonText}>{t('common.invite')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </View>
     </AppLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-    textAlign: 'center',
-  },
-  searchButton: {
-    padding: 8,
-  },
-  scrollView: {
-    flex: 1,
-  },
   gamesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -199,10 +142,8 @@ const styles = StyleSheet.create({
   },
   gameCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 16,
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -226,13 +167,11 @@ const styles = StyleSheet.create({
   gameTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
     marginBottom: 4,
     textAlign: 'center',
   },
   gamePlayers: {
     fontSize: 14,
-    color: '#6B7280',
     marginBottom: 8,
   },
   starContainer: {
@@ -251,42 +190,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  invitationBanner: {
-    backgroundColor: '#F47CC6',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    marginTop: 'auto',
-  },
-  bannerContent: {
-    alignItems: 'center',
-  },
-  bannerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  bannerDescription: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  inviteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  inviteButtonText: {
-    color: '#F47CC6',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
 });
+
