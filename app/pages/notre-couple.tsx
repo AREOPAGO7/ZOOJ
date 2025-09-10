@@ -71,10 +71,10 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
 
   if (isLoading) {
     return (
-      <View style={[styles.gameStatsSection, { backgroundColor: colors.surface }]}>
+      <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
         <View style={styles.gameStatsHeader}>
           <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
-          <Text style={[styles.gameStatsTitle, { color: colors.text }]}>Statistiques de Jeux</Text>
+          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Statistiques de Jeux</Text>
         </View>
         <ActivityIndicator size="small" color={BRAND_PINK} />
       </View>
@@ -83,12 +83,12 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
 
   if (!gameStats || gameStats.total_games_played === 0) {
     return (
-      <View style={[styles.gameStatsSection, { backgroundColor: colors.surface }]}>
+      <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
         <View style={styles.gameStatsHeader}>
           <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
-          <Text style={[styles.gameStatsTitle, { color: colors.text }]}>Statistiques de Jeux</Text>
+          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Statistiques de Jeux</Text>
         </View>
-        <Text style={[styles.noGameStatsText, { color: colors.textSecondary }]}>
+        <Text style={[styles.noGameStatsText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
           Aucune partie jouée pour le moment
         </Text>
       </View>
@@ -96,45 +96,63 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
   }
 
   return (
-    <View style={[styles.gameStatsSection, { backgroundColor: colors.surface }]}>
+    <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
       <View style={styles.gameStatsHeader}>
         <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
-        <Text style={[styles.gameStatsTitle, { color: colors.text }]}>Statistiques de Jeux</Text>
+        <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Statistiques de Jeux</Text>
       </View>
       
       <View style={styles.gameStatsGrid}>
-        <View style={styles.gameStatItem}>
-          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.total_games_played || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>Parties jouées</Text>
+        <View style={[styles.gameStatItem, { 
+          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+        }]}>
+          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.total_games_played || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Parties jouées</Text>
         </View>
         
-        <View style={styles.gameStatItem}>
-          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.chess_games || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>Échecs</Text>
+        <View style={[styles.gameStatItem, { 
+          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+        }]}>
+          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.chess_games || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Échecs</Text>
         </View>
         
-        <View style={styles.gameStatItem}>
-          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.pong_games || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>Pong</Text>
+        <View style={[styles.gameStatItem, { 
+          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+        }]}>
+          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.pong_games || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Pong</Text>
         </View>
         
-        <View style={styles.gameStatItem}>
-          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.player1_wins || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>
+        <View style={[styles.gameStatItem, { 
+          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+        }]}>
+          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player1_wins || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
             Victoires {userNames?.user1 || 'Joueur 1'}
           </Text>
         </View>
         
-        <View style={styles.gameStatItem}>
-          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.player2_wins || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>
+        <View style={[styles.gameStatItem, { 
+          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+        }]}>
+          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player2_wins || 0}</Text>
+          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
             Victoires {userNames?.user2 || 'Joueur 2'}
           </Text>
         </View>
         
-        <View style={styles.gameStatItem}>
-          <Text style={[styles.gameStatValue, { color: colors.text }]}>{gameStats.player1_win_rate || 0}%</Text>
-          <Text style={[styles.gameStatLabel, { color: colors.textSecondary }]}>
+        <View style={[styles.gameStatItem, { 
+          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+        }]}>
+          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player1_win_rate || 0}%</Text>
+          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
             Taux de victoire {userNames?.user1 || 'J1'}
           </Text>
         </View>
@@ -741,13 +759,13 @@ export default function NotreCouplePage() {
             </Pressable>
 
             {/* Names */}
-            <Text style={[styles.coupleNames, { color: colors.text }]}> 
+            <Text style={[styles.coupleNames, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}> 
               {userNames ? `${userNames.user1} & ${userNames.user2}` : 'Lara & Med'}
             </Text>
 
             {/* Relationship Status */}
             <View style={styles.statusContainer}>
-              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Statut</Text>
+              <Text style={[styles.statusLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Statut</Text>
               <View style={styles.statusPillsRow}>
                 {(
                   [
@@ -761,12 +779,19 @@ export default function NotreCouplePage() {
                     onPress={() => !isUpdatingStatus && updateCoupleStatus(option.key)}
                     style={[
                       styles.statusPill,
-                      { borderColor: colors.border, backgroundColor: colors.surface },
+                      { 
+                        borderColor: isDarkMode ? '#333333' : colors.border, 
+                        backgroundColor: isDarkMode ? '#000000' : colors.surface 
+                      },
                       coupleStatus === option.key && styles.statusPillActive,
                       isUpdatingStatus && { opacity: 0.6 },
                     ]}
                   >
-                    <Text style={[styles.statusPillText, coupleStatus === option.key && styles.statusPillTextActive]}>
+                    <Text style={[
+                      styles.statusPillText, 
+                      { color: isDarkMode ? '#FFFFFF' : '#000000' },
+                      coupleStatus === option.key && styles.statusPillTextActive
+                    ]}>
                       {option.label}
                     </Text>
                   </Pressable>
@@ -775,7 +800,7 @@ export default function NotreCouplePage() {
             </View>
 
             {/* Relationship Duration */}
-            <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>{t('ourCouple.togetherSince')}</Text>
+            <Text style={[styles.durationLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.togetherSince')}</Text>
             <View style={styles.durationContainer}>
               {(() => {
                 if (anniversaryDate) {
@@ -792,17 +817,17 @@ export default function NotreCouplePage() {
                       {years > 0 && (
                         <>
                           <Text style={styles.durationNumber}>{years}</Text>
-                          <Text style={[styles.durationText, { color: colors.text }]}>{years > 1 ? t('ourCouple.yearsPlural') : t('ourCouple.years')}</Text>
+                          <Text style={[styles.durationText, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{years > 1 ? t('ourCouple.yearsPlural') : t('ourCouple.years')}</Text>
                         </>
                       )}
                       {months > 0 && (
                         <>
                           <Text style={styles.durationNumber}>{months}</Text>
-                          <Text style={[styles.durationText, { color: colors.text }]}>{t('ourCouple.months')}</Text>
+                          <Text style={[styles.durationText, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.months')}</Text>
                         </>
                       )}
                       <Text style={styles.durationNumber}>{days}</Text>
-                      <Text style={[styles.durationText, { color: colors.text }]}>{days > 1 ? t('ourCouple.daysPlural') : t('ourCouple.days')}</Text>
+                      <Text style={[styles.durationText, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{days > 1 ? t('ourCouple.daysPlural') : t('ourCouple.days')}</Text>
                     </>
                   );
                 }
@@ -823,8 +848,8 @@ export default function NotreCouplePage() {
                     {personalInsights ? `${personalInsights.averageScore}%` : '0%'}
                   </Text>
                 </View>
-                <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user1 || 'Lara'}</Text>
-                <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}> 
+                <Text style={[styles.progressName, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{userNames?.user1 || 'Lara'}</Text>
+                <Text style={[styles.progressSubtext, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}> 
                   {t('ourCouple.compatibilityBasedOn')} {user1QuizCount} {user1QuizCount > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
                 </Text>
               </View>
@@ -835,8 +860,8 @@ export default function NotreCouplePage() {
                     {user2CompatibilityScore}%
                   </Text>
                 </View>
-                <Text style={[styles.progressName, { color: colors.text }]}>{userNames?.user2 || 'Med'}</Text>
-                <Text style={[styles.progressSubtext, { color: colors.textSecondary }]}> 
+                <Text style={[styles.progressName, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{userNames?.user2 || 'Med'}</Text>
+                <Text style={[styles.progressSubtext, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}> 
                   {t('ourCouple.compatibilityBasedOn')} {user2QuizCount} {user2QuizCount > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
                 </Text>
               </View>
@@ -847,16 +872,19 @@ export default function NotreCouplePage() {
           <View style={styles.anniversarySection}>
             <View style={styles.anniversaryHeader}>
               <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
-              <Text style={[styles.anniversaryTitle, { color: colors.text }]}>{t('ourCouple.anniversaryTitle')}</Text>
+              <Text style={[styles.anniversaryTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.anniversaryTitle')}</Text>
             </View>
-            <View style={[styles.dateInputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.dateInputContainer, { 
+              backgroundColor: isDarkMode ? '#000000' : colors.surface, 
+              borderColor: isDarkMode ? '#333333' : colors.border 
+            }]}>
               <MaterialCommunityIcons name="calendar" size={20} color={BRAND_GRAY} />
               <TextInput
-                style={[styles.dateInput, { color: colors.text }]}
+                style={[styles.dateInput, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}
                 value={anniversaryDate}
                 onChangeText={setAnniversaryDate}
                 placeholder="01/01/1900"
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={isDarkMode ? '#CCCCCC' : '#333333'}
               />
               <MaterialCommunityIcons name="pencil" size={20} color={BRAND_BLUE} />
             </View>
@@ -867,39 +895,39 @@ export default function NotreCouplePage() {
 
           {/* Statistics Grid */}
           <View style={[styles.statsGrid, { marginBottom: 20 }]}>
-            <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
+            <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
               <MaterialCommunityIcons name="clock-outline" size={24} color={BRAND_PINK} />
-              <Text style={[styles.statNumber, { color: colors.text }]}> 
+              <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}> 
                 {answeredQuestionsCount}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.questionsAnswered')}</Text>
+              <Text style={[styles.statLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.questionsAnswered')}</Text>
             </View>
 
-            <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
+            <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
               <MaterialCommunityIcons name="heart-outline" size={24} color={BRAND_PINK} />
-              <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.pulsesSent')}</Text>
+              <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>0</Text>
+              <Text style={[styles.statLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.pulsesSent')}</Text>
             </View>
 
-            <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
+            <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
               <MaterialCommunityIcons name="trophy-outline" size={24} color={BRAND_PINK} />
-              <Text style={[styles.statNumber, { color: colors.text }]}> 
+              <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}> 
                 {quizResults.length}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.quizzesCompleted')}</Text>
+              <Text style={[styles.statLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.quizzesCompleted')}</Text>
             </View>
 
-            <View style={[styles.statCard, { backgroundColor: colors.surface }]}> 
+            <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
               <MaterialCommunityIcons name="image-outline" size={24} color={BRAND_PINK} />
-              <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('ourCouple.sharedMemories')}</Text>
+              <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>0</Text>
+              <Text style={[styles.statLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.sharedMemories')}</Text>
             </View>
           </View>
 
           {/* Existing Compatibility Dashboard - Moved to Bottom */}
           {coupleInsights && (
             <View style={styles.compatibilitySection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('ourCouple.compatibilityDashboard')}</Text>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.compatibilityDashboard')}</Text>
               
               {/* Overall Compatibility Score */}
               <View style={styles.compatibilityCard}>
@@ -921,79 +949,79 @@ export default function NotreCouplePage() {
               </View>
 
               {/* Communication Style */}
-              <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+              <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
                 <View style={styles.cardHeader}> 
                   <MaterialCommunityIcons name="message-text" size={24} color={BRAND_BLUE} />
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.communicationStyle')}</Text>
+                  <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.communicationStyle')}</Text>
                 </View>
-                <Text style={[styles.insightText, { color: colors.textSecondary }]}>{coupleInsights.communicationStyle}</Text>
+                <Text style={[styles.insightText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{coupleInsights.communicationStyle}</Text>
               </View>
 
               {/* Strengths and Growth Areas */}
               <View style={styles.insightsGrid}>
                 {/* Strengths */}
-                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
                   <View style={styles.cardHeader}> 
                     <MaterialCommunityIcons name="star" size={24} color="#4CAF50" />
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.strengths')}</Text>
+                    <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.strengths')}</Text>
                   </View>
                   {coupleInsights.strongestAreas.length > 0 ? (
                     coupleInsights.strongestAreas.map((area, index) => (
-                      <Text key={index} style={[styles.insightItem, { color: colors.textSecondary }]}>• {area}</Text>
+                      <Text key={index} style={[styles.insightItem, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>• {area}</Text>
                     ))
                   ) : (
-                    <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('ourCouple.continueExploring')}</Text>
+                    <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.continueExploring')}</Text>
                   )}
                 </View>
 
                 {/* Growth Areas */}
-                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
                   <View style={styles.cardHeader}> 
                     <MaterialCommunityIcons name="trending-up" size={24} color="#FF9800" />
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.growthAreas')}</Text>
+                    <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.growthAreas')}</Text>
                   </View>
                   {coupleInsights.growthAreas.length > 0 ? (
                     coupleInsights.growthAreas.map((area, index) => (
-                      <Text key={index} style={[styles.insightItem, { color: colors.textSecondary }]}>• {area}</Text>
+                      <Text key={index} style={[styles.insightItem, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>• {area}</Text>
                     ))
                   ) : (
-                    <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('ourCouple.excellentWork')}</Text>
+                    <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.excellentWork')}</Text>
                   )}
                 </View>
               </View>
 
               {/* Personal Insights */}
               {personalInsights && (
-                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
                   <View style={styles.cardHeader}> 
                     <MaterialCommunityIcons name="account" size={24} color={BRAND_PINK} />
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.personalInsights')}</Text>
+                    <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.personalInsights')}</Text>
                   </View>
                   
                   <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>{t('ourCouple.responsePatterns')}</Text>
-                    <Text style={[styles.insightValue, { color: colors.text }]}>{personalInsights.responsePatterns}</Text>
+                    <Text style={[styles.insightLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.responsePatterns')}</Text>
+                    <Text style={[styles.insightValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{personalInsights.responsePatterns}</Text>
                   </View>
 
                   <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>{t('ourCouple.favoriteTopics')}</Text>
+                    <Text style={[styles.insightLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.favoriteTopics')}</Text>
                     {personalInsights.favoriteTopics.length > 0 ? (
                       personalInsights.favoriteTopics.map((topic, index) => (
-                        <Text key={index} style={[styles.insightValue, { color: colors.text }]}>• {topic}</Text>
+                        <Text key={index} style={[styles.insightValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>• {topic}</Text>
                       ))
                     ) : (
-                      <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('ourCouple.continueExploringPersonal')}</Text>
+                      <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.continueExploringPersonal')}</Text>
                     )}
                   </View>
 
                   <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: colors.textSecondary }]}>{t('ourCouple.growthZones')}</Text>
+                    <Text style={[styles.insightLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.growthZones')}</Text>
                     {personalInsights.growthAreas.length > 0 ? (
                       personalInsights.growthAreas.map((area, index) => (
-                        <Text key={index} style={[styles.insightValue, { color: colors.text }]}>• {area}</Text>
+                        <Text key={index} style={[styles.insightValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>• {area}</Text>
                       ))
                     ) : (
-                      <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('ourCouple.onRightTrack')}</Text>
+                      <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.onRightTrack')}</Text>
                     )}
                   </View>
                 </View>
@@ -1001,16 +1029,16 @@ export default function NotreCouplePage() {
 
               {/* Detailed Quiz Results */}
               {quizResults.length > 0 && (
-                <View style={[styles.insightCard, { backgroundColor: colors.surface }]}> 
+                <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
                   <View style={styles.cardHeader}> 
                     <MaterialCommunityIcons name="chart-line" size={24} color={BRAND_BLUE} />
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ourCouple.detailedResults')}</Text>
+                    <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.detailedResults')}</Text>
                   </View>
                   
                   {quizResults.map((result, index) => (
                     <View key={index} style={[styles.quizResultItem, { backgroundColor: colors.border }]}> 
                       <View style={styles.quizResultHeader}>
-                        <Text style={[styles.quizTitle, { color: colors.text }]}>{result.quiz_title}</Text>
+                        <Text style={[styles.quizTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{result.quiz_title}</Text>
                         <View style={styles.quizScore}>
                           <Text style={[styles.quizScoreText, { color: getScoreColor(result.score) }]}> 
                             {result.score}%
@@ -1020,12 +1048,12 @@ export default function NotreCouplePage() {
                       
                       <View style={styles.quizDetails}> 
                         <View style={styles.quizDetail}>
-                          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{userNames?.user1 || t('ourCouple.you')}:</Text>
-                          <Text style={[styles.detailValue, { color: colors.text }]}>{result.user1_percent}%</Text>
+                          <Text style={[styles.detailLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{userNames?.user1 || t('ourCouple.you')}:</Text>
+                          <Text style={[styles.detailValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{result.user1_percent}%</Text>
                         </View>
                         <View style={styles.quizDetail}>
                           <Text style={styles.detailLabel}>{userNames?.user2 || t('ourCouple.partner')}:</Text>
-                          <Text style={[styles.detailValue, { color: colors.text }]}>{result.user2_percent}%</Text>
+                          <Text style={[styles.detailValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{result.user2_percent}%</Text>
                         </View>
                       </View>
                     </View>
@@ -1046,10 +1074,10 @@ export default function NotreCouplePage() {
 
           {/* No Data State */}
           {quizResults.length === 0 && (
-            <View style={[styles.noDataCard, { backgroundColor: colors.surface }]}> 
+            <View style={[styles.noDataCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
               <MaterialCommunityIcons name="heart-outline" size={48} color={BRAND_GRAY} />
-              <Text style={[styles.noDataTitle, { color: colors.text }]}>{t('ourCouple.noQuizCompleted')}</Text>
-              <Text style={[styles.noDataText, { color: colors.textSecondary }]}> 
+              <Text style={[styles.noDataTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.noQuizCompleted')}</Text>
+              <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}> 
                 {t('ourCouple.noQuizMessage')}
               </Text>
             </View>
@@ -1169,7 +1197,6 @@ const styles = StyleSheet.create({
     borderColor: '#FFC1DD',
   },
   statusPillText: {
-    color: '#6B7280',
     fontWeight: '600',
   },
   statusPillTextActive: {
@@ -1511,10 +1538,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     paddingVertical: 8,
-    backgroundColor: '#F9FAFB',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   gameStatValue: {
     fontSize: 18,
