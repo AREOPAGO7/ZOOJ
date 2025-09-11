@@ -7,7 +7,7 @@ import { LinearGradient } from "expo-linear-gradient"
 import * as Linking from 'expo-linking'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from "react"
-import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native"
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, SafeAreaView, ScrollView, Share, Text, TextInput, View } from "react-native"
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from "react-native-gesture-handler"
 import { useTheme } from "../../contexts/ThemeContext"
 import { useAuth } from "../../lib/auth"
@@ -1254,8 +1254,25 @@ export default function App() {
                       {/* Action Buttons */}
                       <View style={{ marginTop: 40, width: "100%", maxWidth: 300, gap: 16 }}>
                         <Pressable
-                          onPress={() => {
-                            Alert.alert("Code d'invitation", `Votre code: ${myInviteCode}\n\nPartagez ce code avec votre partenaire.`)
+                          onPress={async () => {
+                            try {
+                              const shareMessage = `🔗 Code d'invitation ZOOJ\n\nMon code: ${myInviteCode}\n\nRejoignez-moi sur ZOOJ pour partager nos moments précieux ! 💕\n\nTéléchargez l'app et utilisez ce code pour nous connecter.`
+                              
+                              const result = await Share.share({
+                                message: shareMessage,
+                                title: 'Code d\'invitation ZOOJ',
+                                url: Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'
+                              })
+                              
+                              if (result.action === Share.sharedAction) {
+                                console.log('Code shared successfully')
+                              } else if (result.action === Share.dismissedAction) {
+                                console.log('Share dismissed')
+                              }
+                            } catch (error) {
+                              console.error('Error sharing code:', error)
+                              Alert.alert("Erreur", "Impossible de partager le code")
+                            }
                           }}
                           style={{ borderRadius: 12, overflow: "hidden" }}
                         >

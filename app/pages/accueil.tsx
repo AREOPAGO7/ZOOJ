@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { CoupleMoodDisplay } from '../../components/CoupleMoodDisplay';
 import { MoodSelector } from '../../components/MoodSelector';
 import { ReceivedPulse } from '../../components/ReceivedPulse';
@@ -67,7 +67,7 @@ export default function AccueilPage() {
       if (error) throw error;
       setQuizThemes(data || []);
     } catch (error) {
-      console.error('Error loading quiz themes:', error);
+      console.log('Error loading quiz themes:', error);
     } finally {
       setIsLoadingThemes(false);
     }
@@ -97,7 +97,7 @@ export default function AccueilPage() {
         .single();
       
       if (coupleError) {
-        console.error('Error finding couple:', coupleError);
+        console.log('Error finding couple:', coupleError);
         return;
       }
       
@@ -112,7 +112,7 @@ export default function AccueilPage() {
       const { data: question, error } = await questionService.getTodayQuestion(couple.id);
       
       if (error) {
-        console.error('Error fetching today question:', error);
+        console.log('Error fetching today question:', error);
         return;
       }
 
@@ -133,7 +133,7 @@ export default function AccueilPage() {
           .limit(1);
         
         if (recentError) {
-          console.error('Error fetching recent question:', recentError);
+          console.log('Error fetching recent question:', recentError);
         } else if (recentQuestions && recentQuestions.length > 0) {
           console.log('Most recent question:', recentQuestions[0]);
           setTodayQuestion(recentQuestions[0]);
@@ -145,7 +145,7 @@ export default function AccueilPage() {
       
       setTodayQuestion(question);
     } catch (error) {
-      console.error('Error fetching today question:', error);
+      console.log('Error fetching today question:', error);
     } finally {
       setIsLoadingQuestion(false);
     }
@@ -166,7 +166,7 @@ export default function AccueilPage() {
         .single();
       
       if (coupleError) {
-        console.error('Error finding couple:', coupleError);
+        console.log('Error finding couple:', coupleError);
         setIsLoading(false);
         return;
       }
@@ -186,7 +186,7 @@ export default function AccueilPage() {
         .eq('couple_id', couple.id);
 
       if (error) {
-        console.error('Error fetching quiz results:', error);
+        console.log('Error fetching quiz results:', error);
         throw error;
       }
 
@@ -205,7 +205,7 @@ export default function AccueilPage() {
         setQuizResultsCount(0);
       }
     } catch (error) {
-      console.error('Error fetching quiz results count:', error);
+      console.log('Error fetching quiz results count:', error);
       setQuizResultsCount(0);
     } finally {
       setIsLoading(false);
@@ -243,7 +243,7 @@ export default function AccueilPage() {
           setInviteCode(profile?.invite_code ?? null);
         }
       } catch (err) {
-        console.error('Error checking couple/invite code:', err);
+        console.log('Error checking couple/invite code:', err);
         setIsInCouple(false);
       } finally {
         setIsCheckingCouple(false);
@@ -273,7 +273,7 @@ export default function AccueilPage() {
     try {
       const { data, error } = await moodService.getCoupleMoods(user.id);
       if (error) {
-        console.error('Error fetching couple moods:', error);
+        console.log('Error fetching couple moods:', error);
         return;
       }
       
@@ -283,7 +283,7 @@ export default function AccueilPage() {
       const userMood = data?.find(mood => mood.user_id === user.id);
       setCurrentUserMood(userMood?.mood_type);
     } catch (error) {
-      console.error('Error fetching couple moods:', error);
+      console.log('Error fetching couple moods:', error);
     } finally {
       setIsLoadingMoods(false);
     }
@@ -304,7 +304,7 @@ export default function AccueilPage() {
     try {
       const { data, error } = await moodService.setUserMood(user.id, moodType);
       if (error) {
-        console.error('Error setting user mood:', error);
+        console.log('Error setting user mood:', error);
         return;
       }
       
@@ -314,7 +314,7 @@ export default function AccueilPage() {
       // Provide haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
-      console.error('Error setting user mood:', error);
+      console.log('Error setting user mood:', error);
     }
   };
 
@@ -326,7 +326,7 @@ export default function AccueilPage() {
     try {
       const { data, error } = await pulseService.sendPulse(user.id, emoji);
       if (error) {
-        console.error('Error sending pulse:', error);
+        console.log('Error sending pulse:', error);
         return;
       }
       
@@ -338,7 +338,7 @@ export default function AccueilPage() {
       // Force refresh of received pulses
       setPulseRefreshKey(prev => prev + 1);
     } catch (error) {
-      console.error('Error sending pulse:', error);
+      console.log('Error sending pulse:', error);
     } finally {
       setIsSendingPulse(false);
     }
@@ -457,12 +457,39 @@ export default function AccueilPage() {
               <View className={`${isDarkMode ? 'bg-dark-border' : 'bg-gray-50'} rounded-2xl px-4 py-3 mr-3`}>
                 <Text className={`text-lg font-mono ${isDarkMode ? 'text-dark-text' : 'text-text'} tracking-wider`}>{inviteCode ?? '—'}</Text>
               </View>
-              <TouchableOpacity className="bg-pink-200 dark:bg-pink-600 rounded-xl px-4 py-2" onPress={handleCopy} disabled={!inviteCode}>
+              <TouchableOpacity className="bg-pink-400 dark:bg-pink-600 rounded-xl px-4 py-2" onPress={handleCopy} disabled={!inviteCode}>
                 <Text className="text-white font-semibold">Copier</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity className="bg-blue-200 dark:bg-blue-600 rounded-xl px-6 py-3 w-full" onPress={handleCopy} disabled={!inviteCode}>
-              <Text className="text-white font-semibold text-center">Copier le code</Text>
+            <TouchableOpacity 
+              className="bg-blue-400 dark:bg-blue-900 rounded-xl px-6 py-3 w-full" 
+              onPress={async () => {
+                if (!inviteCode) return;
+                
+                try {
+                  const shareMessage = `🔗 Code d'invitation ZOOJ\n\nMon code: ${inviteCode}\n\nRejoignez-moi sur ZOOJ pour partager nos moments précieux ! 💕\n\nTéléchargez l'app et utilisez ce code pour nous connecter.`
+                  
+                  const result = await Share.share({
+                    message: shareMessage,
+                    title: 'Code d\'invitation ZOOJ',
+                    url: Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'
+                  })
+                  
+                  if (result.action === Share.sharedAction) {
+                    console.log('Code shared successfully')
+                  } else if (result.action === Share.dismissedAction) {
+                    console.log('Share dismissed')
+                  }
+                } catch (error) {
+                  console.log('Error sharing code:', error)
+                  // Fallback to copy if share fails
+                  await Clipboard.setStringAsync(inviteCode);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }} 
+              disabled={!inviteCode}
+            >
+              <Text className="text-white font-semibold text-center">Partager le code</Text>
             </TouchableOpacity>
           </View>
 
@@ -484,12 +511,12 @@ export default function AccueilPage() {
                   autoCapitalize="characters"
                   className={`flex-1 ${isDarkMode ? 'bg-dark-border text-dark-text' : 'bg-gray-50 text-text'} rounded-xl px-4 py-3`}
                 />
-                <TouchableOpacity className="ml-3 bg-pink-200 dark:bg-pink-600 rounded-xl px-4 py-3" onPress={handlePaste}>
-                  <Text className="text-pink-800 dark:text-pink-200 font-semibold">Coller</Text>
+                <TouchableOpacity className="ml-3 bg-pink-400 dark:bg-pink-600 rounded-xl px-4 py-3" onPress={handlePaste}>
+                  <Text className="text-white dark:text-white font-semibold">Coller</Text>
                 </TouchableOpacity>
               </View>
               {joinError ? <Text className="text-red-500 dark:text-red-400 mb-2">{joinError}</Text> : null}
-              <TouchableOpacity className="bg-blue-200 dark:bg-blue-600 rounded-xl px-6 py-3" onPress={handleJoin} disabled={isJoining || !joinCode.trim()}>
+              <TouchableOpacity className="bg-blue-400 dark:bg-blue-600 rounded-xl px-6 py-3" onPress={handleJoin} disabled={isJoining || !joinCode.trim()}>
                 <Text className="text-white font-semibold text-center">{isJoining ? 'Connexion…' : 'Rejoindre le couple'}</Text>
               </TouchableOpacity>
             </View>
@@ -659,9 +686,6 @@ export default function AccueilPage() {
               <>
                 <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4 text-center leading-6`}>
                   "{t('home.noQuestionAvailable')}"
-                </Text>
-                <Text className="text-xs text-red-500 text-center mb-4">
-                  Debug: Vérifiez la console pour plus d'informations
                 </Text>
                 <Pressable 
                   className="bg-primary rounded-xl py-3"

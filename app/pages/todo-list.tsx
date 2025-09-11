@@ -2,14 +2,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -283,11 +283,17 @@ export default function TodoListPage() {
                 <Pressable
                   key={todo.id}
                   onPress={() => handleTodoPress(todo)}
-                  className={`p-4 rounded-lg border ${
-                    isDarkMode 
-                      ? 'bg-dark-card border-dark-border' 
-                      : 'bg-white border-gray-200'
-                  }`}
+                  style={{
+                    padding: 16,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    backgroundColor: todo.status === 'termine' 
+                      ? (isDarkMode ? '#1A1A1A' : '#FFFFFF')  // Dark background for completed tasks in dark mode
+                      : (isDarkMode ? '#1A1A1A' : '#FFFFFF'), // Dark background for other tasks in dark mode
+                    borderColor: todo.status === 'termine' 
+                      ? (isDarkMode ? '#333333' : '#E5E7EB')  // Dark border for completed tasks
+                      : (isDarkMode ? '#333333' : '#E5E7EB')  // Dark border for other tasks
+                  }}
                 >
                   <View className="flex-row items-start justify-between">
                     <View className="flex-1">
@@ -295,15 +301,31 @@ export default function TodoListPage() {
                         <MaterialCommunityIcons 
                           name={getStatusIcon(todo.status)} 
                           size={20} 
-                          color={isDarkMode ? '#fff' : '#000'} 
+                          color={todo.status === 'termine' 
+                            ? (isDarkMode ? '#FFFFFF' : '#000000')  // White icon for completed tasks in dark mode
+                            : (isDarkMode ? '#FFFFFF' : '#000000')  // White icon for other tasks in dark mode
+                          } 
                         />
-                        <Text className={`ml-2 text-base font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <Text style={{
+                          marginLeft: 8,
+                          fontSize: 16,
+                          fontWeight: '500',
+                          color: todo.status === 'termine' 
+                            ? (isDarkMode ? '#FFFFFF' : '#000000')  // White text for completed tasks in dark mode
+                            : (isDarkMode ? '#FFFFFF' : '#000000')  // White text for other tasks in dark mode
+                        }}>
                           {todo.title}
                         </Text>
                       </View>
                       
                       {todo.description && (
-                        <Text className={`text-sm mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} numberOfLines={2}>
+                        <Text style={{
+                          fontSize: 14,
+                          marginBottom: 8,
+                          color: todo.status === 'termine' 
+                            ? (isDarkMode ? '#CCCCCC' : '#666666')  // Light gray text for completed tasks in dark mode
+                            : (isDarkMode ? '#CCCCCC' : '#666666')  // Light gray text for other tasks in dark mode
+                        }} numberOfLines={2}>
                           {todo.description}
                         </Text>
                       )}
@@ -313,9 +335,18 @@ export default function TodoListPage() {
                           <MaterialCommunityIcons 
                             name={getPriorityIcon(todo.priority)} 
                             size={16} 
-                            color={isDarkMode ? '#fff' : '#000'} 
+                            color={todo.status === 'termine' 
+                              ? (isDarkMode ? '#FFFFFF' : '#000000')  // White icon for completed tasks in dark mode
+                              : (isDarkMode ? '#FFFFFF' : '#000000')  // White icon for other tasks in dark mode
+                            } 
                           />
-                          <Text className={`ml-1 text-xs ${getPriorityColor(todo.priority)}`}>
+                          <Text style={{
+                            marginLeft: 4,
+                            fontSize: 12,
+                            color: todo.status === 'termine' 
+                              ? (isDarkMode ? '#CCCCCC' : '#666666')  // Light gray text for completed tasks in dark mode
+                              : (isDarkMode ? '#FFFFFF' : '#000000')  // White text for other tasks in dark mode
+                          }}>
                             {todo.priority === 'urgent' ? 'Urgent' : 
                              todo.priority === 'normal' ? 'Normal' : 'Peut attendre'}
                           </Text>
@@ -326,15 +357,20 @@ export default function TodoListPage() {
                             <MaterialCommunityIcons 
                               name="calendar" 
                               size={16} 
-                              color={isDarkMode ? '#fff' : '#000'} 
+                              color={todo.status === 'termine' 
+                                ? (isDarkMode ? '#FFFFFF' : '#000000')  // White icon for completed tasks in dark mode
+                                : (isDarkMode ? '#FFFFFF' : '#000000')  // White icon for other tasks in dark mode
+                              } 
                             />
-                            <Text className={`ml-1 text-xs ${
-                              isOverdue(todo.due_date, todo.status) 
-                                ? 'text-red-500' 
-                                : isDarkMode 
-                                ? 'text-gray-300' 
-                                : 'text-gray-600'
-                            }`}>
+                            <Text style={{
+                              marginLeft: 4,
+                              fontSize: 12,
+                              color: todo.status === 'termine' 
+                                ? (isDarkMode ? '#CCCCCC' : '#666666')  // Light gray text for completed tasks in dark mode
+                                : (isOverdue(todo.due_date, todo.status) 
+                                    ? '#EF4444'  // Red for overdue
+                                    : (isDarkMode ? '#CCCCCC' : '#666666'))  // Light gray for other tasks in dark mode
+                            }}>
                               {formatDate(todo.due_date)}
                             </Text>
                           </View>
@@ -345,7 +381,10 @@ export default function TodoListPage() {
                     <MaterialCommunityIcons 
                       name="chevron-right" 
                       size={20} 
-                      color={isDarkMode ? '#666' : '#999'} 
+                      color={todo.status === 'termine' 
+                        ? (isDarkMode ? '#666666' : '#999999')  // Dark gray for completed tasks
+                        : (isDarkMode ? '#666666' : '#999999')  // Same for other tasks
+                      } 
                     />
                   </View>
                 </Pressable>

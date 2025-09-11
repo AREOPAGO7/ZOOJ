@@ -1,6 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { Language, useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
@@ -21,9 +23,15 @@ const languages: LanguageOption[] = [
 ];
 
 export default function LanguePage() {
+  const router = useRouter();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { language: currentLanguage, setLanguage, t } = useLanguage();
+  const { isDarkMode } = useDarkTheme();
+
+  const handleBack = () => {
+    router.back();
+  };
 
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(currentLanguage);
   const [showSaved, setShowSaved] = useState(false);
@@ -52,24 +60,30 @@ export default function LanguePage() {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <MaterialCommunityIcons name="translate" size={32} color="#F47CC6" />
-          <Text style={styles.headerTitle}>{t('language.title')}</Text>
-          <Text style={styles.subtitle}>{t('language.subtitle')}</Text>
+      <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-white'}`}>
+        <View className={`flex-row items-center justify-between pt-5 pb-8 px-5 border-b ${isDarkMode ? 'border-dark-border' : 'border-gray-200'}`}>
+          <Pressable style={{ padding: 8 }} onPress={handleBack}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? "#FFFFFF" : "#6C6C6C"} />
+          </Pressable>
+          <View className="items-center flex-1">
+            <MaterialCommunityIcons name="translate" size={32} color="#F47CC6" />
+            <Text className={`text-2xl font-bold mt-3 ${isDarkMode ? 'text-dark-text' : 'text-gray-700'}`}>{t('language.title')}</Text>
+            <Text className={`text-base text-center mt-2 ${isDarkMode ? 'text-dark-text-secondary' : 'text-gray-500'}`}>{t('language.subtitle')}</Text>
+          </View>
+          <View style={{ width: 40 }} />
         </View>
         
-        <View style={styles.content}>
+        <View className="flex-1 px-5 pt-5">
           {/* Current Language Display */}
-          <View style={styles.currentLanguageSection}>
-            <Text style={styles.sectionTitle}>{t('language.currentLanguage')}</Text>
-            <View style={styles.currentLanguageCard}>
-              <Text style={styles.flag}>{languages.find(l => l.code === currentLanguage)?.flag}</Text>
-              <View style={styles.languageInfo}>
-                <Text style={styles.languageName}>
+          <View className="mb-8">
+            <Text className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-dark-text' : 'text-gray-700'}`}>{t('language.currentLanguage')}</Text>
+            <View className={`flex-row items-center p-5 rounded-xl border-2 border-green-500 ${isDarkMode ? 'bg-dark-surface' : 'bg-gray-100'}`}>
+              <Text className="text-2xl mr-4">{languages.find(l => l.code === currentLanguage)?.flag}</Text>
+              <View className="flex-1">
+                <Text className={`text-base font-semibold mb-1 ${isDarkMode ? 'text-dark-text' : 'text-gray-700'}`}>
                   {languages.find(l => l.code === currentLanguage)?.nativeName}
                 </Text>
-                <Text style={styles.languageCode}>
+                <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-gray-500'}`}>
                   {languages.find(l => l.code === currentLanguage)?.name}
                 </Text>
               </View>
@@ -77,30 +91,39 @@ export default function LanguePage() {
           </View>
 
           {/* Language Selection */}
-          <View style={styles.selectionSection}>
-            <Text style={styles.sectionTitle}>{t('language.selectLanguage')}</Text>
-            <View style={styles.languageList}>
+          <View className="mb-8">
+            <Text className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-dark-text' : 'text-gray-700'}`}>{t('language.selectLanguage')}</Text>
+            <View className="gap-3">
               {languages.map((language) => (
                 <TouchableOpacity
                   key={language.code}
-                  style={[
-                    styles.languageOption,
-                    selectedLanguage === language.code && styles.selectedLanguageOption
-                  ]}
+                  className={`flex-row items-center p-4 rounded-xl border-2 ${
+                    selectedLanguage === language.code 
+                      ? 'bg-green-50 border-green-500' 
+                      : isDarkMode 
+                        ? 'bg-dark-surface border-dark-border' 
+                        : 'bg-gray-50 border-gray-200'
+                  }`}
                   onPress={() => handleLanguageSelect(language.code)}
                 >
-                  <Text style={styles.flag}>{language.flag}</Text>
-                  <View style={styles.languageInfo}>
-                    <Text style={[
-                      styles.languageName,
-                      selectedLanguage === language.code && styles.selectedLanguageName
-                    ]}>
+                  <Text className="text-2xl mr-4">{language.flag}</Text>
+                  <View className="flex-1">
+                    <Text className={`text-base font-semibold mb-1 ${
+                      selectedLanguage === language.code 
+                        ? 'text-green-600' 
+                        : isDarkMode 
+                          ? 'text-dark-text' 
+                          : 'text-gray-700'
+                    }`}>
                       {language.nativeName}
                     </Text>
-                    <Text style={[
-                      styles.languageCode,
-                      selectedLanguage === language.code && styles.selectedLanguageCode
-                    ]}>
+                    <Text className={`text-sm ${
+                      selectedLanguage === language.code 
+                        ? 'text-green-500' 
+                        : isDarkMode 
+                          ? 'text-dark-text-secondary' 
+                          : 'text-gray-500'
+                    }`}>
                       {language.name}
                     </Text>
                   </View>
@@ -114,22 +137,23 @@ export default function LanguePage() {
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[
-              styles.saveButton,
-              selectedLanguage === currentLanguage && styles.saveButtonDisabled
-            ]}
+            className={`flex-row items-center justify-center px-6 py-3 rounded-full mb-5 shadow-lg ${
+              selectedLanguage === currentLanguage 
+                ? 'bg-gray-400' 
+                : 'bg-blue-500'
+            }`}
             onPress={handleSave}
             disabled={selectedLanguage === currentLanguage}
           >
             <MaterialCommunityIcons name="content-save" size={20} color="#FFFFFF" />
-            <Text style={styles.saveButtonText}>{t('language.save')}</Text>
+            <Text className="text-white text-base font-semibold ml-2">{t('language.save')}</Text>
           </TouchableOpacity>
 
           {/* Saved Message */}
           {showSaved && (
-            <View style={styles.savedMessage}>
+            <View className={`flex-row items-center justify-center px-4 py-3 rounded-full bg-green-50 border border-green-500`}>
               <MaterialCommunityIcons name="check-circle" size={20} color="#10B981" />
-              <Text style={styles.savedText}>{t('language.saved')}</Text>
+              <Text className="text-green-600 text-sm font-semibold ml-2">{t('language.saved')}</Text>
             </View>
           )}
         </View>
@@ -137,147 +161,3 @@ export default function LanguePage() {
     </AppLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 30,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#374151',
-    marginTop: 12,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#6B7280',
-  },
-  currentLanguageSection: {
-    marginBottom: 30,
-  },
-  selectionSection: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 15,
-  },
-  currentLanguageCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#10B981',
-  },
-  languageList: {
-    gap: 12,
-  },
-  languageOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
-  selectedLanguageOption: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#10B981',
-  },
-  flag: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  languageInfo: {
-    flex: 1,
-  },
-  languageName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 2,
-  },
-  selectedLanguageName: {
-    color: '#10B981',
-  },
-  languageCode: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  selectedLanguageCode: {
-    color: '#059669',
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#9CA3AF',
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  savedMessage: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#10B981',
-  },
-  savedText: {
-    color: '#10B981',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-});

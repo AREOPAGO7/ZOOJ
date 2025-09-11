@@ -577,7 +577,7 @@ export default function QuestionChatPage() {
       ]}>
         {/* Profile Picture - Left for partner, Right for user */}
         {!isOwnMessage && (
-          <View style={[styles.messageAvatar, { borderColor: colors.border }]}>
+          <View style={[styles.messageAvatar, { borderColor: isDarkMode ? '#333333' : colors.border, backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6' }]}>
             {partnerProfilePicture ? (
               <Image 
                 source={{ uri: partnerProfilePicture }} 
@@ -592,15 +592,15 @@ export default function QuestionChatPage() {
         <View style={[
           styles.messageBubble,
           { 
-            borderColor: colors.border,
-            backgroundColor: colors.surface
+            borderColor: isDarkMode ? '#333333' : colors.border,
+            backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface
           },
-          isOwnMessage ? styles.ownBubble : styles.partnerBubble
+          isOwnMessage ? { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8E8F0' } : { backgroundColor: isDarkMode ? '#1A1A1A' : '#E8F0F8' }
         ]}>
           <Text style={[
             styles.messageText,
-            { color: colors.text },
-            isOwnMessage ? styles.ownMessageText : styles.partnerMessageText
+            { color: isDarkMode ? '#FFFFFF' : colors.text },
+            isOwnMessage ? { color: isDarkMode ? '#FFFFFF' : '#374151' } : { color: isDarkMode ? '#FFFFFF' : '#374151' }
           ]}>
             {item.message_text}
           </Text>
@@ -608,7 +608,7 @@ export default function QuestionChatPage() {
 
         {/* Profile Picture - Right for user */}
         {isOwnMessage && (
-          <View style={[styles.messageAvatar, { borderColor: colors.border }]}>
+          <View style={[styles.messageAvatar, { borderColor: isDarkMode ? '#333333' : colors.border, backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6' }]}>
             {profile?.profile_picture ? (
               <Image 
                 source={{ uri: profile.profile_picture }} 
@@ -628,17 +628,17 @@ export default function QuestionChatPage() {
 
     return (
       <View style={styles.answersSection}>
-        <Text style={[styles.answersTitle, { color: colors.textSecondary }]}>{t('questionChat.yourAnswers')}</Text>
+        <Text style={[styles.answersTitle, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{t('questionChat.yourAnswers')}</Text>
         
         {/* Show user's own answer if they have answered */}
         {userAnswered && (
           <View style={styles.answerBubble}>
-            <View style={styles.answerAvatar}>
+            <View style={[styles.answerAvatar, { backgroundColor: isDarkMode ? '#1A1A1A' : '#E5E7EB' }]}>
               <Text style={styles.avatarText}>👤</Text>
             </View>
-            <View style={styles.answerContent}>
-              <Text style={[styles.answerLabel, { color: '#000' }]}>{userName || t('questionChat.me')}</Text>
-              <Text style={[styles.answerText, { color: '#000' }]}>
+            <View style={[styles.answerContent, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8E8F0' }]}>
+              <Text style={[styles.answerLabel, { color: isDarkMode ? '#FFFFFF' : '#000' }]}>{userName || t('questionChat.me')}</Text>
+              <Text style={[styles.answerText, { color: isDarkMode ? '#FFFFFF' : '#000' }]}>
                 {answers.find(a => a.user_id === user!.id)?.answer_text}
               </Text>
             </View>
@@ -648,12 +648,12 @@ export default function QuestionChatPage() {
         {/* Show partner's answer only if both have answered */}
         {bothAnswered && (
           <View style={styles.answerBubble}>
-            <View style={styles.answerAvatar}>
+            <View style={[styles.answerAvatar, { backgroundColor: isDarkMode ? '#1A1A1A' : '#E5E7EB' }]}>
               <Text style={styles.avatarText}>👥</Text>
             </View>
-            <View style={[styles.answerContent, styles.partnerAnswerContent]}>
-              <Text style={[styles.answerLabel, { color: '#000' }]}>{partnerName || t('questionChat.myPartner')}</Text>
-              <Text style={[styles.answerText, { color: '#000' }]}>
+            <View style={[styles.answerContent, { backgroundColor: isDarkMode ? '#1A1A1A' : '#E0F2FE' }]}>
+              <Text style={[styles.answerLabel, { color: isDarkMode ? '#FFFFFF' : '#000' }]}>{partnerName || t('questionChat.myPartner')}</Text>
+              <Text style={[styles.answerText, { color: isDarkMode ? '#FFFFFF' : '#000' }]}>
                 {answers.find(a => a.user_id !== user!.id)?.answer_text}
               </Text>
             </View>
@@ -664,15 +664,19 @@ export default function QuestionChatPage() {
         {!userAnswered && isQuestionCurrent && (
           <View style={styles.answerInputContainer}>
             <TextInput
-              style={[styles.answerInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[styles.answerInput, { 
+                backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, 
+                borderColor: isDarkMode ? '#333333' : colors.border, 
+                color: isDarkMode ? '#FFFFFF' : colors.text 
+              }]}
               placeholder={t('questionChat.typeAnswer')}
               value={answerText}
               onChangeText={setAnswerText}
               multiline
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={isDarkMode ? '#CCCCCC' : colors.textSecondary}
             />
             <Pressable
-              style={[styles.submitAnswerButton, { backgroundColor: colors.primary }, !answerText.trim() && styles.submitAnswerButtonDisabled]}
+              style={[styles.submitAnswerButton, { backgroundColor: colors.primary }, !answerText.trim() && { backgroundColor: isDarkMode ? '#333333' : '#E5E7EB' }]}
               onPress={handleSubmitAnswer}
               disabled={!answerText.trim() || submittingAnswer}
             >
@@ -710,13 +714,13 @@ export default function QuestionChatPage() {
                  {/* Header */}
          <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
            <Pressable onPress={() => router.back()} style={styles.backButton}>
-             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+             <MaterialCommunityIcons name="arrow-left" size={24} color={isDarkMode ? '#FFFFFF' : colors.text} />
            </Pressable>
            <View style={styles.headerTitleContainer}>
-             <Text style={[styles.headerTitle, { color: colors.text }]}>{t('questionChat.title')}</Text>
+             <Text style={[styles.headerTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('questionChat.title')}</Text>
            </View>
            <Pressable style={styles.menuButton}>
-             <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.text} />
+             <MaterialCommunityIcons name="dots-vertical" size={24} color={isDarkMode ? '#FFFFFF' : colors.text} />
            </Pressable>
          </View>
 
@@ -729,8 +733,8 @@ export default function QuestionChatPage() {
         ) : (
           <>
                          {/* Question and Answers */}
-             <View style={[styles.questionSection, { borderBottomColor: colors.border }]}>
-               <Text style={[styles.questionText, { color: colors.text }]}>
+             <View style={[styles.questionSection, { borderBottomColor: isDarkMode ? '#333333' : colors.border }]}>
+               <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
                  {question?.content || 'Les couples devraient-ils partager leurs mots de passe ?'}
                </Text>
                
@@ -742,7 +746,7 @@ export default function QuestionChatPage() {
                          {/* Chat Messages */}
              {threadId ? (
                <View style={styles.chatSection}>
-                 <Text style={[styles.chatTitle, { color: colors.text }]}>{t('questionChat.discussion')}</Text>
+                 <Text style={[styles.chatTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('questionChat.discussion')}</Text>
                  <FlatList
                    ref={flatListRef}
                    data={messages}
@@ -755,8 +759,8 @@ export default function QuestionChatPage() {
                </View>
              ) : (
                <View style={styles.chatSection}>
-                 <Text style={[styles.chatTitle, { color: colors.text }]}>{t('questionChat.discussion')}</Text>
-                 <Text style={[styles.noChatText, { color: colors.textSecondary }]}>
+                 <Text style={[styles.chatTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('questionChat.discussion')}</Text>
+                 <Text style={[styles.noChatText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                    {t('questionChat.answerFirst')}
                  </Text>
                </View>
@@ -767,13 +771,13 @@ export default function QuestionChatPage() {
 
              {/* Input Bar - allow chat for past questions too */}
              {threadId && (
-               <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
+               <View style={[styles.inputBar, { borderTopColor: isDarkMode ? '#333333' : colors.border, backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
                  <View style={styles.inputContainer}>
                    <Pressable style={styles.attachButton}>
                      <MaterialCommunityIcons 
                        name="paperclip" 
                        size={24} 
-                       color={colors.textSecondary}
+                       color={isDarkMode ? '#FFFFFF' : colors.textSecondary}
                      />
                    </Pressable>
                    <TextInput
@@ -782,10 +786,10 @@ export default function QuestionChatPage() {
                      value={newMessage}
                      onChangeText={setNewMessage}
                      multiline
-                     placeholderTextColor={colors.textSecondary}
+                     placeholderTextColor={isDarkMode ? '#CCCCCC' : colors.textSecondary}
                    />
                    <Pressable
-                     style={[styles.sendButton, { backgroundColor: colors.primary }, !newMessage.trim() && styles.sendButtonDisabled]}
+                     style={[styles.sendButton, { backgroundColor: colors.primary }, !newMessage.trim() && { backgroundColor: isDarkMode ? '#333333' : '#E5E7EB' }]}
                      onPress={handleSendMessage}
                      disabled={!newMessage.trim() || sending}
                    >
@@ -795,7 +799,7 @@ export default function QuestionChatPage() {
                        <MaterialCommunityIcons 
                          name="send" 
                          size={20} 
-                         color={newMessage.trim() ? "#FFFFFF" : colors.textSecondary} 
+                         color={newMessage.trim() ? "#FFFFFF" : (isDarkMode ? '#CCCCCC' : colors.textSecondary)} 
                        />
                      )}
                    </Pressable>

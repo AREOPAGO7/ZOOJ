@@ -34,7 +34,7 @@ export const moodService = {
 
       return { data, error };
     } catch (error) {
-      console.error('Error getting current user mood:', error);
+      console.log('Error getting current user mood:', error);
       return { data: null, error };
     }
   },
@@ -53,7 +53,7 @@ export const moodService = {
 
       return { data, error };
     } catch (error) {
-      console.error('Error setting user mood:', error);
+      console.log('Error setting user mood:', error);
       return { data: null, error };
     }
   },
@@ -69,7 +69,7 @@ export const moodService = {
         .single();
 
       if (coupleError || !couple) {
-        console.error('Error finding couple:', coupleError);
+        console.log('Error finding couple:', coupleError);
         return { data: null, error: coupleError };
       }
 
@@ -80,7 +80,7 @@ export const moodService = {
         .in('id', [couple.user1_id, couple.user2_id]);
 
       if (profilesError) {
-        console.error('Error getting couple profiles:', profilesError);
+        console.log('Error getting couple profiles:', profilesError);
         return { data: null, error: profilesError };
       }
 
@@ -102,7 +102,7 @@ export const moodService = {
 
       return { data: userMoods, error: null };
     } catch (error) {
-      console.error('Error getting couple moods:', error);
+      console.log('Error getting couple moods:', error);
       return { data: null, error };
     }
   },
@@ -115,7 +115,7 @@ export const moodService = {
       const { data, error } = await this.getCurrentUserMood(userId);
       return { data: data ? [data] : null, error };
     } catch (error) {
-      console.error('Error getting user mood history:', error);
+      console.log('Error getting user mood history:', error);
       return { data: null, error };
     }
   }

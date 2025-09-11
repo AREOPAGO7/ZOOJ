@@ -1,10 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import AppLayout from '../app-layout';
 
 const BRAND_BLUE = "#2DB6FF";
@@ -13,7 +12,6 @@ const BRAND_GRAY = "#6C6C6C";
 
 export default function ConfidentialitePage() {
   const router = useRouter();
-  const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   const [expandedCards, setExpandedCards] = React.useState<{
@@ -35,117 +33,117 @@ export default function ConfidentialitePage() {
     <AppLayout>
       <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
+        <View className={`flex-row items-center justify-between pt-5 pb-5 px-5 border-b ${isDarkMode ? 'border-dark-border' : 'border-gray-200'}`}>
+          <Pressable className="p-2" onPress={handleBack}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? "#FFFFFF" : BRAND_GRAY} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('privacy.title')}</Text>
-          <View style={styles.headerSpacer} />
+          <Text className={`text-xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.title')}</Text>
+          <View className="w-10" />
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 px-5 pt-5" showsVerticalScrollIndicator={false}>
           {/* Conditions d'utilisation Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('privacy.termsOfUse')}</Text>
-            <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+          <View className="mb-10">
+            <Text className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.termsOfUse')}</Text>
+            <Text className={`text-base leading-6 mb-6 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
               {t('privacy.termsDescription')}
             </Text>
             
-            <View style={styles.conditionsList}>
-              <View style={styles.conditionItem}>
-                <View style={[styles.conditionIcon, { backgroundColor: colors.border }]}>
+            <View className="gap-5">
+              <View className="flex-row items-center gap-4">
+                <View className={`w-10 h-10 rounded-full justify-center items-center ${isDarkMode ? 'bg-dark-border' : 'bg-gray-200'}`}>
                   <MaterialCommunityIcons name="shield-check" size={24} color={BRAND_BLUE} />
                 </View>
-                <View style={styles.conditionContent}>
-                  <Text style={[styles.conditionTitle, { color: colors.text }]}>{t('privacy.copyrightRespect')}</Text>
-                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>{t('privacy.copyrightSubtitle')}</Text>
+                <View className="flex-1">
+                  <Text className={`text-base font-semibold mb-1 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.copyrightRespect')}</Text>
+                  <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{t('privacy.copyrightSubtitle')}</Text>
                 </View>
               </View>
 
-              <View style={styles.conditionItem}>
-                <View style={[styles.conditionIcon, { backgroundColor: colors.border }]}>
+              <View className="flex-row items-center gap-4">
+                <View className={`w-10 h-10 rounded-full justify-center items-center ${isDarkMode ? 'bg-dark-border' : 'bg-gray-200'}`}>
                   <MaterialCommunityIcons name="file-document-outline" size={24} color={BRAND_BLUE} />
                 </View>
-                <View style={styles.conditionContent}>
-                  <Text style={[styles.conditionTitle, { color: colors.text }]}>{t('privacy.appropriateUse')}</Text>
-                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>{t('privacy.appropriateUseSubtitle')}</Text>
+                <View className="flex-1">
+                  <Text className={`text-base font-semibold mb-1 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.appropriateUse')}</Text>
+                  <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{t('privacy.appropriateUseSubtitle')}</Text>
                 </View>
               </View>
 
-              <View style={styles.conditionItem}>
-                <View style={[styles.conditionIcon, { backgroundColor: colors.border }]}>
+              <View className="flex-row items-center gap-4">
+                <View className={`w-10 h-10 rounded-full justify-center items-center ${isDarkMode ? 'bg-dark-border' : 'bg-gray-200'}`}>
                   <MaterialCommunityIcons name="lock" size={24} color={BRAND_BLUE} />
                 </View>
-                <View style={styles.conditionContent}>
-                  <Text style={[styles.conditionTitle, { color: colors.text }]}>{t('privacy.dataProtection')}</Text>
-                  <Text style={[styles.conditionSubtitle, { color: colors.textSecondary }]}>{t('privacy.dataProtectionSubtitle')}</Text>
+                <View className="flex-1">
+                  <Text className={`text-base font-semibold mb-1 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.dataProtection')}</Text>
+                  <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{t('privacy.dataProtectionSubtitle')}</Text>
                 </View>
               </View>
             </View>
           </View>
 
           {/* Informations Légales Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('privacy.legalInformation')}</Text>
+          <View className="mb-10">
+            <Text className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.legalInformation')}</Text>
             
-            <View style={styles.legalCards}>
-              <Pressable style={[styles.legalCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => toggleCard('privacy')}>
-                <View style={styles.legalCardContent}>
-                  <View style={styles.legalCardText}>
-                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>{t('privacy.privacyPolicy')}</Text>
-                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>{t('privacy.privacyPolicySubtitle')}</Text>
+            <View className="gap-4">
+              <Pressable className={`rounded-xl border ${isDarkMode ? 'bg-dark-surface border-dark-border' : 'bg-white border-gray-200'}`} onPress={() => toggleCard('privacy')}>
+                <View className="flex-row items-center justify-between p-5">
+                  <View className="flex-1">
+                    <Text className={`text-base font-semibold mb-1 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.privacyPolicy')}</Text>
+                    <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{t('privacy.privacyPolicySubtitle')}</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={expandedCards['privacy'] ? "chevron-up" : "chevron-down"} 
                     size={24} 
-                    color={BRAND_GRAY} 
+                    color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} 
                   />
                 </View>
                 {expandedCards['privacy'] && (
-                  <View style={styles.legalCardContent}>
-                    <Text style={[styles.legalCardBody, { color: colors.textSecondary }]}>
+                  <View className="px-5 pb-5">
+                    <Text className={`text-sm leading-5 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
                       {t('privacy.privacyPolicyContent')}
                     </Text>
                   </View>
                 )}
               </Pressable>
 
-              <Pressable style={[styles.legalCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => toggleCard('gdpr')}>
-                <View style={styles.legalCardContent}>
-                  <View style={styles.legalCardText}>
-                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>{t('privacy.gdpr')}</Text>
-                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>{t('privacy.gdprSubtitle')}</Text>
+              <Pressable className={`rounded-xl border ${isDarkMode ? 'bg-dark-surface border-dark-border' : 'bg-white border-gray-200'}`} onPress={() => toggleCard('gdpr')}>
+                <View className="flex-row items-center justify-between p-5">
+                  <View className="flex-1">
+                    <Text className={`text-base font-semibold mb-1 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.gdpr')}</Text>
+                    <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{t('privacy.gdprSubtitle')}</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={expandedCards['gdpr'] ? "chevron-up" : "chevron-down"} 
                     size={24} 
-                    color={BRAND_GRAY} 
+                    color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} 
                   />
                 </View>
                 {expandedCards['gdpr'] && (
-                  <View style={styles.legalCardContent}>
-                    <Text style={[styles.legalCardBody, { color: colors.textSecondary }]}>
+                  <View className="px-5 pb-5">
+                    <Text className={`text-sm leading-5 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
                       {t('privacy.gdprContent')}
                     </Text>
                   </View>
                 )}
               </Pressable>
 
-              <Pressable style={[styles.legalCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => toggleCard('cookies')}>
-                <View style={styles.legalCardContent}>
-                  <View style={styles.legalCardText}>
-                    <Text style={[styles.legalCardTitle, { color: colors.text }]}>{t('privacy.cookies')}</Text>
-                    <Text style={[styles.legalCardSubtitle, { color: colors.textSecondary }]}>{t('privacy.cookiesSubtitle')}</Text>
+              <Pressable className={`rounded-xl border ${isDarkMode ? 'bg-dark-surface border-dark-border' : 'bg-white border-gray-200'}`} onPress={() => toggleCard('cookies')}>
+                <View className="flex-row items-center justify-between p-5">
+                  <View className="flex-1">
+                    <Text className={`text-base font-semibold mb-1 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('privacy.cookies')}</Text>
+                    <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{t('privacy.cookiesSubtitle')}</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={expandedCards['cookies'] ? "chevron-up" : "chevron-down"} 
                     size={24} 
-                    color={BRAND_GRAY} 
+                    color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} 
                   />
                 </View>
                 {expandedCards['cookies'] && (
-                  <View style={styles.legalCardContent}>
-                    <Text style={[styles.legalCardBody, { color: colors.textSecondary }]}>
+                  <View className="px-5 pb-5">
+                    <Text className={`text-sm leading-5 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
                       {t('privacy.cookiesContent')}
                     </Text>
                   </View>
@@ -158,114 +156,3 @@ export default function ConfidentialitePage() {
     </AppLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // backgroundColor is now dynamic from theme
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    // borderBottomColor is now dynamic from theme
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    // color is now dynamic from theme
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  section: {
-    marginBottom: 40,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    // color is now dynamic from theme
-    marginBottom: 15,
-  },
-  sectionDescription: {
-    fontSize: 16,
-    // color is now dynamic from theme
-    lineHeight: 24,
-    marginBottom: 25,
-  },
-  conditionsList: {
-    gap: 20,
-  },
-  conditionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-  },
-  conditionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    // backgroundColor is now dynamic from theme
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  conditionContent: {
-    flex: 1,
-  },
-  conditionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    // color is now dynamic from theme
-    marginBottom: 4,
-  },
-  conditionSubtitle: {
-    fontSize: 14,
-    // color is now dynamic from theme
-  },
-  legalCards: {
-    gap: 15,
-  },
-  legalCard: {
-    // backgroundColor is now dynamic from theme
-    borderRadius: 12,
-    borderWidth: 1,
-    // borderColor is now dynamic from theme
-  },
-  legalCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-  },
-  legalCardText: {
-    flex: 1,
-  },
-  legalCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    // color is now dynamic from theme
-    marginBottom: 4,
-  },
-  legalCardSubtitle: {
-    fontSize: 14,
-    // color is now dynamic from theme
-  },
-  legalCardBody: {
-    fontSize: 14,
-    // color is now dynamic from theme
-    lineHeight: 20,
-    paddingTop: 0,
-  },
-});

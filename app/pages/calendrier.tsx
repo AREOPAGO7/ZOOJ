@@ -610,6 +610,7 @@ export default function CalendrierPage() {
             <Text className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>📅 {t('calendar.ourEvents')}</Text>
             {events
               .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+              .slice(-3) // Show only the last 3 events
               .map((event) => (
                 <Pressable
                   key={event.id}
@@ -657,6 +658,7 @@ export default function CalendrierPage() {
           {souvenirs.length > 0 ? (
             souvenirs
               .sort((a, b) => new Date(a.memory_date).getTime() - new Date(b.memory_date).getTime())
+              .slice(-3) // Show only the last 3 souvenirs
               .map((souvenir) => (
                 <Pressable
                   key={souvenir.id}
@@ -700,6 +702,7 @@ export default function CalendrierPage() {
             {todos
               .filter(todo => todo.status !== 'termine')
               .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+              .slice(-3) // Show only the last 3 active tasks
               .map((todo) => (
                 <Pressable
                   key={todo.id}
@@ -742,10 +745,18 @@ export default function CalendrierPage() {
             {todos
               .filter(todo => todo.status === 'termine')
               .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
+              .slice(-3) // Show only the last 3 completed tasks
               .map((todo) => (
                 <Pressable
                   key={todo.id}
-                  style={[calendarStyles.todoItem, calendarStyles.completedTodoItem]}
+                  style={[
+                    calendarStyles.todoItem, 
+                    {
+                      backgroundColor: isDarkMode ? '#1A1A1A' : '#F0F8F0',  // Dark background in dark mode, light green in light mode
+                      borderBottomColor: isDarkMode ? '#333333' : '#4CAF50',  // Dark border in dark mode, green in light mode
+                      opacity: isDarkMode ? 1 : 0.8  // Full opacity in dark mode, reduced in light mode
+                    }
+                  ]}
                   onPress={() => openItemDetails(todo, 'todo')}
                 >
                   <Pressable
@@ -758,8 +769,16 @@ export default function CalendrierPage() {
                     <MaterialCommunityIcons name="checkbox-marked-circle" size={16} color="#FFFFFF" />
                   </Pressable>
                   <View style={calendarStyles.todoContent}>
-                    <Text className={`text-base font-medium line-through ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>{todo.title}</Text>
-                    <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>{formatDate(todo.due_date)}</Text>
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '500',
+                      textDecorationLine: 'line-through',
+                      color: isDarkMode ? '#FFFFFF' : '#666666'  // White text in dark mode for visibility on dark background
+                    }}>{todo.title}</Text>
+                    <Text style={{
+                      fontSize: 14,
+                      color: isDarkMode ? '#CCCCCC' : '#666666'  // Light gray text in dark mode for visibility on dark background
+                    }}>{formatDate(todo.due_date)}</Text>
                   </View>
                   <View style={calendarStyles.todoPriority}>
                     <View style={[calendarStyles.priorityBadge, { backgroundColor: '#4CAF50' }]}>

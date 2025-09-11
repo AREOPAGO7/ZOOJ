@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
@@ -197,11 +198,16 @@ interface Profile {
 }
 
 export default function NotreCouplePage() {
+  const router = useRouter();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
+
+  const handleBack = () => {
+    router.back();
+  };
   
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [userNames, setUserNames] = useState<{ user1: string; user2: string } | null>(null);
@@ -707,9 +713,15 @@ export default function NotreCouplePage() {
     <AppLayout>
       <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
         {/* Header */}
-        <View className={`flex-row items-center py-4 px-5 border-b ${isDarkMode ? 'border-dark-border' : 'border-border'}`}>
-          <MaterialCommunityIcons name="heart-outline" size={32} color={BRAND_PINK} />
-          <Text className={`text-2xl font-bold ml-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('ourCouple.title')}</Text>
+        <View className={`flex-row items-center justify-between py-4 px-5 border-b ${isDarkMode ? 'border-dark-border' : 'border-border'}`}>
+          <Pressable style={{ padding: 8 }} onPress={handleBack}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? "#FFFFFF" : BRAND_GRAY} />
+          </Pressable>
+          <View className="flex-row items-center">
+            <MaterialCommunityIcons name="heart-outline" size={32} color={BRAND_PINK} />
+            <Text className={`text-2xl font-bold ml-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('ourCouple.title')}</Text>
+          </View>
+          <View style={{ width: 40 }} />
         </View>
         
         <ScrollView 

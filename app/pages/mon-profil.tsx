@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
@@ -276,9 +276,9 @@ export default function MonProfilPage() {
   if (profileLoading) {
     return (
       <AppLayout>
-        <View style={styles.container}>
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>{t('profile.loading')}</Text>
+        <View style={{ flex: 1, backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ fontSize: 18, color: isDarkMode ? '#FFFFFF' : '#6B7280' }}>{t('profile.loading')}</Text>
           </View>
         </View>
       </AppLayout>
@@ -287,28 +287,62 @@ export default function MonProfilPage() {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <View style={{ flex: 1, backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }}>
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color={BRAND_GRAY} />
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          paddingTop: 20, 
+          paddingBottom: 20, 
+          paddingHorizontal: 20, 
+          borderBottomWidth: 1, 
+          borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' 
+        }}>
+          <Pressable style={{ padding: 8 }} onPress={handleBack}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? "#FFFFFF" : BRAND_GRAY} />
           </Pressable>
-          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-          <View style={styles.headerSpacer} />
+          <Text style={{ fontSize: 20, fontWeight: '700', color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.title')}</Text>
+          <View style={{ width: 40 }} />
         </View>
 
         {/* Profile Picture Section */}
-        <View style={styles.profilePictureSection}>
-          <View style={styles.profilePictureContainer}>
+        <View style={{ 
+          alignItems: 'center', 
+          paddingVertical: 20, 
+          paddingHorizontal: 40, 
+          borderBottomWidth: 1, 
+          borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' 
+        }}>
+          <View style={{ 
+            width: 120, 
+            height: 120, 
+            borderRadius: 60, 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            position: 'relative',
+            backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6'
+          }}>
             {profile?.profile_picture ? (
               <Image 
                 source={{ uri: profile.profile_picture }} 
-                style={styles.profilePicture}
+                style={{ width: '100%', height: '100%', borderRadius: 60 }}
                 resizeMode="cover"
               />
             ) : (
-              <View style={styles.profilePicturePlaceholder}>
-                <Text style={styles.profilePictureText}>
+              <View style={{ 
+                width: '100%', 
+                height: '100%', 
+                borderRadius: 60, 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                backgroundColor: isDarkMode ? '#2A2A2A' : '#D1D5DB'
+              }}>
+                <Text style={{ 
+                  fontSize: 40, 
+                  fontWeight: 'bold', 
+                  color: isDarkMode ? '#CCCCCC' : '#6B7280' 
+                }}>
                   {fullName.charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -316,43 +350,79 @@ export default function MonProfilPage() {
             
             {/* Upload overlay when uploading */}
             {isUploadingPicture && (
-              <View style={styles.uploadOverlay}>
+              <View style={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: 0, 
+                right: 0, 
+                bottom: 0, 
+                backgroundColor: 'rgba(0,0,0,0.5)', 
+                borderRadius: 60, 
+                justifyContent: 'center', 
+                alignItems: 'center' 
+              }}>
                 <ActivityIndicator size="large" color="#FFFFFF" />
               </View>
             )}
             
             <Pressable 
-              style={[styles.cameraButton, isUploadingPicture && styles.cameraButtonDisabled]} 
+              style={{ 
+                position: 'absolute', 
+                bottom: 0, 
+                right: 0, 
+                backgroundColor: BRAND_BLUE, 
+                width: 40, 
+                height: 40, 
+                borderRadius: 20, 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                borderWidth: 2, 
+                borderColor: '#FFFFFF',
+                opacity: isUploadingPicture ? 0.7 : 1
+              }}
               onPress={handleChangeProfilePicture}
               disabled={isUploadingPicture}
             >
               <MaterialCommunityIcons name="camera" size={20} color="#FFFFFF" />
             </Pressable>
           </View>
-          <Text style={styles.profilePictureLabel}>
+          <Text style={{ 
+            fontSize: 14, 
+            marginTop: 12, 
+            textAlign: 'center', 
+            color: isDarkMode ? '#CCCCCC' : '#6B7280' 
+          }}>
             {isUploadingPicture ? t('profile.uploading') : t('profile.changePhotoInstruction')}
           </Text>
         </View>
 
         {/* User Information Fields */}
-        <View style={styles.formSection}>
+        <View style={{ paddingHorizontal: 40, paddingTop: 20 }}>
           {/* Full Name Field */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>{t('profile.fullName')}</Text>
-            <View style={styles.inputContainer}>
-              <MaterialCommunityIcons name="account" size={20} color={BRAND_GRAY} style={styles.inputIcon} />
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.fullName')}</Text>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
+              borderRadius: 10, 
+              paddingHorizontal: 15, 
+              paddingVertical: 12 
+            }}>
+              <MaterialCommunityIcons name="account" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
               {isEditingName ? (
                 <TextInput
-                  style={styles.textInput}
+                  style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#374151' }}
                   value={tempName}
                   onChangeText={setTempName}
                   placeholder={t('profile.enterFullName')}
+                  placeholderTextColor={isDarkMode ? "#CCCCCC" : "#9CA3AF"}
                   autoFocus
                 />
               ) : (
-                <Text style={styles.inputText}>{fullName || t('profile.notDefined')}</Text>
+                <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{fullName || t('profile.notDefined')}</Text>
               )}
-              <Pressable style={styles.editButton} onPress={handleEditName}>
+              <Pressable style={{ padding: 4 }} onPress={handleEditName}>
                 <MaterialCommunityIcons 
                   name={isEditingName ? "check" : "pencil"} 
                   size={20} 
@@ -363,33 +433,48 @@ export default function MonProfilPage() {
           </View>
 
           {/* Email Field */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>{t('profile.email')}</Text>
-            <View style={styles.inputContainer}>
-              <MaterialCommunityIcons name="email" size={20} color={BRAND_GRAY} style={styles.inputIcon} />
-              <Text style={styles.inputText}>{email || t('profile.notDefined')}</Text>
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.email')}</Text>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
+              borderRadius: 10, 
+              paddingHorizontal: 15, 
+              paddingVertical: 12 
+            }}>
+              <MaterialCommunityIcons name="email" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
+              <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{email || t('profile.notDefined')}</Text>
               {/* No edit button for email as it's read-only */}
             </View>
           </View>
 
           {/* Password Field */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>{t('profile.password')}</Text>
-            <View style={styles.inputContainer}>
-              <MaterialCommunityIcons name="lock" size={20} color={BRAND_GRAY} style={styles.inputIcon} />
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.password')}</Text>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
+              borderRadius: 10, 
+              paddingHorizontal: 15, 
+              paddingVertical: 12 
+            }}>
+              <MaterialCommunityIcons name="lock" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
               {isEditingPassword ? (
                 <TextInput
-                  style={styles.textInput}
+                  style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#374151' }}
                   value={tempPassword}
                   onChangeText={setTempPassword}
                   placeholder={t('profile.enterNewPassword')}
+                  placeholderTextColor={isDarkMode ? "#CCCCCC" : "#9CA3AF"}
                   secureTextEntry
                   autoFocus
                 />
               ) : (
-                <Text style={styles.inputText}>{password}</Text>
+                <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{password}</Text>
               )}
-              <Pressable style={styles.editButton} onPress={handleEditPassword}>
+              <Pressable style={{ padding: 4 }} onPress={handleEditPassword}>
                 <MaterialCommunityIcons 
                   name={isEditingPassword ? "check" : "pencil"} 
                   size={20} 
@@ -401,14 +486,27 @@ export default function MonProfilPage() {
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <Pressable style={styles.saveButton} onPress={handleSaveChanges}>
-            <Text style={styles.saveButtonText}>{t('profile.saveChanges')}</Text>
+        <View style={{ paddingHorizontal: 40, paddingBottom: 30 }}>
+          <Pressable style={{ 
+            backgroundColor: BRAND_BLUE, 
+            borderRadius: 10, 
+            paddingVertical: 15, 
+            alignItems: 'center', 
+            marginBottom: 15 
+          }} onPress={handleSaveChanges}>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>{t('profile.saveChanges')}</Text>
           </Pressable>
 
-          <Pressable style={styles.logoutButton} onPress={handleLogout}>
-            <MaterialCommunityIcons name="logout" size={20} color={BRAND_PINK} style={styles.logoutIcon} />
-            <Text style={styles.logoutButtonText}>{t('profile.logout')}</Text>
+          <Pressable style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            backgroundColor: '#FEE2E2', 
+            borderRadius: 10, 
+            paddingVertical: 15, 
+            justifyContent: 'center' 
+          }} onPress={handleLogout}>
+            <MaterialCommunityIcons name="logout" size={20} color={BRAND_PINK} style={{ marginRight: 10 }} />
+            <Text style={{ color: BRAND_PINK, fontSize: 18, fontWeight: '700' }}>{t('profile.logout')}</Text>
           </Pressable>
         </View>
         
@@ -420,273 +518,81 @@ export default function MonProfilPage() {
           animationType="fade"
           onRequestClose={() => setShowProfilePictureModal(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{t('profile.changeProfilePhoto')}</Text>
-              <Text style={styles.modalSubtitle}>{t('profile.chooseOption')}</Text>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={{ 
+              borderRadius: 15, 
+              padding: 25, 
+              width: '80%', 
+              alignItems: 'center',
+              backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF'
+            }}>
+              <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 10, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.changeProfilePhoto')}</Text>
+              <Text style={{ fontSize: 14, textAlign: 'center', marginBottom: 25, color: isDarkMode ? '#CCCCCC' : '#6B7280' }}>{t('profile.chooseOption')}</Text>
               
-              <Pressable key="take-photo-option" style={styles.modalOption} onPress={takePhotoWithCamera}>
+              <Pressable key="take-photo-option" style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                width: '100%', 
+                paddingVertical: 15, 
+                paddingHorizontal: 10, 
+                borderRadius: 10, 
+                marginBottom: 10 
+              }} onPress={takePhotoWithCamera}>
                 <MaterialCommunityIcons name="camera" size={24} color={BRAND_BLUE} />
-                <Text style={styles.modalOptionText}>{t('profile.takePhoto')}</Text>
+                <Text style={{ fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#374151', marginLeft: 15 }}>{t('profile.takePhoto')}</Text>
               </Pressable>
               
-              <Pressable key="gallery-option" style={styles.modalOption} onPress={pickImageFromGallery}>
+              <Pressable key="gallery-option" style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                width: '100%', 
+                paddingVertical: 15, 
+                paddingHorizontal: 10, 
+                borderRadius: 10, 
+                marginBottom: 10 
+              }} onPress={pickImageFromGallery}>
                 <MaterialCommunityIcons name="image" size={24} color={BRAND_BLUE} />
-                <Text style={styles.modalOptionText}>{t('profile.chooseFromGallery')}</Text>
+                <Text style={{ fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#374151', marginLeft: 15 }}>{t('profile.chooseFromGallery')}</Text>
               </Pressable>
               
               {profile?.profile_picture && (
-                <Pressable key="delete-option" style={[styles.modalOption, styles.deleteOption]} onPress={handleDeleteProfilePicture}>
+                <Pressable key="delete-option" style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  width: '100%', 
+                  paddingVertical: 15, 
+                  paddingHorizontal: 10, 
+                  borderRadius: 10, 
+                  marginBottom: 10,
+                  backgroundColor: '#FEE2E2',
+                  borderColor: '#EF4444',
+                  borderWidth: 1
+                }} onPress={handleDeleteProfilePicture}>
                   <MaterialCommunityIcons name="delete" size={24} color="#EF4444" />
-                  <Text style={[styles.modalOptionText, styles.deleteOptionText]}>{t('profile.deletePhoto')}</Text>
+                  <Text style={{ fontSize: 16, color: '#EF4444', marginLeft: 15 }}>{t('profile.deletePhoto')}</Text>
                 </Pressable>
               )}
               
               <Pressable 
                 key="cancel-option"
-                style={styles.cancelButton} 
+                style={{ 
+                  backgroundColor: isDarkMode ? '#6B7280' : '#9CA3AF', 
+                  borderRadius: 10, 
+                  paddingVertical: 15, 
+                  paddingHorizontal: 30, 
+                  width: '100%' 
+                }}
                 onPress={() => setShowProfilePictureModal(false)}
               >
-                <Text style={styles.cancelButtonText}>{t('profile.cancel')}</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700', textAlign: 'center' }}>{t('profile.cancel')}</Text>
               </Pressable>
-        </View>
+            </View>
           </View>
         </Modal>
       </View>
     </AppLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#6C6C6C',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#374151',
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  backButton: {
-    padding: 8,
-  },
-  profilePictureSection: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 40,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  profilePictureContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  profilePicture: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 60,
-  },
-  profilePicturePlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 60,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profilePictureText: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#9CA3AF',
-  },
-  uploadOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: BRAND_BLUE,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  cameraButtonDisabled: {
-    opacity: 0.7,
-  },
-  profilePictureLabel: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  formSection: {
-    paddingHorizontal: 40,
-    paddingTop: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  inputText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#4B5563',
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#4B5563',
-  },
-  editButton: {
-    padding: 5,
-  },
-  actionButtons: {
-    paddingHorizontal: 40,
-    paddingBottom: 30,
-  },
-  saveButton: {
-    backgroundColor: BRAND_BLUE,
-    borderRadius: 10,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEE2E2',
-    borderRadius: 10,
-    paddingVertical: 15,
-    justifyContent: 'center',
-  },
-  logoutIcon: {
-    marginRight: 10,
-  },
-  logoutButtonText: {
-    color: BRAND_PINK,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 25,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 10,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 25,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  modalOptionText: {
-    fontSize: 16,
-    color: '#374151',
-    marginLeft: 15,
-  },
-  deleteOption: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#EF4444',
-    borderWidth: 1,
-  },
-  deleteOptionText: {
-    color: '#EF4444',
-  },
-  cancelButton: {
-    backgroundColor: BRAND_GRAY,
-    borderRadius: 10,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    width: '100%',
-  },
-  cancelButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-});
