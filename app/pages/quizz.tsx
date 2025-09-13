@@ -69,6 +69,9 @@ export default function QuizzPage() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user, loading } = useAuth();
+  
+  // Check if we have a quizId parameter to auto-select
+  const targetQuizId = params.quizId as string;
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
@@ -79,6 +82,11 @@ export default function QuizzPage() {
   const [themes, setThemes] = useState<any[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [userInterests, setUserInterests] = useState<string[]>([]);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [showAllQuizzes, setShowAllQuizzes] = useState(false);
+  const [themeQuizzes, setThemeQuizzes] = useState<Quiz[]>([]);
+  const [isLoadingThemeQuizzes, setIsLoadingThemeQuizzes] = useState(false);
 
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [isTakingQuiz, setIsTakingQuiz] = useState(false);
@@ -293,11 +301,19 @@ export default function QuizzPage() {
   // Load quizzes and themes
   useEffect(() => {
     if (user && isProfileComplete) {
+      loadUserProfile();
       loadQuizzes();
       loadThemes();
       checkPendingInvites();
     }
   }, [user, isProfileComplete]);
+
+  // Reload quizzes when user interests or showAllQuizzes state change
+  useEffect(() => {
+    if (user && isProfileComplete && userInterests.length >= 0) {
+      loadQuizzes();
+    }
+  }, [userInterests, showAllQuizzes]);
 
   const getCoupleId = async () => {
     try {
@@ -367,7 +383,7 @@ export default function QuizzPage() {
       if (error) throw error;
 
       // Transform data to match our interface
-      const transformedQuizzes = (data || []).map(quiz => ({
+      const allQuizzes = (data || []).map(quiz => ({
         id: quiz.id,
         title: quiz.title,
         description: quiz.description,
@@ -377,7 +393,29 @@ export default function QuizzPage() {
         estimated_time: Math.ceil((quiz.questions?.length || 0) * 0.5) // Rough estimate: 30 seconds per question
       }));
 
-      setQuizzes(transformedQuizzes);
+      // Filter quizzes based on user interests (unless showAllQuizzes is true)
+      let filteredQuizzes = allQuizzes;
+      
+      if (!showAllQuizzes && userInterests.length > 0) {
+        filteredQuizzes = allQuizzes.filter(quiz => {
+          // Check if the quiz theme name matches any of the user's interests
+          return userInterests.includes(quiz.theme?.name);
+        });
+        
+        console.log(`Filtered quizzes: ${filteredQuizzes.length} out of ${allQuizzes.length} based on interests:`, userInterests);
+        
+        // If no quizzes match user interests, show a few popular quizzes as fallback
+        if (filteredQuizzes.length === 0) {
+          console.log('No quizzes match user interests, showing first 3 quizzes as fallback');
+          filteredQuizzes = allQuizzes.slice(0, 3);
+        }
+      } else if (showAllQuizzes) {
+        console.log('Showing all quizzes (Tout button active)');
+      } else {
+        console.log('No user interests found, showing all quizzes');
+      }
+
+      setQuizzes(filteredQuizzes);
     } catch (error) {
       console.error('Error loading quizzes:', error);
     }
@@ -394,6 +432,66 @@ export default function QuizzPage() {
       setThemes(data || []);
     } catch (error) {
       console.error('Error loading themes:', error);
+    }
+  };
+
+  const loadUserProfile = async () => {
+    try {
+      if (!user) return;
+      
+      setIsLoadingProfile(true);
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('interests')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // Set user interests, ensuring it's always an array
+      const interests = profile?.interests || [];
+      setUserInterests(Array.isArray(interests) ? interests : []);
+      
+      console.log('User interests loaded:', interests);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setUserInterests([]);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const loadAllQuizzesForTheme = async (themeId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('quizzes')
+        .select(`
+          *,
+          theme:quiz_themes(id, name, description),
+          questions:quiz_questions(count)
+        `)
+        .eq('theme_id', themeId)
+        .order('title', { ascending: true });
+
+      if (error) throw error;
+
+      // Transform data to match our interface - NO FILTERING BY INTERESTS
+      const themeQuizzes = (data || []).map(quiz => ({
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description,
+        image: quiz.image,
+        theme: quiz.theme,
+        questions_count: quiz.questions?.length || 0,
+        estimated_time: Math.ceil((quiz.questions?.length || 0) * 0.5)
+      }));
+
+      console.log(`Loaded ${themeQuizzes.length} quizzes for theme ${themeId} (no interest filtering)`);
+      return themeQuizzes;
+    } catch (error) {
+      console.error('Error loading quizzes for theme:', error);
+      return [];
     }
   };
 
@@ -854,17 +952,29 @@ export default function QuizzPage() {
     }
   };
 
-  const selectTheme = (theme: any) => {
+  const selectTheme = async (theme: any) => {
     setSelectedTheme(theme);
+    setIsLoadingThemeQuizzes(true);
+    
+    try {
+      const quizzes = await loadAllQuizzesForTheme(theme.id);
+      setThemeQuizzes(quizzes);
+    } catch (error) {
+      console.error('Error loading theme quizzes:', error);
+      setThemeQuizzes([]);
+    } finally {
+      setIsLoadingThemeQuizzes(false);
+    }
   };
 
   const resetTheme = () => {
     setSelectedTheme(null);
+    setThemeQuizzes([]);
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadQuizzes(), loadThemes()]);
+    await Promise.all([loadUserProfile(), loadQuizzes(), loadThemes()]);
     setRefreshing(false);
   };
 
@@ -909,6 +1019,19 @@ export default function QuizzPage() {
       }
     }
   }, [params.themeId, themes]);
+
+  // Auto-select quiz if quizId parameter is provided
+  useEffect(() => {
+    if (targetQuizId && quizzes.length > 0) {
+      const targetQuiz = quizzes.find(q => q.id === targetQuizId);
+      if (targetQuiz) {
+        console.log('🎯 Auto-selecting quiz:', targetQuiz.title);
+        startQuiz(targetQuiz);
+      } else {
+        console.log('🎯 Quiz not found with ID:', targetQuizId);
+      }
+    }
+  }, [targetQuizId, quizzes]);
 
   // Show loading while checking auth or profile completion
   if (loading || profileLoading || isCheckingCouple || isInCouple === null) {
@@ -1424,71 +1547,75 @@ export default function QuizzPage() {
                 </ScrollView>
               </View>
 
-              {/* Quiz Taking Invite Section */}
-              <View style={[styles.quizTakingInviteSection, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA' }]}>
-                <Text style={[styles.quizTakingInviteTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.invitePartner')}</Text>
-                <Text style={[styles.quizTakingInviteDescription, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>
-                  {t('quiz.whileTaking')}
-                </Text>
-                
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.quizTakingInviteButton,
-                    pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
-                  ]}
-                  onPress={() => handleSendQuizInvite(selectedQuiz!)}
-                  disabled={isSendingInvite}
-                >
-                  <LinearGradient
-                    colors={[BRAND_BLUE, BRAND_PINK]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.quizTakingInviteButtonGradient}
+              {/* Quiz Taking Invite Section - Only show when user hasn't answered yet */}
+              {!hasAnsweredQuiz && (
+                <View style={[styles.quizTakingInviteSection, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA' }]}>
+                  <Text style={[styles.quizTakingInviteTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.invitePartner')}</Text>
+                  <Text style={[styles.quizTakingInviteDescription, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>
+                    {t('quiz.whileTaking')}
+                  </Text>
+                  
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.quizTakingInviteButton,
+                      pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
+                    ]}
+                    onPress={() => handleSendQuizInvite(selectedQuiz!)}
+                    disabled={isSendingInvite}
                   >
-                    <MaterialCommunityIcons
-                      name="heart"
-                      size={20}
-                      color="#FFFFFF"
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text style={styles.quizTakingInviteButtonText}>
-                      {isSendingInvite ? t('quiz.sendingInvite') : t('quiz.invitePartnerQuiz')}
-                    </Text>
-                  </LinearGradient>
-                </Pressable>
-              </View>
-
-              {/* Submit Button - Fixed at bottom */}
-              <View className={`px-5 py-4 border-t ${isDarkMode ? 'bg-dark-bg border-dark-border' : 'bg-background border-border'}`}>
-                <Pressable
-                  onPress={submitQuiz}
-                  disabled={!allQuestionsAnswered || isSubmittingQuiz}
-                  style={[
-                    styles.submitButton,
-                    (!allQuestionsAnswered || isSubmittingQuiz) && styles.submitButtonDisabled
-                  ]}
-                >
-                  <LinearGradient
-                    colors={allQuestionsAnswered && !isSubmittingQuiz ? [BRAND_BLUE, BRAND_PINK] : [BRAND_GRAY, BRAND_GRAY]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.submitButtonGradient}
-                  >
-                    {isSubmittingQuiz ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
-                        <Text style={styles.submitButtonText}>
-                          {t('quiz.sending')}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.submitButtonText}>
-                        {t('quiz.submitQuiz')}
+                    <LinearGradient
+                      colors={[BRAND_BLUE, BRAND_PINK]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.quizTakingInviteButtonGradient}
+                    >
+                      <MaterialCommunityIcons
+                        name="heart"
+                        size={20}
+                        color="#FFFFFF"
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={styles.quizTakingInviteButtonText}>
+                        {isSendingInvite ? t('quiz.sendingInvite') : t('quiz.invitePartnerQuiz')}
                       </Text>
-                    )}
-                  </LinearGradient>
-                </Pressable>
-              </View>
+                    </LinearGradient>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Submit Button - Fixed at bottom - Only show if user hasn't answered yet */}
+              {!hasAnsweredQuiz && (
+                <View className={`px-5 py-4 border-t ${isDarkMode ? 'bg-dark-bg border-dark-border' : 'bg-background border-border'}`}>
+                  <Pressable
+                    onPress={submitQuiz}
+                    disabled={!allQuestionsAnswered || isSubmittingQuiz}
+                    style={[
+                      styles.submitButton,
+                      (!allQuestionsAnswered || isSubmittingQuiz) && styles.submitButtonDisabled
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={allQuestionsAnswered && !isSubmittingQuiz ? [BRAND_BLUE, BRAND_PINK] : [BRAND_GRAY, BRAND_GRAY]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.submitButtonGradient}
+                    >
+                      {isSubmittingQuiz ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
+                          <Text style={styles.submitButtonText}>
+                            {t('quiz.sending')}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.submitButtonText}>
+                          {t('quiz.submitQuiz')}
+                        </Text>
+                      )}
+                    </LinearGradient>
+                  </Pressable>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -1669,7 +1796,6 @@ export default function QuizzPage() {
 
   // Theme-specific view
   if (selectedTheme) {
-    const themeQuizzes = quizzes.filter(quiz => quiz.theme.id === selectedTheme.id);
     
     return (
       <AppLayout>
@@ -1690,7 +1816,14 @@ export default function QuizzPage() {
 
           {/* Quizzes for this theme */}
           <ScrollView style={styles.themeQuizzesScroll} showsVerticalScrollIndicator={false}>
-            {themeQuizzes.length > 0 ? (
+            {isLoadingThemeQuizzes ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={BRAND_BLUE} />
+                <Text style={[styles.loadingText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
+                  Chargement des quiz...
+                </Text>
+              </View>
+            ) : themeQuizzes.length > 0 ? (
               themeQuizzes.map((quiz) => (
                 <Pressable
                   key={quiz.id}
@@ -1897,9 +2030,39 @@ export default function QuizzPage() {
         {/* Quizzes for You Section */}
         <View style={styles.quizzesSection}>
           <View style={styles.quizzesHeader}>
-            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.quizzesForYou')}</Text>
+            <View style={styles.quizzesTitleContainer}>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('quiz.quizzesForYou')}</Text>
+              {/* Tout Button */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.toutButton,
+                  { 
+                    backgroundColor: showAllQuizzes 
+                      ? (isDarkMode ? BRAND_BLUE : BRAND_BLUE)
+                      : (isDarkMode ? '#333333' : '#F0F0F0'),
+                    borderColor: showAllQuizzes 
+                      ? BRAND_BLUE 
+                      : (isDarkMode ? '#555555' : '#E0E0E0'),
+                    opacity: pressed ? 0.7 : 1,
+                    transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }]
+                  }
+                ]}
+                onPress={() => setShowAllQuizzes(!showAllQuizzes)}
+              >
+                <Text style={[
+                  styles.toutButtonText,
+                  { 
+                    color: showAllQuizzes 
+                      ? '#FFFFFF' 
+                      : (isDarkMode ? '#CCCCCC' : colors.textSecondary)
+                  }
+                ]}>
+                  Tout
+                </Text>
+              </Pressable>
+            </View>
             <Text style={[styles.quizzesSubtitle, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
-              {t('quiz.quizzesSubtitle')}
+              {showAllQuizzes ? 'Tous les quiz disponibles' : t('quiz.quizzesSubtitle')}
             </Text>
           </View>
           {(searchQuery.trim() !== '' ? filteredQuizzes : quizzes).length > 0 ? (
@@ -2872,6 +3035,22 @@ const styles = StyleSheet.create({
   },
   quizzesHeader: {
     marginBottom: 20,
+  },
+  quizzesTitleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  toutButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  toutButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   quizzesSubtitle: {
     fontSize: 14,

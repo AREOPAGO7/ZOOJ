@@ -35,6 +35,12 @@ export default function ReglagesPage() {
     },
 
     {
+      id: 'notifications',
+      title: 'Notifications',
+      icon: 'bell-outline',
+      route: '/pages/notification-settings'
+    },
+    {
       id: 'confidentialite',
       title: t('settings.privacy'),
       icon: 'lock-outline',

@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
@@ -306,209 +306,215 @@ export default function MonProfilPage() {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Profile Picture Section */}
-        <View style={{ 
-          alignItems: 'center', 
-          paddingVertical: 20, 
-          paddingHorizontal: 40, 
-          borderBottomWidth: 1, 
-          borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' 
-        }}>
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Profile Picture Section */}
           <View style={{ 
-            width: 120, 
-            height: 120, 
-            borderRadius: 60, 
-            justifyContent: 'center', 
             alignItems: 'center', 
-            position: 'relative',
-            backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6'
+            paddingVertical: 20, 
+            paddingHorizontal: 40, 
+            borderBottomWidth: 1, 
+            borderBottomColor: isDarkMode ? '#333333' : '#E5E7EB' 
           }}>
-            {profile?.profile_picture ? (
-              <Image 
-                source={{ uri: profile.profile_picture }} 
-                style={{ width: '100%', height: '100%', borderRadius: 60 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={{ 
-                width: '100%', 
-                height: '100%', 
-                borderRadius: 60, 
-                justifyContent: 'center', 
-                alignItems: 'center',
-                backgroundColor: isDarkMode ? '#2A2A2A' : '#D1D5DB'
-              }}>
-                <Text style={{ 
-                  fontSize: 40, 
-                  fontWeight: 'bold', 
-                  color: isDarkMode ? '#CCCCCC' : '#6B7280' 
+            <View style={{ 
+              width: 120, 
+              height: 120, 
+              borderRadius: 60, 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              position: 'relative',
+              backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6'
+            }}>
+              {profile?.profile_picture ? (
+                <Image 
+                  source={{ uri: profile.profile_picture }} 
+                  style={{ width: '100%', height: '100%', borderRadius: 60 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  borderRadius: 60, 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  backgroundColor: isDarkMode ? '#2A2A2A' : '#D1D5DB'
                 }}>
-                  {fullName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
-            
-            {/* Upload overlay when uploading */}
-            {isUploadingPicture && (
+                  <Text style={{ 
+                    fontSize: 40, 
+                    fontWeight: 'bold', 
+                    color: isDarkMode ? '#CCCCCC' : '#6B7280' 
+                  }}>
+                    {fullName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Upload overlay when uploading */}
+              {isUploadingPicture && (
+                <View style={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  right: 0, 
+                  bottom: 0, 
+                  backgroundColor: 'rgba(0,0,0,0.5)', 
+                  borderRadius: 60, 
+                  justifyContent: 'center', 
+                  alignItems: 'center' 
+                }}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                </View>
+              )}
+              
+              <Pressable 
+                style={{ 
+                  position: 'absolute', 
+                  bottom: 0, 
+                  right: 0, 
+                  backgroundColor: BRAND_BLUE, 
+                  width: 40, 
+                  height: 40, 
+                  borderRadius: 20, 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  borderWidth: 2, 
+                  borderColor: '#FFFFFF',
+                  opacity: isUploadingPicture ? 0.7 : 1
+                }}
+                onPress={handleChangeProfilePicture}
+                disabled={isUploadingPicture}
+              >
+                <MaterialCommunityIcons name="camera" size={20} color="#FFFFFF" />
+              </Pressable>
+            </View>
+            <Text style={{ 
+              fontSize: 14, 
+              marginTop: 12, 
+              textAlign: 'center', 
+              color: isDarkMode ? '#CCCCCC' : '#6B7280' 
+            }}>
+              {isUploadingPicture ? t('profile.uploading') : t('profile.changePhotoInstruction')}
+            </Text>
+          </View>
+
+          {/* User Information Fields */}
+          <View style={{ paddingHorizontal: 40, paddingTop: 20 }}>
+            {/* Full Name Field */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.fullName')}</Text>
               <View style={{ 
-                position: 'absolute', 
-                top: 0, 
-                left: 0, 
-                right: 0, 
-                bottom: 0, 
-                backgroundColor: 'rgba(0,0,0,0.5)', 
-                borderRadius: 60, 
-                justifyContent: 'center', 
-                alignItems: 'center' 
-              }}>
-                <ActivityIndicator size="large" color="#FFFFFF" />
-              </View>
-            )}
-            
-            <Pressable 
-              style={{ 
-                position: 'absolute', 
-                bottom: 0, 
-                right: 0, 
-                backgroundColor: BRAND_BLUE, 
-                width: 40, 
-                height: 40, 
-                borderRadius: 20, 
-                justifyContent: 'center', 
+                flexDirection: 'row', 
                 alignItems: 'center', 
-                borderWidth: 2, 
-                borderColor: '#FFFFFF',
-                opacity: isUploadingPicture ? 0.7 : 1
-              }}
-              onPress={handleChangeProfilePicture}
-              disabled={isUploadingPicture}
-            >
-              <MaterialCommunityIcons name="camera" size={20} color="#FFFFFF" />
+                backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
+                borderRadius: 10, 
+                paddingHorizontal: 15, 
+                paddingVertical: 12 
+              }}>
+                <MaterialCommunityIcons name="account" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
+                {isEditingName ? (
+                  <TextInput
+                    style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#374151' }}
+                    value={tempName}
+                    onChangeText={setTempName}
+                    placeholder={t('profile.enterFullName')}
+                    placeholderTextColor={isDarkMode ? "#CCCCCC" : "#9CA3AF"}
+                    autoFocus
+                  />
+                ) : (
+                  <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{fullName || t('profile.notDefined')}</Text>
+                )}
+                <Pressable style={{ padding: 4 }} onPress={handleEditName}>
+                  <MaterialCommunityIcons 
+                    name={isEditingName ? "check" : "pencil"} 
+                    size={20} 
+                    color={BRAND_BLUE} 
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Email Field */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.email')}</Text>
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
+                borderRadius: 10, 
+                paddingHorizontal: 15, 
+                paddingVertical: 12 
+              }}>
+                <MaterialCommunityIcons name="email" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
+                <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{email || t('profile.notDefined')}</Text>
+                {/* No edit button for email as it's read-only */}
+              </View>
+            </View>
+
+            {/* Password Field */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.password')}</Text>
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
+                borderRadius: 10, 
+                paddingHorizontal: 15, 
+                paddingVertical: 12 
+              }}>
+                <MaterialCommunityIcons name="lock" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
+                {isEditingPassword ? (
+                  <TextInput
+                    style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#374151' }}
+                    value={tempPassword}
+                    onChangeText={setTempPassword}
+                    placeholder={t('profile.enterNewPassword')}
+                    placeholderTextColor={isDarkMode ? "#CCCCCC" : "#9CA3AF"}
+                    secureTextEntry
+                    autoFocus
+                  />
+                ) : (
+                  <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{password}</Text>
+                )}
+                <Pressable style={{ padding: 4 }} onPress={handleEditPassword}>
+                  <MaterialCommunityIcons 
+                    name={isEditingPassword ? "check" : "pencil"} 
+                    size={20} 
+                    color={BRAND_BLUE} 
+                  />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={{ paddingHorizontal: 40, paddingBottom: 30 }}>
+            <Pressable style={{ 
+              backgroundColor: BRAND_BLUE, 
+              borderRadius: 10, 
+              paddingVertical: 15, 
+              alignItems: 'center', 
+              marginBottom: 15 
+            }} onPress={handleSaveChanges}>
+              <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>{t('profile.saveChanges')}</Text>
+            </Pressable>
+
+            <Pressable style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: '#FEE2E2', 
+              borderRadius: 10, 
+              paddingVertical: 15, 
+              justifyContent: 'center' 
+            }} onPress={handleLogout}>
+              <MaterialCommunityIcons name="logout" size={20} color={BRAND_PINK} style={{ marginRight: 10 }} />
+              <Text style={{ color: BRAND_PINK, fontSize: 18, fontWeight: '700' }}>{t('profile.logout')}</Text>
             </Pressable>
           </View>
-          <Text style={{ 
-            fontSize: 14, 
-            marginTop: 12, 
-            textAlign: 'center', 
-            color: isDarkMode ? '#CCCCCC' : '#6B7280' 
-          }}>
-            {isUploadingPicture ? t('profile.uploading') : t('profile.changePhotoInstruction')}
-          </Text>
-        </View>
-
-        {/* User Information Fields */}
-        <View style={{ paddingHorizontal: 40, paddingTop: 20 }}>
-          {/* Full Name Field */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.fullName')}</Text>
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
-              borderRadius: 10, 
-              paddingHorizontal: 15, 
-              paddingVertical: 12 
-            }}>
-              <MaterialCommunityIcons name="account" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
-              {isEditingName ? (
-                <TextInput
-                  style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#374151' }}
-                  value={tempName}
-                  onChangeText={setTempName}
-                  placeholder={t('profile.enterFullName')}
-                  placeholderTextColor={isDarkMode ? "#CCCCCC" : "#9CA3AF"}
-                  autoFocus
-                />
-              ) : (
-                <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{fullName || t('profile.notDefined')}</Text>
-              )}
-              <Pressable style={{ padding: 4 }} onPress={handleEditName}>
-                <MaterialCommunityIcons 
-                  name={isEditingName ? "check" : "pencil"} 
-                  size={20} 
-                  color={BRAND_BLUE} 
-                />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Email Field */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.email')}</Text>
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
-              borderRadius: 10, 
-              paddingHorizontal: 15, 
-              paddingVertical: 12 
-            }}>
-              <MaterialCommunityIcons name="email" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
-              <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{email || t('profile.notDefined')}</Text>
-              {/* No edit button for email as it's read-only */}
-            </View>
-          </View>
-
-          {/* Password Field */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8, color: isDarkMode ? '#FFFFFF' : '#374151' }}>{t('profile.password')}</Text>
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', 
-              borderRadius: 10, 
-              paddingHorizontal: 15, 
-              paddingVertical: 12 
-            }}>
-              <MaterialCommunityIcons name="lock" size={20} color={isDarkMode ? "#CCCCCC" : BRAND_GRAY} style={{ marginRight: 12 }} />
-              {isEditingPassword ? (
-                <TextInput
-                  style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#374151' }}
-                  value={tempPassword}
-                  onChangeText={setTempPassword}
-                  placeholder={t('profile.enterNewPassword')}
-                  placeholderTextColor={isDarkMode ? "#CCCCCC" : "#9CA3AF"}
-                  secureTextEntry
-                  autoFocus
-                />
-              ) : (
-                <Text style={{ flex: 1, fontSize: 16, color: isDarkMode ? '#CCCCCC' : '#4B5563' }}>{password}</Text>
-              )}
-              <Pressable style={{ padding: 4 }} onPress={handleEditPassword}>
-                <MaterialCommunityIcons 
-                  name={isEditingPassword ? "check" : "pencil"} 
-                  size={20} 
-                  color={BRAND_BLUE} 
-                />
-              </Pressable>
-            </View>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={{ paddingHorizontal: 40, paddingBottom: 30 }}>
-          <Pressable style={{ 
-            backgroundColor: BRAND_BLUE, 
-            borderRadius: 10, 
-            paddingVertical: 15, 
-            alignItems: 'center', 
-            marginBottom: 15 
-          }} onPress={handleSaveChanges}>
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>{t('profile.saveChanges')}</Text>
-          </Pressable>
-
-          <Pressable style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            backgroundColor: '#FEE2E2', 
-            borderRadius: 10, 
-            paddingVertical: 15, 
-            justifyContent: 'center' 
-          }} onPress={handleLogout}>
-            <MaterialCommunityIcons name="logout" size={20} color={BRAND_PINK} style={{ marginRight: 10 }} />
-            <Text style={{ color: BRAND_PINK, fontSize: 18, fontWeight: '700' }}>{t('profile.logout')}</Text>
-          </Pressable>
-        </View>
+        </ScrollView>
         
         {/* Profile Picture Options Modal */}
         <Modal

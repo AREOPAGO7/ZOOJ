@@ -1,23 +1,46 @@
 import { useAuth } from '@/lib/auth'
 import { DailyQuestionNotification, dailyQuestionNotificationService } from '@/lib/dailyQuestionNotificationService'
 import { Notification, notificationService, NotificationSettings } from '@/lib/notificationService'
+import { Pulse, pulseService } from '@/lib/pulseService'
 import { SimpleChatNotification, simpleChatNotificationService } from '@/lib/simpleChatNotificationService'
 import { supabase } from '@/lib/supabase'
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react'
 
+interface ChatNotification {
+  id: string
+  thread_id: string
+  message_id: string
+  sender_id: string
+  receiver_id: string
+  question_id: string
+  question_content: string
+  sender_name: string
+  message_preview: string
+  is_read: boolean
+  is_delivered: boolean
+  created_at: string
+  expires_at: string
+  updated_at: string
+}
+
 interface NotificationContextType {
   notifications: Notification[]
   chatNotifications: SimpleChatNotification[]
+  chatNotificationsTable: ChatNotification[]
   dailyQuestionNotifications: DailyQuestionNotification[]
+  pulses: Pulse[]
   unreadCount: number
   chatUnreadCount: number
+  chatNotificationsTableUnreadCount: number
   dailyQuestionUnreadCount: number
+  pulseUnreadCount: number
   notificationSettings: NotificationSettings | null
   isLoading: boolean
   refreshNotifications: () => Promise<void>
   markAsRead: (notificationId: string) => Promise<void>
   markChatAsRead: (notificationId: string) => Promise<void>
   markDailyQuestionAsRead: (notificationId: string) => Promise<void>
+  markPulseAsRead: (pulseId: string) => Promise<void>
   markAllAsRead: () => Promise<void>
   deleteNotification: (notificationId: string) => Promise<void>
   // Daily question notifications cannot be deleted (they're global)
@@ -44,10 +67,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [chatNotifications, setChatNotifications] = useState<SimpleChatNotification[]>([])
+  const [chatNotificationsTable, setChatNotificationsTable] = useState<ChatNotification[]>([])
   const [dailyQuestionNotifications, setDailyQuestionNotifications] = useState<DailyQuestionNotification[]>([])
+  const [pulses, setPulses] = useState<Pulse[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [chatUnreadCount, setChatUnreadCount] = useState(0)
+  const [chatNotificationsTableUnreadCount, setChatNotificationsTableUnreadCount] = useState(0)
   const [dailyQuestionUnreadCount, setDailyQuestionUnreadCount] = useState(0)
+  const [pulseUnreadCount, setPulseUnreadCount] = useState(0)
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -65,12 +92,25 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
       const coupleId = coupleData?.id
 
-      const [notificationsResult, unreadResult, chatNotificationsResult, dailyQuestionResult, dailyQuestionUnreadResult, settingsResult] = await Promise.all([
+      const [notificationsResult, unreadResult, chatNotificationsResult, chatNotificationsTableResult, dailyQuestionResult, dailyQuestionUnreadResult, pulsesResult, settingsResult] = await Promise.all([
         notificationService.getNotifications(user.id),
         notificationService.getUnreadCount(user.id),
         coupleId ? simpleChatNotificationService.getNotifications(user.id, coupleId, 3) : Promise.resolve({ data: [], error: null }),
+        supabase
+          .from('chat_notifications')
+          .select('*')
+          .eq('receiver_id', user.id)
+          .eq('is_read', false)
+          .order('created_at', { ascending: false })
+          .limit(20),
         dailyQuestionNotificationService.getDailyQuestionNotifications(user.id),
         dailyQuestionNotificationService.getUnreadCount(user.id),
+        supabase
+          .from('pulses')
+          .select('*')
+          .eq('receiver_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(3),
         notificationService.getNotificationSettings(user.id)
       ])
 
@@ -91,12 +131,31 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       if (chatNotificationsResult.error) {
         console.error('Error fetching simple chat notifications:', chatNotificationsResult.error)
       }
+      
+      if (chatNotificationsTableResult.data) {
+        console.log('NotificationContext: Fetched chat notifications table:', chatNotificationsTableResult.data.length);
+        setChatNotificationsTable(chatNotificationsTableResult.data)
+        setChatNotificationsTableUnreadCount(chatNotificationsTableResult.data.length)
+      }
+      if (chatNotificationsTableResult.error) {
+        console.error('Error fetching chat notifications table:', chatNotificationsTableResult.error)
+      }
       if (dailyQuestionResult.data) {
         setDailyQuestionNotifications(dailyQuestionResult.data)
       }
       if (dailyQuestionUnreadResult.data !== null) {
         setDailyQuestionUnreadCount(dailyQuestionUnreadResult.data)
       }
+      
+      if (pulsesResult.data) {
+        console.log('NotificationContext: Fetched pulses:', pulsesResult.data.length);
+        setPulses(pulsesResult.data)
+        setPulseUnreadCount(pulsesResult.data.length)
+      }
+      if (pulsesResult.error) {
+        console.error('Error fetching pulses:', pulsesResult.error)
+      }
+      
       if (settingsResult.data) {
         setNotificationSettings(settingsResult.data)
       }
@@ -152,6 +211,22 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }
 
+  const markPulseAsRead = async (pulseId: string) => {
+    if (!user?.id) return
+
+    try {
+      await pulseService.markPulseAsRead(pulseId)
+      setPulses(prev => 
+        prev.map(pulse => 
+          pulse.id === pulseId ? { ...pulse, is_read: true } : pulse
+        )
+      )
+      setPulseUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (error) {
+      console.error('Error marking pulse as read:', error)
+    }
+  }
+
   const markAllAsRead = async () => {
     if (!user?.id) return
 
@@ -168,15 +243,29 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       await Promise.all([
         notificationService.markAllAsRead(user.id),
         coupleId ? simpleChatNotificationService.deleteAllNotifications(coupleId) : Promise.resolve(),
-        dailyQuestionNotificationService.markAllAsRead(user.id)
+        supabase
+          .from('chat_notifications')
+          .update({ is_read: true })
+          .eq('receiver_id', user.id)
+          .eq('is_read', false),
+        dailyQuestionNotificationService.markAllAsRead(user.id),
+        supabase
+          .from('pulses')
+          .update({ is_read: true })
+          .eq('receiver_id', user.id)
+          .eq('is_read', false)
       ])
       
       setNotifications(prev => prev.map(notif => ({ ...notif, is_read: true })))
       setChatNotifications([]) // Clear all chat notifications
+      setChatNotificationsTable(prev => prev.map(notif => ({ ...notif, is_read: true })))
       setDailyQuestionNotifications(prev => prev.map(notif => ({ ...notif, is_read: true })))
+      setPulses(prev => prev.map(pulse => ({ ...pulse, is_read: true })))
       setUnreadCount(0)
       setChatUnreadCount(0)
+      setChatNotificationsTableUnreadCount(0)
       setDailyQuestionUnreadCount(0)
+      setPulseUnreadCount(0)
     } catch (error) {
       console.error('Error marking all notifications as read:', error)
     }
@@ -221,15 +310,33 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         await simpleChatNotificationService.deleteAllNotifications(coupleId)
       }
 
+      // Delete chat notifications table
+      await supabase
+        .from('chat_notifications')
+        .update({ is_read: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false)
+
       // Delete daily question notifications
       await dailyQuestionNotificationService.deleteAllNotifications(user.id)
       
+      // Mark all pulses as read
+      await supabase
+        .from('pulses')
+        .update({ is_read: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false)
+      
       setNotifications([])
       setChatNotifications([])
+      setChatNotificationsTable([])
       setDailyQuestionNotifications([])
+      setPulses([])
       setUnreadCount(0)
       setChatUnreadCount(0)
+      setChatNotificationsTableUnreadCount(0)
       setDailyQuestionUnreadCount(0)
+      setPulseUnreadCount(0)
     } catch (error) {
       console.error('Error deleting all notifications:', error)
     }
@@ -322,16 +429,21 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const value: NotificationContextType = {
     notifications,
     chatNotifications,
+    chatNotificationsTable,
     dailyQuestionNotifications,
+    pulses,
     unreadCount,
     chatUnreadCount,
+    chatNotificationsTableUnreadCount,
     dailyQuestionUnreadCount,
+    pulseUnreadCount,
     notificationSettings,
     isLoading,
     refreshNotifications,
     markAsRead,
     markChatAsRead,
     markDailyQuestionAsRead,
+    markPulseAsRead,
     markAllAsRead,
     deleteNotification,
     // deleteDailyQuestionNotification removed - daily question notifications are global

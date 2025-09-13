@@ -9,6 +9,7 @@ import { MoodSelector } from '../../components/MoodSelector';
 import { ReceivedPulse } from '../../components/ReceivedPulse';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
@@ -23,6 +24,10 @@ export default function AccueilPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
+  const { unreadCount, chatUnreadCount, chatNotificationsTableUnreadCount, dailyQuestionUnreadCount, pulseUnreadCount } = useNotifications();
+  
+  // Calculate total unread count from all notification types
+  const totalUnreadCount = unreadCount + chatUnreadCount + chatNotificationsTableUnreadCount + dailyQuestionUnreadCount + pulseUnreadCount;
   const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
   
@@ -537,10 +542,13 @@ export default function AccueilPage() {
           <View className="flex-row justify-between items-center mb-6">
             <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('home.compatibility')}</Text>
             <TouchableOpacity 
-              className={`w-10 h-10 ${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-full justify-center items-center`}
+              className={`w-10 h-10 ${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-full justify-center items-center relative`}
               onPress={() => router.push('/pages/notifications')}
             >
               <MaterialCommunityIcons name="bell" size={24} color={isDarkMode ? "#FFFFFF" : "#2D2D2D"} />
+              {totalUnreadCount > 0 && (
+                <View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+              )}
             </TouchableOpacity>
           </View>
           

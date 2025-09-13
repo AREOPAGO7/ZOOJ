@@ -78,17 +78,8 @@ export default function App() {
 
   const genders = ["male", "female", "other"]
   
-  // Interests data
-  const interests = [
-    { id: "wellness", label: "Bien-être & développement personnel", icon: "meditation" },
-    { id: "travel", label: "Voyages & découvertes", icon: "airplane" },
-    { id: "cinema", label: "Cinéma & séries", icon: "movie" },
-    { id: "humor", label: "Humour & jeux", icon: "party-popper" },
-    { id: "communication", label: "Communication", icon: "message-text" },
-    { id: "family", label: "Famille & valeurs", icon: "account-group" },
-    { id: "romance", label: "Vie de couple & romance", icon: "heart" },
-    { id: "future", label: "Projets d'avenir", icon: "lightbulb" }
-  ]
+  // Interests data - will be fetched from quiz_themes table
+  const [interests, setInterests] = useState<Array<{ id: string; label: string; icon: string }>>([])
   
   // Invite code state
   const [inviteCode, setInviteCode] = useState("")
@@ -101,6 +92,80 @@ export default function App() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [isInterestsLoading, setIsInterestsLoading] = useState(false)
   const [showJoinSection, setShowJoinSection] = useState(false)
+  const [isLoadingInterests, setIsLoadingInterests] = useState(false)
+
+  // Fetch interests from quiz_themes table
+  const fetchInterests = async () => {
+    try {
+      setIsLoadingInterests(true)
+      console.log("Fetching interests from quiz_themes table...")
+      
+      const { data: quizThemes, error } = await supabase
+        .from('quiz_themes')
+        .select('id, name, icon')
+        .order('name', { ascending: true })
+      
+      console.log("Database fetch result:", { quizThemes, error })
+      
+      if (error) {
+        console.error("Error fetching quiz themes:", error)
+        console.log("Using fallback interests due to database error")
+        // Fallback to all available themes if database fetch fails
+        setInterests([
+          { id: "Voyages & découvertes", label: "Voyages & découvertes", icon: "airplane" },
+          { id: "Projets d'avenir", label: "Projets d'avenir", icon: "lightbulb" },
+          { id: "Bien-être & développement personnel", label: "Bien-être & développement personnel", icon: "meditation" },
+          { id: "Humour & jeux", label: "Humour & jeux", icon: "emoticon-happy" },
+          { id: "Communication", label: "Communication", icon: "message-text" },
+          { id: "Cinéma & séries", label: "Cinéma & séries", icon: "movie" },
+          { id: "Vie de couple & romance", label: "Vie de couple & romance", icon: "heart" },
+          { id: "Famille & valeurs", label: "Famille & valeurs", icon: "account-group" }
+        ])
+        return
+      }
+      
+      if (quizThemes && quizThemes.length > 0) {
+        // Transform quiz themes to interests format
+        const transformedInterests = quizThemes.map(theme => ({
+          id: theme.name, // Use theme name as ID instead of theme.id
+          label: theme.name,
+          icon: theme.icon || "help-circle" // Default icon if none provided
+        }))
+        
+        setInterests(transformedInterests)
+        console.log("Interests fetched successfully:", transformedInterests)
+      } else {
+        console.log("No quiz themes found, using fallback interests")
+        // Fallback to all available themes
+        setInterests([
+          { id: "Voyages & découvertes", label: "Voyages & découvertes", icon: "airplane" },
+          { id: "Projets d'avenir", label: "Projets d'avenir", icon: "lightbulb" },
+          { id: "Bien-être & développement personnel", label: "Bien-être & développement personnel", icon: "meditation" },
+          { id: "Humour & jeux", label: "Humour & jeux", icon: "emoticon-happy" },
+          { id: "Communication", label: "Communication", icon: "message-text" },
+          { id: "Cinéma & séries", label: "Cinéma & séries", icon: "movie" },
+          { id: "Vie de couple & romance", label: "Vie de couple & romance", icon: "heart" },
+          { id: "Famille & valeurs", label: "Famille & valeurs", icon: "account-group" }
+        ])
+      }
+    } catch (error) {
+      console.error("Error fetching interests:", error)
+      console.log("Using fallback interests due to exception")
+      // Fallback to all available themes
+      setInterests([
+        { id: "Voyages & découvertes", label: "Voyages & découvertes", icon: "airplane" },
+        { id: "Projets d'avenir", label: "Projets d'avenir", icon: "lightbulb" },
+        { id: "Bien-être & développement personnel", label: "Bien-être & développement personnel", icon: "meditation" },
+        { id: "Humour & jeux", label: "Humour & jeux", icon: "emoticon-happy" },
+        { id: "Communication", label: "Communication", icon: "message-text" },
+        { id: "Cinéma & séries", label: "Cinéma & séries", icon: "movie" },
+        { id: "Vie de couple & romance", label: "Vie de couple & romance", icon: "heart" },
+        { id: "Famille & valeurs", label: "Famille & valeurs", icon: "account-group" }
+      ])
+    } finally {
+      setIsLoadingInterests(false)
+    }
+  }
 
   // Check if user is authenticated and redirect accordingly
   useEffect(() => {
@@ -174,6 +239,87 @@ export default function App() {
       setIsRecoveryMode(false)
     }
   }, [screen])
+
+  // Fetch interests when interests screen is shown
+  useEffect(() => {
+    if (screen === "interests") {
+      if (interests.length === 0) {
+        fetchInterests()
+      }
+      // Pre-populate selected interests from existing profile
+      loadExistingInterests()
+    }
+  }, [screen])
+
+  // Pre-populate profile form if user goes back to profile screen
+  useEffect(() => {
+    if (screen === "profile" && user) {
+      loadExistingProfileData()
+    }
+  }, [screen, user])
+
+  // Load existing profile data to pre-populate form
+  const loadExistingProfileData = async () => {
+    if (!user) return
+    
+    try {
+      const { data: existingProfile, error } = await profileService.getProfile(user.id)
+      
+      if (existingProfile && !error) {
+        console.log("Loading existing profile data:", existingProfile)
+        
+        // Pre-populate form fields with existing data
+        if (existingProfile.name) setName(existingProfile.name)
+        if (existingProfile.country) setSelectedCountry(existingProfile.country)
+        if (existingProfile.gender) setGender(existingProfile.gender)
+        if (existingProfile.birth_date) setBirthDate(existingProfile.birth_date)
+        if (existingProfile.profile_picture) setProfilePicture(existingProfile.profile_picture)
+      }
+    } catch (error) {
+      console.error("Error loading existing profile data:", error)
+      // Don't show error to user, just continue with empty form
+    }
+  }
+
+  // Load existing interests from profile to pre-populate interests selection
+  const loadExistingInterests = async () => {
+    if (!user) return
+    
+    try {
+      const { data: existingProfile, error } = await profileService.getProfile(user.id)
+      
+      if (existingProfile && !error && existingProfile.interests) {
+        console.log("Loading existing interests from profile:", existingProfile.interests)
+        
+        // Map old shortcuts to full theme names
+        const shortcutToFullName: { [key: string]: string } = {
+          "travel": "Voyages & découvertes",
+          "humor": "Humour & jeux", 
+          "cinema": "Cinéma & séries",
+          "communication": "Communication",
+          "family": "Famille & valeurs",
+          "romance": "Vie de couple & romance",
+          "future": "Projets d'avenir",
+          "wellness": "Bien-être & développement personnel"
+        }
+        
+        // Convert shortcuts to full names, or keep as-is if already full names
+        const mappedInterests = existingProfile.interests.map(interest => 
+          shortcutToFullName[interest] || interest
+        )
+        
+        console.log("Mapped interests:", mappedInterests)
+        setSelectedInterests(mappedInterests)
+      } else {
+        // Clear selected interests if no profile or no interests
+        setSelectedInterests([])
+      }
+    } catch (error) {
+      console.error("Error loading existing interests:", error)
+      // Clear selected interests on error
+      setSelectedInterests([])
+    }
+  }
 
   const checkUserProfile = async () => {
     if (!user) return
@@ -488,41 +634,80 @@ export default function App() {
       return
     }
 
-    console.log("Creating profile for user:", user.id, user.email)
+    console.log("Creating/updating profile for user:", user.id, user.email)
     console.log("Profile data:", { name, selectedCountry, gender, birthDate })
 
     setIsLoading(true)
     setError("")
 
     try {
-      const inviteCode = await profileService.generateInviteCode()
-      console.log("Generated invite code:", inviteCode)
+      // Check if profile already exists
+      const { data: existingProfile, error: profileCheckError } = await profileService.getProfile(user.id)
       
-      const profileData = {
-        id: user.id, // Include the user ID
-        name,
-        country: selectedCountry,
-        gender,
-        birth_date: birthDate || null,
-        invite_code: inviteCode,
-        profile_picture: profilePicture || null,
-        completed: false, // Profile not completed until interests are selected
+      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+        console.error("Error checking existing profile:", profileCheckError)
+        setError("Erreur lors de la vérification du profil")
+        return
       }
 
-      console.log("Sending profile data:", profileData)
+      if (existingProfile) {
+        // Profile exists, update it
+        console.log("Profile exists, updating with new data")
+        
+        const updateData = {
+          name,
+          country: selectedCountry,
+          gender,
+          birth_date: birthDate || null,
+          profile_picture: profilePicture || existingProfile.profile_picture, // Keep existing picture if no new one
+          completed: false, // Reset completion status since we're updating
+        }
 
-      const { data, error } = await profileService.createProfile(profileData)
-      
-      if (error) {
-        console.error("Profile creation error:", error)
-        setError(error.message || "Erreur lors de la création du profil")
+        console.log("Updating profile with data:", updateData)
+
+        const { data, error } = await profileService.updateProfile(user.id, updateData)
+        
+        if (error) {
+          console.error("Profile update error:", error)
+          setError(error.message || "Erreur lors de la mise à jour du profil")
+        } else {
+          console.log("Profile updated successfully:", data)
+          // Success! Redirect to interests section
+          setScreen("interests")
+        }
       } else {
-        console.log("Profile created successfully:", data)
-        // Success! Redirect to interests section
-        setScreen("interests")
+        // Profile doesn't exist, create new one
+        console.log("Profile doesn't exist, creating new profile")
+        
+        const inviteCode = await profileService.generateInviteCode()
+        console.log("Generated invite code:", inviteCode)
+        
+        const profileData = {
+          id: user.id, // Include the user ID
+          name,
+          country: selectedCountry,
+          gender,
+          birth_date: birthDate || null,
+          invite_code: inviteCode,
+          profile_picture: profilePicture || null,
+          completed: false, // Profile not completed until interests are selected
+        }
+
+        console.log("Creating new profile with data:", profileData)
+
+        const { data, error } = await profileService.createProfile(profileData)
+        
+        if (error) {
+          console.error("Profile creation error:", error)
+          setError(error.message || "Erreur lors de la création du profil")
+        } else {
+          console.log("Profile created successfully:", data)
+          // Success! Redirect to interests section
+          setScreen("interests")
+        }
       }
     } catch (error) {
-      console.error("Profile creation exception:", error)
+      console.error("Profile creation/update exception:", error)
       setError("Une erreur inattendue s'est produite")
     } finally {
       setIsLoading(false)
@@ -589,16 +774,34 @@ export default function App() {
   }
 
   const handleInterestsComplete = async () => {
-    if (!user) return
+    if (!user || selectedInterests.length === 0) return
     
     console.log("Completing interests for user:", user.id)
-    console.log("Selected interests:", selectedInterests)
+    console.log("Selected interests (quiz theme names):", selectedInterests)
     
     setIsInterestsLoading(true)
     try {
-      // Update profile with selected interests but DON'T mark as completed yet
+      // Map any remaining shortcuts to full theme names before saving
+      const shortcutToFullName: { [key: string]: string } = {
+        "travel": "Voyages & découvertes",
+        "humor": "Humour & jeux", 
+        "cinema": "Cinéma & séries",
+        "communication": "Communication",
+        "family": "Famille & valeurs",
+        "romance": "Vie de couple & romance",
+        "future": "Projets d'avenir",
+        "wellness": "Bien-être & développement personnel"
+      }
+      
+      const finalInterests = selectedInterests.map(interest => 
+        shortcutToFullName[interest] || interest
+      )
+      
+      console.log("Final interests to save:", finalInterests)
+      
+      // Update profile with selected quiz theme names as interests
       const { data, error } = await profileService.updateProfile(user.id, { 
-        interests: selectedInterests,
+        interests: finalInterests, // These are now quiz theme names from the database
         completed: false // Keep as false until couple is formed
       })
       
@@ -607,7 +810,7 @@ export default function App() {
         return
       }
       
-      console.log("Interests updated successfully:", data)
+      console.log("Interests (quiz theme names) updated successfully:", data)
       
       // Get the user's invite code and go to invite codes section
       const { data: profile } = await profileService.getProfile(user.id)
@@ -1126,7 +1329,7 @@ export default function App() {
                           {isLoading ? (
                             <ActivityIndicator color="#FFFFFF" />
                           ) : (
-                            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Créer mon profil</Text>
+                            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Continuer</Text>
                           )}
                     </LinearGradient>
                   </Pressable>
@@ -1138,65 +1341,76 @@ export default function App() {
             <>
               <HeaderBar variant="title" title="Vos centres d'intérêts" onBack={() => setScreen("profile")} />
 
-              <View style={{ flex: 1, paddingHorizontal: 20 }}>
-                <View style={{ gap: 16, marginTop: 20 }}>
-                  {interests.map((interest) => (
-                    <Pressable
-                      key={interest.id}
-                      onPress={() => handleInterestToggle(interest.id)}
-                      style={{
-                        backgroundColor: selectedInterests.includes(interest.id) ? colors.primary : colors.surface,
-                        borderColor: selectedInterests.includes(interest.id) ? colors.primary : colors.border,
-                        borderWidth: 1,
-                        borderRadius: 12,
-                        paddingHorizontal: 16,
-                        paddingVertical: 16,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 12,
-                      }}
-                    >
-                      <MaterialCommunityIcons
-                        name={interest.icon as any}
-                        size={24}
-                        color={selectedInterests.includes(interest.id) ? "#FFFFFF" : colors.textSecondary}
-                      />
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontWeight: "500",
-                          color: selectedInterests.includes(interest.id) ? "#FFFFFF" : colors.text,
-                          flex: 1,
-                        }}
-                      >
-                        {interest.label}
-                      </Text>
-                      {selectedInterests.includes(interest.id) && (
-                        <MaterialCommunityIcons
-                          name="check"
-                          size={20}
-                          color="#FFFFFF"
-                        />
-                      )}
-                    </Pressable>
-                  ))}
-                </View>
+              <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10 }}>
+                {isLoadingInterests ? (
+                  <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={{ marginTop: 16, color: colors.textSecondary }}>Chargement des centres d'intérêts...</Text>
+                  </View>
+                ) : (
+                  <>
+                    <View style={{ gap: 16, marginTop: 20 }}>
+                      {interests.map((interest) => (
+                        <Pressable
+                          key={interest.id}
+                          onPress={() => handleInterestToggle(interest.id)}
+                          style={{
+                            backgroundColor: selectedInterests.includes(interest.id) ? colors.primary : colors.surface,
+                            borderColor: selectedInterests.includes(interest.id) ? colors.primary : colors.border,
+                            borderWidth: 1,
+                            borderRadius: 12,
+                            paddingHorizontal: 16,
+                            paddingVertical: 16,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 12,
+                          }}
+                        >
+                          <MaterialCommunityIcons
+                            name={interest.icon as any}
+                            size={24}
+                            color={selectedInterests.includes(interest.id) ? "#FFFFFF" : colors.textSecondary}
+                          />
+                          <Text
+                            style={{
+                              fontSize: 16,
+                              fontWeight: "500",
+                              color: selectedInterests.includes(interest.id) ? "#FFFFFF" : colors.text,
+                              flex: 1,
+                            }}
+                          >
+                            {interest.label}
+                          </Text>
+                          {selectedInterests.includes(interest.id) && (
+                            <MaterialCommunityIcons
+                              name="check"
+                              size={20}
+                              color="#FFFFFF"
+                            />
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
 
-                <View style={{ marginTop: 32 }}>
-                  <Pressable
-                    onPress={handleInterestsComplete}
-                    disabled={isInterestsLoading}
-                    style={{ borderRadius: 12, overflow: "hidden", opacity: isInterestsLoading ? 0.7 : 1 }}
-                  >
-                    <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
-                      {isInterestsLoading ? (
-                        <ActivityIndicator color="#FFFFFF" />
-                      ) : (
-                        <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Terminer</Text>
-                      )}
-                    </LinearGradient>
-                  </Pressable>
-                </View>
+                    <View style={{ marginTop: 32 }}>
+                      <Pressable
+                        onPress={handleInterestsComplete}
+                        disabled={isInterestsLoading || selectedInterests.length === 0}
+                        style={{ borderRadius: 12, overflow: "hidden", opacity: (isInterestsLoading || selectedInterests.length === 0) ? 0.7 : 1 }}
+                      >
+                        <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
+                          {isInterestsLoading ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                          ) : (
+                            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
+                              {selectedInterests.length === 0 ? "Sélectionnez au moins un centre d'intérêt" : "Terminer"}
+                            </Text>
+                          )}
+                        </LinearGradient>
+                      </Pressable>
+                    </View>
+                  </>
+                )}
               </View>
             </>
           )}
