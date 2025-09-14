@@ -59,13 +59,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        console.error('Error loading profile:', error)
+        console.log('Error loading profile:', error)
+        // If profile doesn't exist (PGRST116), that's normal for new users
+        if (error.code === 'PGRST116') {
+          console.log('No profile found - user needs to create one')
+        }
         return
       }
 
       setProfile(profileData)
     } catch (error) {
-      console.error('Error loading profile:', error)
+      console.log('Error loading profile:', error)
     } finally {
       setProfileLoading(false)
     }
@@ -157,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       
       if (signUpError) {
-        console.error("Auth context: Signup error:", signUpError)
+        console.log("Auth context: Signup error:", signUpError)
         return { error: signUpError }
       }
       
@@ -172,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
         
         if (signInError) {
-          console.error("Auth context: Auto-signin error:", signInError)
+          console.log("Auth context: Auto-signin error:", signInError)
           return { error: signInError }
         }
         
@@ -184,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return { error: null }
     } catch (error) {
-      console.error("Auth context: Signup exception:", error)
+      console.log("Auth context: Signup exception:", error)
       return { error: { message: 'Une erreur inattendue s\'est produite' } }
     }
   }
@@ -225,14 +229,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       
       if (error) {
-        console.error("Auth context: Password reset error:", error)
+        console.log("Auth context: Password reset error:", error)
         return { error }
       }
       
       console.log("Auth context: Password reset email sent successfully to:", email)
       return { error: null }
     } catch (error) {
-      console.error("Auth context: Password reset exception:", error)
+      console.log("Auth context: Password reset exception:", error)
       return { error: { message: 'Une erreur inattendue s\'est produite' } }
     }
   }
@@ -244,14 +248,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       
       if (error) {
-        console.error("Auth context: Password update error:", error)
+        console.log("Auth context: Password update error:", error)
         return { error }
       }
       
       console.log("Auth context: Password updated successfully")
       return { error: null }
     } catch (error) {
-      console.error("Auth context: Password update exception:", error)
+      console.log("Auth context: Password update exception:", error)
       return { error: { message: 'Une erreur inattendue s\'est produite' } }
     }
   }

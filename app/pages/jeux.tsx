@@ -119,7 +119,10 @@ export default function JeuxPage() {
                     {game.players}
                   </Text>
                   <StarRating rating={game.rating} isDarkMode={isDarkMode} />
-                  <TouchableOpacity style={[styles.playButton, { backgroundColor: game.color }]}>
+                  <TouchableOpacity 
+                    style={[styles.playButton, { backgroundColor: game.color }]}
+                    onPress={() => handleGamePress(game.route)}
+                  >
                     <Text style={styles.playButtonText}>{t('common.play')}</Text>
                   </TouchableOpacity>
                 </View>

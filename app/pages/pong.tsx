@@ -47,6 +47,7 @@ interface GameState {
   gamePhase: 'playing' | 'paused' | 'gameOver';
   winner?: string;
   gameStartTime: number;
+  ballSpeed: number;
   ballHitsPlayer: number;
   ballHitsBot: number;
   longestRally: number;
@@ -60,7 +61,8 @@ const PADDLE_WIDTH = 80;
 const PADDLE_HEIGHT = 15;
 const BALL_RADIUS = 8;
 const PADDLE_SPEED = 5;
-const BALL_SPEED = 3;
+const BALL_SPEED_MIN = 2;
+const BALL_SPEED_MAX = 6;
 const WIN_SCORE = 5;
 
 // AsyncStorage functions
@@ -105,6 +107,7 @@ export default function PongPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [gameStats, setGameStats] = useState<any>(null);
+  const [ballSpeed, setBallSpeed] = useState(3);
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
   const panGestureRef = useRef<PanGestureHandler>(null);
 
@@ -121,11 +124,11 @@ export default function PongPage() {
         position: { x: GAME_WIDTH / 2 - PADDLE_WIDTH / 2, y: 10 },
         width: PADDLE_WIDTH,
         height: PADDLE_HEIGHT,
-        speed: PADDLE_SPEED,
+        speed: PADDLE_SPEED * 0.8, // Bot is slightly slower than player
       },
       ball: {
         position: { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 },
-        velocity: { x: BALL_SPEED, y: BALL_SPEED },
+        velocity: { x: ballSpeed, y: ballSpeed },
         radius: BALL_RADIUS,
       },
       playerScore: 0,
@@ -134,12 +137,13 @@ export default function PongPage() {
       isPlaying: false,
       gamePhase: 'paused',
       gameStartTime: Date.now(),
+      ballSpeed: ballSpeed,
       ballHitsPlayer: 0,
       ballHitsBot: 0,
       longestRally: 0,
       currentRally: 0,
     };
-  }, []);
+  }, [ballSpeed]);
 
   // Get couple ID
   const getCoupleId = useCallback(async () => {
@@ -164,15 +168,15 @@ export default function PongPage() {
 
   // Load game statistics
   const loadGameStats = useCallback(async () => {
-    if (!coupleId) return;
+    if (!user) return;
     
     try {
-      const stats = await gameStatsService.getCoupleGameStats(coupleId);
+      const stats = await gameStatsService.getBotGameStats(user.id);
       setGameStats(stats);
     } catch (error) {
       console.error('Error loading game stats:', error);
     }
-  }, [coupleId]);
+  }, [user]);
 
   // Load game state on mount
   useEffect(() => {
@@ -189,35 +193,29 @@ export default function PongPage() {
     loadGame();
   }, [initializeGame, getCoupleId]);
 
-  // Load stats when couple ID is available
+  // Load stats when user is available
   useEffect(() => {
-    if (coupleId) {
+    if (user) {
       loadGameStats();
     }
-  }, [coupleId, loadGameStats]);
+  }, [user, loadGameStats]);
 
   // Save game statistics
-  const saveGameStats = useCallback(async (gameState: GameState, couple: any) => {
-    if (!couple || !coupleId) return;
+  const saveGameStats = useCallback(async (gameState: GameState) => {
+    if (!user) return;
 
     try {
-      const gameDuration = Math.floor((Date.now() - gameState.gameStartTime) / 1000);
-      const winnerId = gameState.winner === 'Vous' ? couple.user1_id : 
-                      gameState.winner === 'Bot' ? couple.user2_id : undefined;
+      // For bot games, player1 is the user, player2 is null (bot)
+      const winnerId = gameState.winner === 'Vous' ? user.id : undefined;
 
       const stats: GameStats = {
-        couple_id: coupleId,
+        couple_id: null, // No couple for bot games
         game_type: 'pong',
-        player1_id: couple.user1_id,
-        player2_id: couple.user2_id,
+        player1_id: user.id, // User is the only player
+        player2_id: null, // Bot has no ID
         winner_id: winnerId,
         is_draw: gameState.winner === undefined,
-        game_duration: gameDuration,
-        player1_score: gameState.playerScore,
-        player2_score: gameState.botScore,
-        pong_ball_hits_player1: gameState.ballHitsPlayer,
-        pong_ball_hits_player2: gameState.ballHitsBot,
-        pong_longest_rally: gameState.longestRally,
+        is_bot_game: true, // This is a bot game
       };
 
       await gameStatsService.saveGameStats(stats);
@@ -226,7 +224,7 @@ export default function PongPage() {
     } catch (error) {
       console.error('Error saving game stats:', error);
     }
-  }, [coupleId, loadGameStats]);
+  }, [user, loadGameStats]);
 
   // Save game state whenever it changes
   useEffect(() => {
@@ -245,7 +243,7 @@ export default function PongPage() {
 
         const newState = { ...prevState };
         
-        // Update ball position
+        // Update ball position with current ball speed
         newState.ball.position.x += newState.ball.velocity.x;
         newState.ball.position.y += newState.ball.velocity.y;
 
@@ -284,9 +282,11 @@ export default function PongPage() {
             ball.position.x <= botPaddle.position.x + botPaddle.width &&
             ball.velocity.y < 0) {
           ball.velocity.y = -ball.velocity.y;
-          // Add some angle based on where the ball hits the paddle
+          // Add some angle based on where the ball hits the paddle with randomness
           const hitPos = (ball.position.x - botPaddle.position.x) / botPaddle.width;
-          ball.velocity.x = (hitPos - 0.5) * 4;
+          const baseAngle = (hitPos - 0.5) * 4;
+          const randomVariation = (Math.random() - 0.5) * 1.5; // Add some randomness
+          ball.velocity.x = baseAngle + randomVariation;
           
           // Track ball hits and rally
           newState.ballHitsBot++;
@@ -294,13 +294,29 @@ export default function PongPage() {
           newState.longestRally = Math.max(newState.longestRally, newState.currentRally);
         }
 
-        // Bot AI - follow the ball
+        // Bot AI - follow the ball with some imperfection
         const ballX = ball.position.x;
         const botPaddleCenter = botPaddle.position.x + botPaddle.width / 2;
-        if (ballX > botPaddleCenter + 5) {
-          botPaddle.position.x = Math.min(GAME_WIDTH - botPaddle.width, botPaddle.position.x + botPaddle.speed);
-        } else if (ballX < botPaddleCenter - 5) {
-          botPaddle.position.x = Math.max(0, botPaddle.position.x - botPaddle.speed);
+        
+        // Add some randomness to bot movement (15% chance to not move optimally)
+        const shouldMove = Math.random() > 0.15;
+        const reactionDelay = Math.random() > 0.8; // 20% chance of delayed reaction
+        
+        if (shouldMove && !reactionDelay) {
+          const tolerance = 8 + Math.random() * 4; // Variable tolerance (8-12 pixels)
+          if (ballX > botPaddleCenter + tolerance) {
+            botPaddle.position.x = Math.min(GAME_WIDTH - botPaddle.width, botPaddle.position.x + botPaddle.speed);
+          } else if (ballX < botPaddleCenter - tolerance) {
+            botPaddle.position.x = Math.max(0, botPaddle.position.x - botPaddle.speed);
+          }
+        } else if (reactionDelay) {
+          // Delayed reaction - move slower
+          const slowSpeed = botPaddle.speed * 0.5;
+          if (ballX > botPaddleCenter + 10) {
+            botPaddle.position.x = Math.min(GAME_WIDTH - botPaddle.width, botPaddle.position.x + slowSpeed);
+          } else if (ballX < botPaddleCenter - 10) {
+            botPaddle.position.x = Math.max(0, botPaddle.position.x - slowSpeed);
+          }
         }
 
         // Scoring
@@ -308,7 +324,7 @@ export default function PongPage() {
           newState.playerScore++;
           newState.ball = {
             position: { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 },
-            velocity: { x: BALL_SPEED, y: BALL_SPEED },
+            velocity: { x: newState.ballSpeed, y: newState.ballSpeed },
             radius: BALL_RADIUS,
           };
           newState.gameStatus = `Vous: ${newState.playerScore} - Bot: ${newState.botScore}`;
@@ -317,7 +333,7 @@ export default function PongPage() {
           newState.botScore++;
           newState.ball = {
             position: { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 },
-            velocity: { x: -BALL_SPEED, y: -BALL_SPEED },
+            velocity: { x: -newState.ballSpeed, y: -newState.ballSpeed },
             radius: BALL_RADIUS,
           };
           newState.gameStatus = `Vous: ${newState.playerScore} - Bot: ${newState.botScore}`;
@@ -334,7 +350,7 @@ export default function PongPage() {
           // Save stats when game ends
           getCoupleId().then(couple => {
             if (couple) {
-              saveGameStats(newState, couple);
+              saveGameStats(newState);
             }
           });
         } else if (newState.botScore >= WIN_SCORE) {
@@ -346,7 +362,7 @@ export default function PongPage() {
           // Save stats when game ends
           getCoupleId().then(couple => {
             if (couple) {
-              saveGameStats(newState, couple);
+              saveGameStats(newState);
             }
           });
         }
@@ -397,14 +413,15 @@ export default function PongPage() {
     } : null);
   }, [gameState]);
 
-  // Drag-based paddle control
+  // Simple drag state for paddle control
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartPaddleX, setDragStartPaddleX] = useState(0);
 
+  // Touch handlers for paddle control
   const handleTouchStart = useCallback((event: any) => {
-    if (!gameState || !gameState.isPlaying) return;
-
+    if (!gameState) return;
+    
     const nativeEvent = event.nativeEvent;
     const touchX = nativeEvent.locationX || nativeEvent.pageX || nativeEvent.clientX || nativeEvent.x;
     
@@ -412,16 +429,30 @@ export default function PongPage() {
       setIsDragging(true);
       setDragStartX(touchX);
       setDragStartPaddleX(gameState.playerPaddle.position.x);
+      
+      // Position paddle so its center aligns with touch point
+      const clampedTouchX = Math.max(0, Math.min(GAME_WIDTH, touchX));
+      const paddleCenter = clampedTouchX;
+      const newX = Math.max(0, Math.min(GAME_WIDTH - PADDLE_WIDTH, paddleCenter - PADDLE_WIDTH / 2));
+      
+      setGameState(prev => prev ? {
+        ...prev,
+        playerPaddle: {
+          ...prev.playerPaddle,
+          position: { ...prev.playerPaddle.position, x: newX }
+        }
+      } : null);
     }
   }, [gameState]);
 
   const handleTouchMove = useCallback((event: any) => {
-    if (!gameState || !gameState.isPlaying || !isDragging) return;
-
+    if (!gameState || !isDragging) return;
+    
     const nativeEvent = event.nativeEvent;
     const touchX = nativeEvent.locationX || nativeEvent.pageX || nativeEvent.clientX || nativeEvent.x;
     
     if (touchX !== undefined && touchX !== null) {
+      // Calculate delta movement for smooth dragging
       const deltaX = touchX - dragStartX;
       const newX = Math.max(0, Math.min(GAME_WIDTH - PADDLE_WIDTH, dragStartPaddleX + deltaX));
       
@@ -476,6 +507,59 @@ export default function PongPage() {
             <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
               Vous: {gameState.playerScore} - Bot: {gameState.botScore}
             </Text>
+            
+            {/* Ball Speed Control */}
+            <View style={styles.speedControl}>
+              <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
+                Vitesse de la balle: {ballSpeed}
+              </Text>
+              <View style={styles.speedButtons}>
+                <TouchableOpacity
+                  style={[styles.speedButton, { backgroundColor: isDarkMode ? '#333' : '#f0f0f0' }]}
+                  onPress={() => {
+                    const newSpeed = Math.max(BALL_SPEED_MIN, ballSpeed - 0.5);
+                    setBallSpeed(newSpeed);
+                    if (gameState) {
+                      setGameState(prev => prev ? {
+                        ...prev,
+                        ballSpeed: newSpeed,
+                        ball: {
+                          ...prev.ball,
+                          velocity: {
+                            x: prev.ball.velocity.x > 0 ? newSpeed : -newSpeed,
+                            y: prev.ball.velocity.y > 0 ? newSpeed : -newSpeed
+                          }
+                        }
+                      } : null);
+                    }
+                  }}
+                >
+                  <Text className={`text-lg ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>-</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.speedButton, { backgroundColor: isDarkMode ? '#333' : '#f0f0f0' }]}
+                  onPress={() => {
+                    const newSpeed = Math.min(BALL_SPEED_MAX, ballSpeed + 0.5);
+                    setBallSpeed(newSpeed);
+                    if (gameState) {
+                      setGameState(prev => prev ? {
+                        ...prev,
+                        ballSpeed: newSpeed,
+                        ball: {
+                          ...prev.ball,
+                          velocity: {
+                            x: prev.ball.velocity.x > 0 ? newSpeed : -newSpeed,
+                            y: prev.ball.velocity.y > 0 ? newSpeed : -newSpeed
+                          }
+                        }
+                      } : null);
+                    }
+                  }}
+                >
+                  <Text className={`text-lg ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
           
           {/* Game Area */}
@@ -485,6 +569,9 @@ export default function PongPage() {
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
             >
               {/* Bot Paddle */}
               <View
@@ -810,5 +897,31 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6B7280',
     marginTop: 2,
+  },
+  speedControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    gap: 10,
+  },
+  speedButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  speedButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
 });

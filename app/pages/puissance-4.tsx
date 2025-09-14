@@ -252,26 +252,21 @@ export default function Puissance4Page() {
   }, [gameState, isLoading]);
 
   // Save game statistics
-  const saveGameStats = useCallback(async (gameState: GameState, couple: any) => {
-    if (!couple || !coupleId) return;
+  const saveGameStats = useCallback(async (gameState: GameState) => {
+    if (!user) return;
 
     try {
-      const gameDuration = Math.floor((Date.now() - gameState.gameStartTime) / 1000);
-      const winnerId = gameState.winner === 'red' ? couple.user1_id : 
-                      gameState.winner === 'yellow' ? couple.user2_id : undefined;
+      // For bot games, player1 is the user, player2 is null (bot)
+      const winnerId = gameState.winner === 'red' ? user.id : undefined;
 
       const stats: GameStats = {
-        couple_id: coupleId,
+        couple_id: null, // No couple for bot games
         game_type: 'connect4',
-        player1_id: couple.user1_id,
-        player2_id: couple.user2_id,
+        player1_id: user.id, // User is the only player
+        player2_id: null, // Bot has no ID
         winner_id: winnerId,
         is_draw: gameState.winner === null,
-        game_duration: gameDuration,
-        player1_score: gameState.winner === 'red' ? 1 : 0,
-        player2_score: gameState.winner === 'yellow' ? 1 : 0,
-        connect4_moves: gameState.moveCount,
-        connect4_winning_move: gameState.winner ? gameState.moveCount : undefined,
+        is_bot_game: true, // This is a bot game
       };
 
       await gameStatsService.saveGameStats(stats);
@@ -280,7 +275,7 @@ export default function Puissance4Page() {
     } catch (error) {
       console.error('Error saving game stats:', error);
     }
-  }, [coupleId, loadGameStats]);
+  }, [user, loadGameStats]);
 
   const makeMove = useCallback((col: number) => {
     if (!gameState || gameState.gamePhase === 'gameOver') return;
@@ -340,7 +335,7 @@ export default function Puissance4Page() {
     if (newGameState.gamePhase === 'gameOver') {
       getCoupleId().then(couple => {
         if (couple) {
-          saveGameStats(newGameState, couple);
+          saveGameStats(newGameState);
         }
       });
     }

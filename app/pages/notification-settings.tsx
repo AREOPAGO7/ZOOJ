@@ -7,7 +7,6 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import { useNotificationSettingsStore } from '../../lib/notificationSettingsStore';
-import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
 interface NotificationSettings {
@@ -40,146 +39,51 @@ export default function NotificationSettingsPage() {
     initializeSettings
   } = useNotificationSettingsStore();
 
-  // Fetch notification settings and update global state
-  const fetchSettings = async () => {
+  // Initialize settings from AsyncStorage only (no database fetch)
+  const initializeSettingsOnly = async () => {
     try {
       setIsLoading(true);
-      
-      // Try to fetch record with id = 1 first
-      let { data, error } = await supabase
-        .from('notification_setting')
-        .select('*')
-        .eq('id', 1)
-        .single();
-
-      // If no record with id = 1, try to get the first available record
-      if (error && error.code === 'PGRST116') {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('notification_setting')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        data = fallbackData;
-        error = fallbackError;
-      }
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching notification settings:', error);
-      }
-
-      if (data) {
-        // Update global state instead of local state (this will also save to AsyncStorage)
-        await setSettings(data);
-      }
+      await initializeSettings();
     } catch (error) {
-      console.error('Error fetching notification settings:', error);
+      console.log('Error initializing settings:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Update notification setting - now uses global state directly
+  // Update notification setting - uses global state only
   const handleUpdateSetting = async (field: keyof Omit<NotificationSettings, 'id'>, value: boolean) => {
     try {
       // Update global state immediately (this will also save to AsyncStorage)
       await updateSetting(field, value);
-
-      // Update database in background
-      const newSettings = { ...settings, [field]: value };
-      const { error } = await supabase
-        .from('notification_setting')
-        .update({
-          [field]: value,
-          daily_questions: newSettings.daily_questions,
-          quiz_invite: newSettings.quiz_invite,
-          pulse: newSettings.pulse,
-          upcoming_events: newSettings.upcoming_events,
-          messages: newSettings.messages,
-          sound_enabled: newSettings.sound_enabled,
-        })
-        .eq('id', 1);
-
-      if (error) {
-        console.error('Error updating notification setting:', error);
-        // Revert global state on error
-        await updateSetting(field, !value);
-      }
     } catch (error) {
-      console.error('Error updating notification setting:', error);
-      // Revert global state on error
-      await updateSetting(field, !value);
+      console.log('Error updating notification setting:', error);
     }
   };
 
-  // Toggle master notification setting - now uses global state directly
+  // Toggle master notification setting - uses global state only
   const handleToggleMasterSetting = async (value: boolean) => {
     try {
       // Update global state immediately (this will also save to AsyncStorage)
       await toggleMasterSetting(value);
-
-      // Update database in background
-      supabase
-        .from('notification_setting')
-        .update({
-          daily_questions: value,
-          quiz_invite: value,
-          pulse: value,
-          upcoming_events: value,
-          messages: value,
-          sound_enabled: value,
-        })
-        .eq('id', 1)
-        .then(async ({ error }) => {
-          if (error) {
-            console.error('Error updating master notification setting:', error);
-            // Revert global state on error
-            await toggleMasterSetting(!value);
-          }
-        });
     } catch (error) {
-      console.error('Error updating master notification setting:', error);
-      // Revert global state on error
-      await toggleMasterSetting(!value);
+      console.log('Error updating master notification setting:', error);
     }
   };
 
-  // Toggle sound setting - now uses global state directly
+  // Toggle sound setting - uses global state only
   const handleToggleSoundSetting = async (value: boolean) => {
     try {
       // Update global state immediately (this will also save to AsyncStorage)
       await toggleSoundSetting(value);
-
-      // Update database in background
-      supabase
-        .from('notification_setting')
-        .update({
-          sound_enabled: value,
-        })
-        .eq('id', 1)
-        .then(async ({ error }) => {
-          if (error) {
-            console.error('Error updating sound setting:', error);
-            // Revert global state on error
-            await toggleSoundSetting(!value);
-          }
-        });
     } catch (error) {
-      console.error('Error updating sound setting:', error);
-      // Revert global state on error
-      await toggleSoundSetting(!value);
+      console.log('Error updating sound setting:', error);
     }
   };
 
   useEffect(() => {
-    // Initialize settings from AsyncStorage first, then fetch from database
-    const initializeAndFetch = async () => {
-      await initializeSettings();
-      await fetchSettings();
-    };
-    
-    initializeAndFetch();
+    // Initialize settings from AsyncStorage only
+    initializeSettingsOnly();
   }, []);
 
   const isMasterEnabled = settings.daily_questions && 

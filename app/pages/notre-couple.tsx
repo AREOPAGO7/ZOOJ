@@ -2,13 +2,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
-import { CoupleGameStats, gameStatsService } from '../../lib/gameStatsService';
+import { BotGameStats, CoupleGameStats, gameStatsService } from '../../lib/gameStatsService';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
@@ -38,6 +38,8 @@ interface GameStatisticsSectionProps {
   colors: any;
   isDarkMode: boolean;
   t: (key: string) => string;
+  userId: string | null;
+  partnerId: string | null;
 }
 
 const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({ 
@@ -45,21 +47,43 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
   userNames, 
   colors, 
   isDarkMode, 
-  t 
+  t,
+  userId,
+  partnerId
 }) => {
   const [gameStats, setGameStats] = useState<CoupleGameStats | null>(null);
+  const [botGameStats, setBotGameStats] = useState<BotGameStats | null>(null);
+  const [partnerBotGameStats, setPartnerBotGameStats] = useState<BotGameStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadGameStats = async () => {
-      if (!coupleId) {
+      if (!coupleId && !userId) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const stats = await gameStatsService.getCoupleGameStats(coupleId);
-        setGameStats(stats);
+        // Load couple game stats (if couple exists)
+        if (coupleId) {
+          const coupleStats = await gameStatsService.getCoupleGameStats(coupleId);
+          setGameStats(coupleStats);
+        }
+
+        // Load individual bot game stats for both users
+        if (userId) {
+          console.log('Loading bot game stats for user:', userId);
+          const botStats = await gameStatsService.getBotGameStats(userId);
+          console.log('User bot game stats:', botStats);
+          setBotGameStats(botStats);
+        }
+        
+        if (partnerId) {
+          console.log('Loading bot game stats for partner:', partnerId);
+          const partnerBotStats = await gameStatsService.getBotGameStats(partnerId);
+          console.log('Partner bot game stats:', partnerBotStats);
+          setPartnerBotGameStats(partnerBotStats);
+        }
       } catch (error) {
         console.error('Error loading game stats:', error);
       } finally {
@@ -68,7 +92,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
     };
 
     loadGameStats();
-  }, [coupleId]);
+  }, [coupleId, userId, partnerId]);
 
   if (isLoading) {
     return (
@@ -82,7 +106,15 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
     );
   }
 
-  if (!gameStats || gameStats.total_games_played === 0) {
+  // Check if we have any game stats (couple or individual bot)
+  const hasCoupleGames = gameStats && gameStats.total_games_played > 0;
+  const hasBotGames = botGameStats && botGameStats.total_games_played > 0;
+  const hasPartnerBotGames = partnerBotGameStats && partnerBotGameStats.total_games_played > 0;
+  
+  // Always show partner bot games section if we have a partner (even with 0 games)
+  const shouldShowPartnerBotGames = partnerId && partnerBotGameStats;
+
+  if (!hasCoupleGames && !hasBotGames && !shouldShowPartnerBotGames) {
     return (
       <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
         <View style={styles.gameStatsHeader}>
@@ -103,61 +135,185 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
         <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Statistiques de Jeux</Text>
       </View>
       
-      <View style={styles.gameStatsGrid}>
-        <View style={[styles.gameStatItem, { 
-          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
-          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
-        }]}>
-          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.total_games_played || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Parties jouées</Text>
-        </View>
-        
-        <View style={[styles.gameStatItem, { 
-          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
-          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
-        }]}>
-          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.chess_games || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Échecs</Text>
-        </View>
-        
-        <View style={[styles.gameStatItem, { 
-          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
-          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
-        }]}>
-          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.pong_games || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Pong</Text>
-        </View>
-        
-        <View style={[styles.gameStatItem, { 
-          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
-          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
-        }]}>
-          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player1_wins || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-            Victoires {userNames?.user1 || 'Joueur 1'}
+      {/* Individual Bot Games Section - User */}
+      {hasBotGames && (
+        <View style={styles.botGamesSection}>
+          <Text style={[styles.botGamesTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
+            {userNames?.user2 || 'Vos'} jeux contre l'IA 🤖
           </Text>
+          <View style={styles.gameStatsGrid}>
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.total_games_played}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Parties jouées</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.human_wins}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Vos victoires</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.bot_wins}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Victoires IA</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.pong_games}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Pong</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.chess_games}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Échecs</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.human_win_rate}%</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Votre taux de victoire</Text>
+            </View>
+          </View>
         </View>
-        
-        <View style={[styles.gameStatItem, { 
-          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
-          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
-        }]}>
-          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player2_wins || 0}</Text>
-          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-            Victoires {userNames?.user2 || 'Joueur 2'}
+      )}
+
+
+      {/* Individual Bot Games Section - Partner */}
+      {true && (
+        <View style={styles.botGamesSection}>
+          <Text style={[styles.botGamesTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
+            {userNames?.user1 || 'Partenaire'} jeux contre l'IA 🤖
           </Text>
+          <View style={styles.gameStatsGrid}>
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.total_games_played}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Parties jouées</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.human_wins}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Ses victoires</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.bot_wins}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Victoires IA</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.pong_games}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Pong</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.chess_games}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Échecs</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.human_win_rate}%</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Son taux de victoire</Text>
+            </View>
+          </View>
         </View>
-        
-        <View style={[styles.gameStatItem, { 
-          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
-          borderColor: isDarkMode ? '#333333' : '#E5E7EB'
-        }]}>
-          <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player1_win_rate || 0}%</Text>
-          <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-            Taux de victoire {userNames?.user1 || 'J1'}
+      )}
+
+
+      {/* Couple Games Section */}
+      {hasCoupleGames && (
+        <View style={styles.coupleGamesSection}>
+          <Text style={[styles.coupleGamesTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
+            Jeux en couple 💕
           </Text>
+          <View style={styles.gameStatsGrid}>
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.total_games_played}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Parties jouées</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player1_wins}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
+                Victoires {userNames?.user1 || 'Joueur 1'}
+              </Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player2_wins}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
+                Victoires {userNames?.user2 || 'Joueur 2'}
+              </Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.pong_games}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Pong</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.chess_games}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Échecs</Text>
+            </View>
+            
+            <View style={[styles.gameStatItem, { 
+              backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              borderColor: isDarkMode ? '#333333' : '#E5E7EB'
+            }]}>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.draws}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Égalités</Text>
+            </View>
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 };
@@ -210,6 +366,7 @@ export default function NotreCouplePage() {
   };
   
   const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
   const [userNames, setUserNames] = useState<{ user1: string; user2: string } | null>(null);
   const [userProfiles, setUserProfiles] = useState<{ user1: Profile | null; user2: Profile | null } | null>(null);
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
@@ -224,6 +381,8 @@ export default function NotreCouplePage() {
   const [isUpdatingDate, setIsUpdatingDate] = useState(false);
   const [coupleStatus, setCoupleStatus] = useState<'en_finance' | 'en_couple' | 'marie' | ''>('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [botGameStats, setBotGameStats] = useState<BotGameStats | null>(null);
+  const [partnerBotGameStats, setPartnerBotGameStats] = useState<BotGameStats | null>(null);
 
   // Function declarations
   const loadCoupleData = async () => {
@@ -245,6 +404,13 @@ export default function NotreCouplePage() {
       
       console.log('Found couple:', couple);
       setCoupleId(couple.id);
+      
+      // Determine partner ID
+      const currentUserId = user?.id;
+      const partnerId = couple.user1_id === currentUserId ? couple.user2_id : couple.user1_id;
+      console.log('Current user ID:', currentUserId);
+      console.log('Partner ID:', partnerId);
+      setPartnerId(partnerId);
       
       // Set status if present
       if (couple.status) {
@@ -269,6 +435,9 @@ export default function NotreCouplePage() {
       
       // Load answered questions count
       await loadAnsweredQuestionsCount(couple.id);
+      
+      // Load game stats for sharing
+      await loadGameStatsForSharing(user?.id, partnerId);
       
     } catch (error) {
       console.error('Error loading couple data:', error);
@@ -305,6 +474,22 @@ export default function NotreCouplePage() {
       }
     } catch (error) {
       console.error('Error getting user names:', error);
+    }
+  };
+
+  const loadGameStatsForSharing = async (userId: string | undefined, partnerId: string | null) => {
+    try {
+      if (userId) {
+        const userBotStats = await gameStatsService.getBotGameStats(userId);
+        setBotGameStats(userBotStats);
+      }
+      
+      if (partnerId) {
+        const partnerBotStats = await gameStatsService.getBotGameStats(partnerId);
+        setPartnerBotGameStats(partnerBotStats);
+      }
+    } catch (error) {
+      console.error('Error loading game stats for sharing:', error);
     }
   };
 
@@ -390,6 +575,80 @@ export default function NotreCouplePage() {
       Alert.alert(t('ourCouple.error'), t('ourCouple.unexpectedError'));
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleShareCoupleStatus = async () => {
+    try {
+      // Calculate relationship duration
+      let durationText = '';
+      if (anniversaryDate) {
+        const startDate = new Date(anniversaryDate.split('/').reverse().join('-'));
+        const today = new Date();
+        const diffTime = Math.abs(today.getTime() - startDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const years = Math.floor(diffDays / 365);
+        const months = Math.floor((diffDays % 365) / 30);
+        const days = diffDays % 30;
+        
+        const durationParts = [];
+        if (years > 0) durationParts.push(`${years} an${years > 1 ? 's' : ''}`);
+        if (months > 0) durationParts.push(`${months} mois`);
+        if (days > 0) durationParts.push(`${days} jour${days > 1 ? 's' : ''}`);
+        
+        durationText = durationParts.join(', ');
+      }
+
+      // Get status text
+      const statusText = coupleStatus === 'en_finance' ? 'En fiançailles' :
+                        coupleStatus === 'en_couple' ? 'En couple' :
+                        coupleStatus === 'marie' ? 'Marié(e)s' : 'En couple';
+
+      // Get compatibility score
+      const compatibilityScore = coupleInsights?.overallCompatibility || 0;
+      const quizCount = coupleInsights?.totalQuizzes || 0;
+
+      // Get game stats
+      const totalGames = (botGameStats?.total_games_played || 0) + (partnerBotGameStats?.total_games_played || 0);
+      const userWins = botGameStats?.human_wins || 0;
+      const partnerWins = partnerBotGameStats?.human_wins || 0;
+
+      // Create share message
+      const shareMessage = `💕 Notre Statut de Couple sur ZOOJ 💕
+
+👫 ${userNames?.user1 || 'Nous'} & ${userNames?.user2 || 'Notre partenaire'}
+
+📅 Statut: ${statusText}
+${durationText ? `⏰ Ensemble depuis: ${durationText}` : ''}
+
+🎯 Compatibilité: ${compatibilityScore}%
+📊 Basé sur ${quizCount} quiz complété${quizCount > 1 ? 's' : ''}
+
+🎮 Statistiques de Jeux:
+• ${totalGames} parties jouées contre l'IA
+• ${userNames?.user1 || 'Moi'}: ${userWins} victoires
+• ${userNames?.user2 || 'Mon partenaire'}: ${partnerWins} victoires
+
+💬 Questions répondues ensemble: ${answeredQuestionsCount}
+
+Rejoignez-nous sur ZOOJ pour découvrir votre compatibilité ! 💕
+
+Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'}`;
+
+      const result = await Share.share({
+        message: shareMessage,
+        title: 'Notre Statut de Couple - ZOOJ',
+        url: Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'
+      });
+
+      if (result.action === Share.sharedAction) {
+        console.log('Couple status shared successfully');
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed');
+      }
+    } catch (error) {
+      console.log('Error sharing couple status:', error);
+      Alert.alert('Erreur', 'Impossible de partager le statut du couple');
     }
   };
 
@@ -766,7 +1025,7 @@ export default function NotreCouplePage() {
             </View>
 
             {/* Share Icon */}
-            <Pressable style={styles.shareButton}>
+            <Pressable style={styles.shareButton} onPress={handleShareCoupleStatus}>
               <MaterialCommunityIcons name="share-variant" size={24} color={BRAND_PINK} />
             </Pressable>
 
@@ -1048,7 +1307,7 @@ export default function NotreCouplePage() {
                   </View>
                   
                   {quizResults.map((result, index) => (
-                    <View key={index} style={[styles.quizResultItem, { backgroundColor: colors.border }]}> 
+                    <View key={index} style={[styles.quizResultItem, { backgroundColor: isDarkMode ? '#1F2937' : colors.border }]}> 
                       <View style={styles.quizResultHeader}>
                         <Text style={[styles.quizTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{result.quiz_title}</Text>
                         <View style={styles.quizScore}>
@@ -1082,6 +1341,8 @@ export default function NotreCouplePage() {
             colors={colors}
             isDarkMode={isDarkMode}
             t={t}
+            userId={user?.id || null}
+            partnerId={partnerId}
           />
 
           {/* No Data State */}
@@ -1566,5 +1827,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  botGamesSection: {
+    marginBottom: 20,
+  },
+  botGamesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  coupleGamesSection: {
+    marginTop: 10,
+  },
+  coupleGamesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+    textAlign: 'center',
   },
 });

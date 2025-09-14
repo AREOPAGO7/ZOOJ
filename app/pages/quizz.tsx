@@ -1016,6 +1016,8 @@ export default function QuizzPage() {
       const theme = themes.find(t => t.id === params.themeId);
       if (theme) {
         setSelectedTheme(theme);
+        // Automatically load quizzes for this theme
+        selectTheme(theme);
       }
     }
   }, [params.themeId, themes]);

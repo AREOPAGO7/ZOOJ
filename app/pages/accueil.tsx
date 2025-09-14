@@ -640,10 +640,10 @@ export default function AccueilPage() {
                 <Text className={`ml-2 text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>Chargement...</Text>
               </View>
             ) : quizThemes.length > 0 ? (
-              quizThemes.slice(0, 6).map((theme, index) => {
+              quizThemes.map((theme, index) => {
                 // Generate different colors for each theme
-                const colors = ['#4A90E2', '#50C878', '#228B22', '#FF6B6B', '#9B59B6', '#F39C12'];
-                const emojis = ['📚', '💪', '🌿', '❤️', '🎯', '🌟'];
+                const colors = ['#4A90E2', '#50C878', '#228B22', '#FF6B6B', '#9B59B6', '#F39C12', '#E74C3C', '#3498DB', '#2ECC71', '#F1C40F', '#9B59B6', '#E67E22'];
+                const emojis = ['📚', '💪', '🌿', '❤️', '🎯', '🌟', '🎨', '🏠', '💼', '🎵', '🍕', '✈️'];
                 const themeColor = colors[index % colors.length];
                 const themeEmoji = emojis[index % emojis.length];
                 

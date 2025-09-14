@@ -108,7 +108,7 @@ export default function App() {
       console.log("Database fetch result:", { quizThemes, error })
       
       if (error) {
-        console.error("Error fetching quiz themes:", error)
+       console.log("Error fetching quiz themes:", error)
         console.log("Using fallback interests due to database error")
         // Fallback to all available themes if database fetch fails
         setInterests([
@@ -149,7 +149,7 @@ export default function App() {
         ])
       }
     } catch (error) {
-      console.error("Error fetching interests:", error)
+     console.log("Error fetching interests:", error)
       console.log("Using fallback interests due to exception")
       // Fallback to all available themes
       setInterests([
@@ -205,11 +205,11 @@ export default function App() {
             setIsRecoveryMode(true)
             setScreen("newPassword")
           } else {
-            console.error("No access token found in URL")
+            console.log("No access token found in URL")
             setNewPasswordError("Lien de réinitialisation invalide")
           }
         } catch (error) {
-          console.error("Error processing recovery link:", error)
+          console.log("Error processing recovery link:", error)
           setNewPasswordError("Erreur lors du traitement du lien")
         }
       }
@@ -265,7 +265,16 @@ export default function App() {
     try {
       const { data: existingProfile, error } = await profileService.getProfile(user.id)
       
-      if (existingProfile && !error) {
+      if (error) {
+        console.log("Error loading existing profile data:", error)
+        // If profile doesn't exist (PGRST116), that's normal for new users
+        if (error.code === 'PGRST116') {
+          console.log("No existing profile found - user is creating new profile")
+        }
+        return
+      }
+      
+      if (existingProfile) {
         console.log("Loading existing profile data:", existingProfile)
         
         // Pre-populate form fields with existing data
@@ -276,7 +285,7 @@ export default function App() {
         if (existingProfile.profile_picture) setProfilePicture(existingProfile.profile_picture)
       }
     } catch (error) {
-      console.error("Error loading existing profile data:", error)
+      console.log("Error loading existing profile data:", error)
       // Don't show error to user, just continue with empty form
     }
   }
@@ -288,7 +297,17 @@ export default function App() {
     try {
       const { data: existingProfile, error } = await profileService.getProfile(user.id)
       
-      if (existingProfile && !error && existingProfile.interests) {
+      if (error) {
+        console.log("Error loading existing interests:", error)
+        // If profile doesn't exist (PGRST116), that's normal for new users
+        if (error.code === 'PGRST116') {
+          console.log("No existing profile found - user is selecting interests for first time")
+        }
+        setSelectedInterests([])
+        return
+      }
+      
+      if (existingProfile && existingProfile.interests) {
         console.log("Loading existing interests from profile:", existingProfile.interests)
         
         // Map old shortcuts to full theme names
@@ -315,7 +334,7 @@ export default function App() {
         setSelectedInterests([])
       }
     } catch (error) {
-      console.error("Error loading existing interests:", error)
+      console.log("Error loading existing interests:", error)
       // Clear selected interests on error
       setSelectedInterests([])
     }
@@ -331,6 +350,12 @@ export default function App() {
       
       if (profileError) {
         console.log("Profile check error:", profileError)
+        // If profile doesn't exist (PGRST116), that's normal for new users
+        if (profileError.code === 'PGRST116') {
+          console.log("No profile found - user needs to create one")
+          setScreen("profile")
+          return
+        }
       }
       
       if (profile) {
@@ -379,7 +404,7 @@ export default function App() {
         setScreen("profile")
       }
     } catch (error) {
-      console.error("Error checking user profile:", error)
+      console.log("Error checking user profile:", error)
       setScreen("profile")
     }
   }
@@ -410,14 +435,14 @@ export default function App() {
       const result = await signIn(email, password)
       
       if (result.error) {
-        console.error("Signin error:", result.error)
+        console.log("Signin error:", result.error)
         setError(result.error.message || "Erreur lors de la connexion")
       } else {
         console.log("Signin successful")
         // User will be automatically redirected by the useEffect
       }
     } catch (error) {
-      console.error("Signin exception:", error)
+      console.log("Signin exception:", error)
       setError("Une erreur inattendue s'est produite")
     } finally {
       setIsLoading(false)
@@ -443,7 +468,7 @@ export default function App() {
       const result = await signUp(email, password)
       
       if (result.error) {
-        console.error("Signup error:", result.error)
+        console.log("Signup error:", result.error)
         setError(result.error.message || "Erreur lors de la création du compte")
       } else {
         console.log("Signup successful, user should be automatically signed in")
@@ -451,7 +476,7 @@ export default function App() {
         // No need to wait or manually redirect
       }
     } catch (error) {
-      console.error("Signup exception:", error)
+      console.log("Signup exception:", error)
       setError("Une erreur inattendue s'est produite")
     } finally {
       setIsLoading(false)
@@ -518,7 +543,7 @@ export default function App() {
         console.log('Image selection cancelled or no assets');
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      console.log('Error picking image:', error);
       Alert.alert('Erreur', 'Impossible de sélectionner l\'image');
     }
   };
@@ -552,7 +577,7 @@ export default function App() {
         console.log('Camera cancelled or no assets');
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
+      console.log('Error taking photo:', error);
       Alert.alert('Erreur', 'Impossible de prendre la photo');
     }
   };
@@ -596,8 +621,10 @@ export default function App() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Cloudinary response error:', response.status, errorText);
-        throw new Error(`Upload failed: ${response.status}`);
+        console.log('Cloudinary response error:', response.status, errorText);
+        console.log(`Upload failed: ${response.status}`);
+        Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil. Veuillez réessayer.');
+        return;
       }
 
       const data = await response.json();
@@ -613,10 +640,12 @@ export default function App() {
         // Show success feedback
         Alert.alert('Succès', 'Photo de profil mise à jour avec succès!');
       } else {
-        throw new Error('Upload failed - no secure_url in response');
+        console.log('Upload failed - no secure_url in response');
+        Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil. Veuillez réessayer.');
+        return;
       }
     } catch (error) {
-      console.error('Profile picture upload error:', error);
+      console.log('Profile picture upload error:', error);
       Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil. Veuillez réessayer.');
     } finally {
       setIsUploadingPicture(false);
@@ -645,7 +674,7 @@ export default function App() {
       const { data: existingProfile, error: profileCheckError } = await profileService.getProfile(user.id)
       
       if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-        console.error("Error checking existing profile:", profileCheckError)
+        console.log("Error checking existing profile:", profileCheckError)
         setError("Erreur lors de la vérification du profil")
         return
       }
@@ -668,7 +697,7 @@ export default function App() {
         const { data, error } = await profileService.updateProfile(user.id, updateData)
         
         if (error) {
-          console.error("Profile update error:", error)
+          console.log("Profile update error:", error)
           setError(error.message || "Erreur lors de la mise à jour du profil")
         } else {
           console.log("Profile updated successfully:", data)
@@ -698,7 +727,7 @@ export default function App() {
         const { data, error } = await profileService.createProfile(profileData)
         
         if (error) {
-          console.error("Profile creation error:", error)
+          console.log("Profile creation error:", error)
           setError(error.message || "Erreur lors de la création du profil")
         } else {
           console.log("Profile created successfully:", data)
@@ -707,7 +736,7 @@ export default function App() {
         }
       }
     } catch (error) {
-      console.error("Profile creation/update exception:", error)
+      console.log("Profile creation/update exception:", error)
       setError("Une erreur inattendue s'est produite")
     } finally {
       setIsLoading(false)
@@ -806,7 +835,7 @@ export default function App() {
       })
       
       if (error) {
-        console.error("Error updating interests:", error)
+        console.log("Error updating interests:", error)
         return
       }
       
@@ -819,7 +848,7 @@ export default function App() {
         setMyInviteCode(profile.invite_code || "")
         setScreen("inviteCodes")
       } else {
-        console.error("Failed to retrieve profile after interests update")
+        console.log("Failed to retrieve profile after interests update")
         // Fallback: try to get invite code from the update result
         if (data && data.invite_code) {
           setMyInviteCode(data.invite_code)
@@ -827,7 +856,7 @@ export default function App() {
         }
       }
     } catch (error) {
-      console.error("Error updating interests:", error)
+      console.log("Error updating interests:", error)
       // Fallback: try to get profile again
       try {
         const { data: profile } = await profileService.getProfile(user.id)
@@ -836,7 +865,7 @@ export default function App() {
           setScreen("inviteCodes")
         }
       } catch (fallbackError) {
-        console.error("Fallback profile retrieval failed:", fallbackError)
+        console.log("Fallback profile retrieval failed:", fallbackError)
       }
     } finally {
       setIsInterestsLoading(false)
@@ -852,7 +881,7 @@ export default function App() {
           router.push('/pages/accueil')
         })
         .catch(error => {
-          console.error("Error marking profile as completed:", error)
+          console.log("Error marking profile as completed:", error)
           // Still redirect even if there's an error
           router.push('/pages/accueil')
         })
@@ -877,7 +906,7 @@ export default function App() {
       const { error } = await resetPassword(resetEmail.trim())
       
       if (error) {
-        console.error("Password reset error:", error)
+        console.log("Password reset error:", error)
         setResetError(error.message || "Erreur lors de l'envoi de l'email de réinitialisation")
         return
       }
@@ -894,7 +923,7 @@ export default function App() {
       }, 4000)
       
     } catch (error) {
-      console.error("Password reset exception:", error)
+      console.log("Password reset exception:", error)
       setResetError("Une erreur inattendue s'est produite")
     } finally {
       setIsResetting(false)
@@ -935,13 +964,13 @@ export default function App() {
       })
       
       if (sessionError) {
-        console.error("Error establishing recovery session:", sessionError)
+        console.log("Error establishing recovery session:", sessionError)
         setNewPasswordError("Erreur lors de la récupération de la session")
         return
       }
       
       if (!sessionData.session) {
-        console.error("No session established from recovery tokens")
+        console.log("No session established from recovery tokens")
         setNewPasswordError("Impossible d'établir la session de récupération")
         return
       }
@@ -952,7 +981,7 @@ export default function App() {
       const { error } = await updatePassword(newPassword)
       
       if (error) {
-        console.error("Password update error:", error)
+        console.log("Password update error:", error)
         setNewPasswordError(error.message || "Erreur lors de la mise à jour du mot de passe")
         return
       }
@@ -978,7 +1007,7 @@ export default function App() {
       )
       
     } catch (error) {
-      console.error("Password update exception:", error)
+      console.log("Password update exception:", error)
       setNewPasswordError("Une erreur inattendue s'est produite")
     } finally {
       setIsUpdatingPassword(false)
@@ -1484,7 +1513,7 @@ export default function App() {
                                 console.log('Share dismissed')
                               }
                             } catch (error) {
-                              console.error('Error sharing code:', error)
+                              console.log('Error sharing code:', error)
                               Alert.alert("Erreur", "Impossible de partager le code")
                             }
                           }}

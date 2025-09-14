@@ -2,12 +2,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
@@ -218,8 +218,11 @@ export default function BonsPlansPage() {
             }`}
             onPress={() => setShowCitySelector(!showCitySelector)}
           >
-            <Text className={isDarkMode ? 'text-gray-300' : 'text-gray-500'}>
-              Sélectionnez votre ville
+            <Text className={selectedCity !== 'Sélectionnez votre ville' 
+              ? (isDarkMode ? 'text-white' : 'text-gray-900')
+              : (isDarkMode ? 'text-gray-300' : 'text-gray-500')
+            }>
+              {selectedCity}
             </Text>
             <MaterialCommunityIcons 
               name="chevron-down" 
