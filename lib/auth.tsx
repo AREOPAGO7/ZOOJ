@@ -224,8 +224,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
+      // Use the proper deep link scheme for mobile production
+      // This will work for both development and production builds
+      const redirectUrl = 'zooj://reset-password'
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'zooj://new-password', // Deep link to new password page
+        redirectTo: redirectUrl,
       })
       
       if (error) {

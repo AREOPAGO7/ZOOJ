@@ -137,9 +137,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         setChatNotificationsTable(chatNotificationsTableResult.data)
         setChatNotificationsTableUnreadCount(chatNotificationsTableResult.data.length)
       }
-      if (chatNotificationsTableResult.error) {
-        console.error('Error fetching chat notifications table:', chatNotificationsTableResult.error)
-      }
       if (dailyQuestionResult.data) {
         setDailyQuestionNotifications(dailyQuestionResult.data)
       }

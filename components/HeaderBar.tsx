@@ -34,11 +34,11 @@ export default function HeaderBar(props: HeaderBarProps) {
 
   return (
     <View style={{ width: "100%" }}>
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, paddingHorizontal: 20 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, paddingHorizontal: 20, marginTop: 20 }}>
         <Pressable onPress={props.onBack} accessibilityRole="button">
-          <MaterialCommunityIcons name="chevron-left" size={24} color="#1a1a1a" />
+          <MaterialCommunityIcons name="chevron-left" size={28} color="#1a1a1a" />
         </Pressable>
-        <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: "#2D2D2D" }}>{props.title}</Text>
+        <Text style={{ marginLeft: 8, fontSize: 24, fontWeight: "700", color: "#2D2D2D" }}>{props.title}</Text>
       </View>
       <View style={{ height: 1, backgroundColor: "#EFEFEF", marginBottom: 8 }} />
     </View>

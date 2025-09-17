@@ -18,10 +18,10 @@ const BRAND_PINK = "#F47CC6"
 const BRAND_GRAY = "#6C6C6C"
 
 export default function App() {
-  const { user, signUp, signIn, createProfile, resetPassword, updatePassword, loading: authLoading } = useAuth()
+  const { user, signUp, signIn, createProfile, updatePassword, loading: authLoading } = useAuth()
   const { colors } = useTheme()
   const router = useRouter()
-  const [screen, setScreen] = useState<"welcome" | "auth" | "signup" | "profile" | "interests" | "inviteCodes" | "resetPassword" | "newPassword">("welcome")
+  const [screen, setScreen] = useState<"welcome" | "auth" | "signup" | "profile" | "interests" | "inviteCodes" | "newPassword">("welcome")
   const [isLoading, setIsLoading] = useState(false)
 
   // Auth state
@@ -31,11 +31,6 @@ export default function App() {
   const [error, setError] = useState("")
   const [isSignUp, setIsSignUp] = useState(false)
   
-  // Password reset state
-  const [resetEmail, setResetEmail] = useState("")
-  const [resetError, setResetError] = useState("")
-  const [resetSuccess, setResetSuccess] = useState("")
-  const [isResetting, setIsResetting] = useState(false)
   
   // New password state
   const [newPassword, setNewPassword] = useState("")
@@ -187,9 +182,21 @@ export default function App() {
         
         try {
           // Extract the access token from the URL
-          const urlObj = new URL(url)
-          const accessToken = urlObj.hash.split('access_token=')[1]?.split('&')[0]
-          const refreshToken = urlObj.hash.split('refresh_token=')[1]?.split('&')[0]
+          // Handle both hash-based and query parameter-based URLs
+          let accessToken: string | undefined
+          let refreshToken: string | undefined
+          
+          if (url.includes('#')) {
+            // Hash-based URL (common in mobile deep links)
+            const hashPart = url.split('#')[1]
+            accessToken = hashPart.split('access_token=')[1]?.split('&')[0]
+            refreshToken = hashPart.split('refresh_token=')[1]?.split('&')[0]
+          } else {
+            // Query parameter-based URL (fallback)
+            const urlObj = new URL(url)
+            accessToken = urlObj.searchParams.get('access_token') || undefined
+            refreshToken = urlObj.searchParams.get('refresh_token') || undefined
+          }
           
           if (accessToken) {
             console.log("Access token extracted, storing for later use...")
@@ -416,8 +423,7 @@ export default function App() {
       else if (screen === "profile") setScreen("signup")
       else if (screen === "interests") setScreen("profile")
       else if (screen === "inviteCodes") setScreen("interests")
-      else if (screen === "resetPassword") setScreen("auth")
-      else if (screen === "newPassword") setScreen("resetPassword")
+      else if (screen === "newPassword") setScreen("auth")
     }
   }
 
@@ -890,45 +896,6 @@ export default function App() {
     }
   }
 
-  const handlePasswordReset = async () => {
-    if (!resetEmail.trim()) {
-      setResetError("Veuillez entrer votre email")
-      return
-    }
-
-    setIsResetting(true)
-    setResetError("")
-    setResetSuccess("")
-
-    try {
-      console.log("Sending password reset email to:", resetEmail)
-      
-      const { error } = await resetPassword(resetEmail.trim())
-      
-      if (error) {
-        console.log("Password reset error:", error)
-        setResetError(error.message || "Erreur lors de l'envoi de l'email de réinitialisation")
-        return
-      }
-      
-      setResetSuccess("Un email de réinitialisation a été envoyé à votre adresse email. Cliquez sur le lien dans l'email pour continuer.")
-      
-      // Clear the email field
-      setResetEmail("")
-      
-      // Redirect back to login after success
-      setTimeout(() => {
-        setScreen("auth")
-        setResetSuccess("")
-      }, 4000)
-      
-    } catch (error) {
-      console.log("Password reset exception:", error)
-      setResetError("Une erreur inattendue s'est produite")
-    } finally {
-      setIsResetting(false)
-    }
-  }
 
   const handleUpdatePassword = async () => {
     if (!newPassword.trim()) {
@@ -1055,7 +1022,7 @@ export default function App() {
             onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    style={{ paddingHorizontal: 14, height: 50, color: colors.text }}
+                    style={{ paddingHorizontal: 14, height: 50, color: colors.text, fontSize: 16 }}
                     placeholderTextColor={colors.textSecondary}
           />
                 </View>
@@ -1065,7 +1032,7 @@ export default function App() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-                    style={{ paddingHorizontal: 14, height: 50, color: colors.text }}
+                    style={{ paddingHorizontal: 14, height: 50, color: colors.text, fontSize: 16 }}
                     placeholderTextColor={colors.textSecondary}
                   />
                 </View>
@@ -1078,20 +1045,20 @@ export default function App() {
                         {isLoading ? (
                           <ActivityIndicator color="#FFFFFF" />
                         ) : (
-                  <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Se connecter</Text>
+                  <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>Se connecter</Text>
                         )}
                 </LinearGradient>
               </Pressable>
 
               <View style={{ alignItems: "center", marginTop: 12 }}>
                       <Pressable onPress={() => setScreen("signup")}>
-                        <Text style={{ color: colors.primary, fontSize: 12 }}>Créer un compte</Text>
+                        <Text style={{ color: colors.primary, fontSize: 16 }}>Créer un compte</Text>
                 </Pressable>
               </View>
 
               <View style={{ alignItems: "center", marginTop: 8 }}>
-                <Pressable onPress={() => setScreen("resetPassword")}>
-                  <Text style={{ color: colors.primary, fontSize: 12 }}>Mot de passe oublié?</Text>
+                <Pressable onPress={() => router.push('/pages/password-reset')}>
+                  <Text style={{ color: colors.primary, fontSize: 16 }}>Mot de passe oublié?</Text>
                 </Pressable>
               </View>
 
@@ -1111,7 +1078,7 @@ export default function App() {
                           onChangeText={setEmail}
                           keyboardType="email-address"
                           autoCapitalize="none"
-                          style={{ paddingHorizontal: 14, height: 50 }}
+                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16 }}
                           placeholderTextColor="#9A9A9A"
                         />
                       </View>
@@ -1121,7 +1088,7 @@ export default function App() {
                           value={password}
                           onChangeText={setPassword}
                           secureTextEntry
-                          style={{ paddingHorizontal: 14, height: 50 }}
+                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16 }}
                           placeholderTextColor="#9A9A9A"
                         />
                       </View>
@@ -1131,7 +1098,7 @@ export default function App() {
                           value={confirmPassword}
                           onChangeText={setConfirmPassword}
                           secureTextEntry
-                          style={{ paddingHorizontal: 14, height: 50 }}
+                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16 }}
                           placeholderTextColor="#9A9A9A"
                         />
                       </View>
@@ -1144,14 +1111,14 @@ export default function App() {
                         {isLoading ? (
                           <ActivityIndicator color="#FFFFFF" />
                         ) : (
-                          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Créer un compte</Text>
+                          <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>Créer un compte</Text>
                         )}
                       </LinearGradient>
                     </Pressable>
 
                     <View style={{ alignItems: "center", marginTop: 12 }}>
                       <Pressable onPress={() => setScreen("auth")}>
-                        <Text style={{ color: colors.primary, fontSize: 12 }}>Déjà un compte? Se connecter</Text>
+                        <Text style={{ color: colors.primary, fontSize: 16 }}>Déjà un compte? Se connecter</Text>
                       </Pressable>
               </View>
             </>
@@ -1449,151 +1416,180 @@ export default function App() {
                     <HeaderBar variant="title" title="Code d'invitation" onBack={() => setScreen("profile")} />
 
                     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
-                      {/* Invite Code Card */}
-                      <LinearGradient
-                        colors={['#c6eff7', '#ffd4f1']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={{ 
-                          borderRadius: 20, 
-                          padding: 32, 
-                          alignItems: "center",
-                          width: "100%",
-                          maxWidth: 300,
-                          shadowColor: "#000",
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.1,
-                          shadowRadius: 8,  
-                          elevation: 3
-                        }}
-                      >
-                        {myInviteCode ? (
-                          <>
-                            <Text style={{ 
-                              fontSize: 32, 
-                              fontWeight: "700", 
-                              color: "#35b1f0", 
-                              letterSpacing: 3,
-                              marginBottom: 12,
-                              fontFamily: 'monospace',
-                            }}>
-                              {myInviteCode}
-                            </Text>
-                            <Text style={{ 
-                              fontSize: 16, 
-                              color: "gray", 
-                              textAlign: "center",
-                              lineHeight: 22,
-                              fontWeight: 'bold',
-                            }}>
-                              Partagez le code avec votre partenaire
-                            </Text>
-                          </>
-                        ) : (
-                          <ActivityIndicator size="large" color="#FFFFFF" />
-                        )}
-                      </LinearGradient>
-
-                      {/* Action Buttons */}
-                      <View style={{ marginTop: 40, width: "100%", maxWidth: 300, gap: 16 }}>
-                        <Pressable
-                          onPress={async () => {
-                            try {
-                              const shareMessage = `🔗 Code d'invitation ZOOJ\n\nMon code: ${myInviteCode}\n\nRejoignez-moi sur ZOOJ pour partager nos moments précieux ! 💕\n\nTéléchargez l'app et utilisez ce code pour nous connecter.`
-                              
-                              const result = await Share.share({
-                                message: shareMessage,
-                                title: 'Code d\'invitation ZOOJ',
-                                url: Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'
-                              })
-                              
-                              if (result.action === Share.sharedAction) {
-                                console.log('Code shared successfully')
-                              } else if (result.action === Share.dismissedAction) {
-                                console.log('Share dismissed')
-                              }
-                            } catch (error) {
-                              console.log('Error sharing code:', error)
-                              Alert.alert("Erreur", "Impossible de partager le code")
-                            }
-                          }}
-                          style={{ borderRadius: 12, overflow: "hidden" }}
-                        >
-                          <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center", flexDirection: "row", justifyContent: "center" }}>
-                            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginRight: 8 }}>
-                              Partager le code
-                            </Text>
-                            <MaterialCommunityIcons name="share-variant" size={20} color="#FFFFFF" />
-                          </LinearGradient>
-                  </Pressable>
-
-                        <Pressable
-                          onPress={async () => {
-                            try {
-                              await Clipboard.setStringAsync(myInviteCode)
-                              Alert.alert("Code copié!", "Le code a été copié dans le presse-papiers")
-                            } catch (error) {
-                              Alert.alert("Erreur", "Impossible de copier le code")
-                            }
-                          }}
-                          style={{ borderRadius: 12, overflow: "hidden" }}
-                        >
-                          <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center", flexDirection: "row", justifyContent: "center" }}>
-                            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginRight: 8 }}>
-                              Copier le code
-                            </Text>
-                            <MaterialCommunityIcons name="content-copy" size={20} color="#FFFFFF" />
-                          </LinearGradient>
-                        </Pressable>
-                    </View>
-
-                      {/* Toggle join section */}
-                      <View style={{ marginTop: 24, width: "100%", maxWidth: 300, alignItems: 'center' }}>
-                        <Pressable onPress={() => setShowJoinSection(prev => !prev)}>
-                          <Text style={{ color: colors.primary, fontWeight: '600', textDecorationLine: 'underline' }}>
-                            {showJoinSection ? 'Masquer' : "Déjà un code ?"}
-                          </Text>
-                        </Pressable>
-                      </View>
-
-                      {/* Redeem Code Section (collapsible) */}
-                      {showJoinSection && (
-                        <View style={{ marginTop: 16, width: "100%", maxWidth: 300, gap: 16 }}>
-                          <Text style={{ fontSize: 18, fontWeight: "600", color: "#2D2D2D", textAlign: "center" }}>
-                            Rejoindre avec un code
-                          </Text>
-
-                          <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
-                            <TextInput 
-                              placeholder="Mon partenaire" 
-                              value={inviteCode} 
-                              onChangeText={(t) => { setInviteCode(t); setRedeemError(""); setRedeemSuccess("") }} 
-                              style={{ paddingHorizontal: 14, height: 50 }} 
-                              placeholderTextColor="#9A9A9A" 
+                      {!showJoinSection ? (
+                        <>
+                          {/* App Logo */}
+                          <View style={{ alignItems: "center", marginBottom: 40 }}>
+                            <Image 
+                              source={require('../../assets/images/big-logo.png')} 
+                              style={{ width: 300, height: 300, resizeMode: 'contain',marginBottom: -70, marginTop: -70 }}
                             />
                           </View>
 
-                          {redeemError ? <Text style={{ color: "#FF5A5F", textAlign: "center" }}>{redeemError}</Text> : null}
-                          {redeemSuccess ? <Text style={{ color: "#4CAF50", textAlign: "center" }}>{redeemSuccess}</Text> : null}
-
-                          <Pressable
-                            onPress={handleRedeemCode}
-                            disabled={isRedeeming}
-                            style={{ borderRadius: 12, overflow: "hidden", opacity: isRedeeming ? 0.7 : 1 }}
+                          {/* Share Code Section */}
+                          <LinearGradient
+                            colors={['#c6eff7', '#ffd4f1']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={{ 
+                              borderRadius: 20, 
+                              padding: 20, 
+                              alignItems: "center",
+                              width: "100%",
+                              maxWidth: 300,
+                              shadowColor: "#000",
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.1,
+                              shadowRadius: 8,  
+                              elevation: 3
+                            }}
                           >
-                            <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
-                              {isRedeeming ? (
-                                <ActivityIndicator color="#FFFFFF" />
-                              ) : (
-                                <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Rejoindre</Text>
-                              )}
-                            </LinearGradient>
-                          </Pressable>
-                        </View>
+                            {myInviteCode ? (
+                              <>
+                                <Text style={{ 
+                                  fontSize: 25, 
+                                  fontWeight: "700", 
+                                  color: "#35b1f0", 
+                                  letterSpacing: 3,
+                                  marginBottom: 12,
+                                  fontFamily: 'monospace',
+                                }}>
+                                  {myInviteCode}
+                                </Text>
+                                <Text style={{ 
+                                  fontSize: 14, 
+                                  color: "gray", 
+                                  textAlign: "center",
+                                  lineHeight: 22,
+                                  fontWeight: 'bold',
+                                }}>
+                                  Partagez le code avec votre partenaire
+                                </Text>
+                              </>
+                            ) : (
+                              <ActivityIndicator size="large" color="#FFFFFF" />
+                            )}
+                          </LinearGradient>
+
+                          {/* Action Buttons */}
+                          <View style={{ marginTop: 30, width: "100%", maxWidth: 300, gap: 16 }}>
+                            <Pressable
+                              onPress={async () => {
+                                try {
+                                  const shareMessage = `🔗 Code d'invitation ZOOJ\n\nMon code: ${myInviteCode}\n\nRejoignez-moi sur ZOOJ pour partager nos moments précieux ! 💕\n\nTéléchargez l'app et utilisez ce code pour nous connecter.`
+                                  
+                                  const result = await Share.share({
+                                    message: shareMessage,
+                                    title: 'Code d\'invitation ZOOJ',
+                                    url: Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'
+                                  })
+                                  
+                                  if (result.action === Share.sharedAction) {
+                                    console.log('Code shared successfully')
+                                  } else if (result.action === Share.dismissedAction) {
+                                    console.log('Share dismissed')
+                                  }
+                                } catch (error) {
+                                  console.log('Error sharing code:', error)
+                                  Alert.alert("Erreur", "Impossible de partager le code")
+                                }
+                              }}
+                              style={{ borderRadius: 12, overflow: "hidden" }}
+                            >
+                              <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center", flexDirection: "row", justifyContent: "center" }}>
+                                <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginRight: 8 }}>
+                                  Partager le code
+                                </Text>
+                                <MaterialCommunityIcons name="share-variant" size={20} color="#FFFFFF" />
+                              </LinearGradient>
+                            </Pressable>
+
+                            <Pressable
+                              onPress={async () => {
+                                try {
+                                  await Clipboard.setStringAsync(myInviteCode)
+                                  Alert.alert("Code copié!", "Le code a été copié dans le presse-papiers")
+                                } catch (error) {
+                                  Alert.alert("Erreur", "Impossible de copier le code")
+                                }
+                              }}
+                              style={{ borderRadius: 12, overflow: "hidden" }}
+                            >
+                              <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center", flexDirection: "row", justifyContent: "center" }}>
+                                <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginRight: 8 }}>
+                                  Copier le code
+                                </Text>
+                                <MaterialCommunityIcons name="content-copy" size={20} color="#FFFFFF" />
+                              </LinearGradient>
+                            </Pressable>
+                          </View>
+
+                          {/* Toggle to redeem section */}
+                          <View style={{ marginTop: 20, width: "100%", maxWidth: 300, alignItems: 'center' }}>
+                            <Pressable onPress={() => setShowJoinSection(true)}>
+                              <Text style={{ color: colors.primary, fontWeight: '600', textDecorationLine: 'underline' }}>
+                                Déjà un code ?
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          {/* App Logo */}
+                          <View style={{ alignItems: "center", marginBottom: 40 }}>
+                            <Image 
+                              source={require('../../assets/images/big-logo.png')} 
+                              style={{ width: 300, height: 300, resizeMode: 'contain', marginTop: -100,marginBottom: -50 }}
+                            />
+                          </View>
+
+                          {/* Redeem Code Section */}
+                          <View style={{ width: "100%", maxWidth: 300, gap: 16 }}>
+                            <Text style={{ fontSize: 18, fontWeight: "600", color: "#2D2D2D", textAlign: "center" }}>
+                              Rejoindre avec un code
+                            </Text>
+
+                            <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
+                              <TextInput 
+                                placeholder="Mon partenaire" 
+                                value={inviteCode} 
+                                onChangeText={(t) => { setInviteCode(t); setRedeemError(""); setRedeemSuccess("") }} 
+                                style={{ paddingHorizontal: 14, height: 50 }} 
+                                placeholderTextColor="#9A9A9A" 
+                              />
+                            </View>
+
+                            {redeemError ? <Text style={{ color: "#FF5A5F", textAlign: "center" }}>{redeemError}</Text> : null}
+                            {redeemSuccess ? <Text style={{ color: "#4CAF50", textAlign: "center" }}>{redeemSuccess}</Text> : null}
+
+                            <Pressable
+                              onPress={handleRedeemCode}
+                              disabled={isRedeeming}
+                              style={{ borderRadius: 12, overflow: "hidden", opacity: isRedeeming ? 0.7 : 1 }}
+                            >
+                              <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
+                                {isRedeeming ? (
+                                  <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                  <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Rejoindre</Text>
+                                )}
+                              </LinearGradient>
+                            </Pressable>
+                          </View>
+
+                          {/* Toggle back to share section */}
+                          <View style={{ marginTop: 24, width: "100%", maxWidth: 300, alignItems: 'center' }}>
+                            <Pressable onPress={() => setShowJoinSection(false)}>
+                              <Text style={{ color: colors.primary, fontWeight: '600', textDecorationLine: 'underline' }}>
+                                Partager mon code
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </>
                       )}
 
                       {/* Skip Option */}
-                      <View style={{ marginTop: 32, alignItems: 'center' }}>
+                      <View style={{ marginTop: 30, alignItems: 'center' }}>
                        
                         <Pressable
                           onPress={handleSkipInviteCodes}
@@ -1615,74 +1611,6 @@ export default function App() {
         </>
       )}
 
-      {screen === "resetPassword" && (
-        <>
-          <HeaderBar variant="title" title="Réinitialiser le mot de passe" onBack={() => setScreen("auth")} />
-
-          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
-            <View style={{ width: "100%", maxWidth: 400, gap: 24 }}>
-              <View style={{ alignItems: "center" }}>
-                <View style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: "#F3F4F6",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 16
-                }}>
-                  <MaterialCommunityIcons name="lock-reset" size={40} color={BRAND_BLUE} />
-                </View>
-                <Text style={{ fontSize: 18, fontWeight: "600", color: "#2D2D2D", textAlign: "center", marginBottom: 8 }}>
-                  Mot de passe oublié?
-                </Text>
-                <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", lineHeight: 20 }}>
-                  Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
-                </Text>
-              </View>
-
-              <View style={{ gap: 16 }}>
-                <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
-                  <TextInput
-                    placeholder="Votre adresse email"
-                    value={resetEmail}
-                    onChangeText={(text) => { setResetEmail(text); setResetError(""); setResetSuccess("") }}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    style={{ paddingHorizontal: 14, height: 50 }}
-                    placeholderTextColor="#9A9A9A"
-                  />
-                </View>
-
-                {resetError ? <Text style={{ color: "#FF5A5F", textAlign: "center", fontSize: 14 }}>{resetError}</Text> : null}
-                {resetSuccess ? <Text style={{ color: "#4CAF50", textAlign: "center", fontSize: 14 }}>{resetSuccess}</Text> : null}
-
-                <Pressable
-                  onPress={handlePasswordReset}
-                  disabled={isResetting}
-                  style={{ borderRadius: 12, overflow: "hidden", opacity: isResetting ? 0.7 : 1 }}
-                >
-                  <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
-                    {isResetting ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Envoyer l'email de réinitialisation</Text>
-                    )}
-                  </LinearGradient>
-                </Pressable>
-              </View>
-
-              <View style={{ alignItems: "center" }}>
-                <Pressable onPress={() => setScreen("auth")}>
-                  <Text style={{ color: BRAND_BLUE, fontSize: 16, fontWeight: "500" }}>
-                    Retour à la connexion
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </>
-      )}
 
       {screen === "newPassword" && (
         <>

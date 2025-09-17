@@ -719,9 +719,6 @@ export default function QuestionChatPage() {
            <View style={styles.headerTitleContainer}>
              <Text style={[styles.headerTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{t('questionChat.title')}</Text>
            </View>
-           <Pressable style={styles.menuButton}>
-             <MaterialCommunityIcons name="dots-vertical" size={24} color={isDarkMode ? '#FFFFFF' : colors.text} />
-           </Pressable>
          </View>
 
         {/* Content */}
@@ -773,13 +770,6 @@ export default function QuestionChatPage() {
              {threadId && (
                <View style={[styles.inputBar, { borderTopColor: isDarkMode ? '#333333' : colors.border, backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
                  <View style={styles.inputContainer}>
-                   <Pressable style={styles.attachButton}>
-                     <MaterialCommunityIcons 
-                       name="paperclip" 
-                       size={24} 
-                       color={isDarkMode ? '#FFFFFF' : colors.textSecondary}
-                     />
-                   </Pressable>
                    <TextInput
                      style={[styles.messageInput, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.background, color: isDarkMode ? '#FFFFFF' : colors.text }]}
                      placeholder={t('questionChat.message')}
@@ -947,10 +937,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
   },
-  attachButton: {
-    padding: 8,
-    marginRight: 12,
-  },
   messageInput: {
     flex: 1,
     backgroundColor: '#F3F4F6',
@@ -1060,10 +1046,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
-  },
-  menuButton: {
-    padding: 8,
-    marginLeft: 16,
   },
   partnerAnswerContent: {
     backgroundColor: '#E0F2FE',
