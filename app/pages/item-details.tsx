@@ -566,7 +566,7 @@ export default function ItemDetailsPage() {
       <ScrollView 
         style={{
           flex: 1,
-          backgroundColor: isDarkMode ? '#1A1A1A' : '#F5F5F5'
+          backgroundColor: isDarkMode ? '#000000' : '#F5F5F5'
         }}
         contentContainerStyle={{
           flexGrow: 1,
@@ -579,9 +579,9 @@ export default function ItemDetailsPage() {
         <View style={{
           paddingHorizontal: 20,
           paddingVertical: 16,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
           borderBottomWidth: 1,
-          borderBottomColor: '#E5E5E5'
+          borderBottomColor: isDarkMode ? '#000000' : '#E5E5E5'
         }}>
           <View style={{
             flexDirection: 'row',
@@ -600,14 +600,14 @@ export default function ItemDetailsPage() {
               <MaterialCommunityIcons 
                 name="arrow-left" 
                 size={24} 
-                color="#000000" 
+                color={isDarkMode ? '#FFFFFF' : '#000000'} 
               />
             </TouchableOpacity>
             
             <Text style={{
               fontSize: 18,
               fontWeight: '600',
-              color: '#000000'
+              color: isDarkMode ? '#FFFFFF' : '#000000'
             }}>
               {isEditing ? (editItemType === 'event' ? 'Événement' : 'Souvenir') : (itemType === 'event' ? `Détails de l'évènement` : `Détails du souvenir`)}
             </Text>
@@ -645,8 +645,8 @@ export default function ItemDetailsPage() {
                   paddingHorizontal: 16,
                   borderRadius: 8,
                   borderWidth: 1,
-                  borderColor: (isEditing ? editItemType : itemType) === 'event' ? '#87CEEB' : '#E5E5E5',
-                  backgroundColor: (isEditing ? editItemType : itemType) === 'event' ? '#E6F3FF' : '#FFFFFF'
+                  borderColor: (isEditing ? editItemType : itemType) === 'event' ? '#87CEEB' : (isDarkMode ? '#000000' : '#E5E5E5'),
+                  backgroundColor: (isEditing ? editItemType : itemType) === 'event' ? '#E6F3FF' : (isDarkMode ? '#000000' : '#FFFFFF')
                 }}
                  >
                    <MaterialCommunityIcons 
@@ -682,8 +682,8 @@ export default function ItemDetailsPage() {
                   paddingHorizontal: 16,
                   borderRadius: 8,
                   borderWidth: 1,
-                  borderColor: (isEditing ? editItemType : itemType) === 'souvenir' ? '#FFB6C1' : '#E5E5E5',
-                  backgroundColor: (isEditing ? editItemType : itemType) === 'souvenir' ? '#FFE4E1' : '#FFFFFF'
+                  borderColor: (isEditing ? editItemType : itemType) === 'souvenir' ? '#FFB6C1' : (isDarkMode ? '#000000' : '#E5E5E5'),
+                  backgroundColor: (isEditing ? editItemType : itemType) === 'souvenir' ? '#FFE4E1' : (isDarkMode ? '#000000' : '#FFFFFF')
                 }}
                  >
                    <MaterialCommunityIcons 
@@ -723,12 +723,12 @@ export default function ItemDetailsPage() {
                   paddingVertical: 12,
                   borderRadius: 8,
                   borderWidth: 1,
-                  borderColor: '#E5E5E5',
-                  backgroundColor: '#FFFFFF',
+                  borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                  backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
                   fontSize: 16,
-                  color: '#000000'
+                  color: isDarkMode ? '#FFFFFF' : '#000000'
                 }}
-                placeholderTextColor="#999999"
+                placeholderTextColor={isDarkMode ? '#CCCCCC' : '#999999'}
               />
             ) : (
               <Text style={{
@@ -756,7 +756,7 @@ export default function ItemDetailsPage() {
               <View style={{ flex: 1 }}>
             {isEditing ? (
                   <TouchableOpacity
-                      onPress={() => setShowDatePicker(true)}
+                    onPress={() => setShowDatePicker(true)}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -764,19 +764,19 @@ export default function ItemDetailsPage() {
                       paddingVertical: 12,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: '#E5E5E5',
-                      backgroundColor: '#FFFFFF'
+                      borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                      backgroundColor: isDarkMode ? '#000000' : '#FFFFFF'
                     }}
                   >
                     <MaterialCommunityIcons 
                       name="calendar" 
                       size={20} 
-                      color="#999999" 
+                      color={isDarkMode ? '#CCCCCC' : '#999999'} 
                     />
                     <Text style={{
                       marginLeft: 8,
                       fontSize: 16,
-                      color: '#000000'
+                      color: isDarkMode ? '#FFFFFF' : '#000000'
                     }}>
                         {editDate.toLocaleDateString('fr-FR')}
                       </Text>
@@ -789,18 +789,18 @@ export default function ItemDetailsPage() {
                     paddingVertical: 12,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: '#E5E5E5',
-                    backgroundColor: '#FFFFFF'
+                    borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                    backgroundColor: isDarkMode ? '#000000' : '#FFFFFF'
                   }}>
                     <MaterialCommunityIcons 
                       name="calendar" 
                       size={20} 
-                      color="#999999" 
+                      color={isDarkMode ? '#CCCCCC' : '#999999'} 
                     />
                     <Text style={{
                       marginLeft: 8,
                       fontSize: 16,
-                      color: '#000000'
+                      color: isDarkMode ? '#FFFFFF' : '#000000'
                     }}>
                       {itemType === 'event' ? formatDate(new Date((item as CalendarEvent).event_date)) : formatDate(new Date((item as CalendarSouvenir).memory_date))}
                     </Text>
@@ -820,19 +820,19 @@ export default function ItemDetailsPage() {
                       paddingVertical: 12,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: '#E5E5E5',
-                      backgroundColor: '#FFFFFF'
+                      borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                      backgroundColor: isDarkMode ? '#000000' : '#FFFFFF'
                     }}
                   >
                     <MaterialCommunityIcons 
                       name="clock" 
                       size={20} 
-                      color="#999999" 
+                      color={isDarkMode ? '#CCCCCC' : '#999999'} 
                     />
                     <Text style={{
                       marginLeft: 8,
                       fontSize: 16,
-                      color: '#000000'
+                      color: isDarkMode ? '#FFFFFF' : '#000000'
                     }}>
                       {formatTime(editTime)}
                       </Text>
@@ -845,18 +845,18 @@ export default function ItemDetailsPage() {
                     paddingVertical: 12,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: '#E5E5E5',
-                    backgroundColor: '#FFFFFF'
+                    borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                    backgroundColor: isDarkMode ? '#000000' : '#FFFFFF'
                   }}>
                     <MaterialCommunityIcons 
                       name="clock" 
                       size={20} 
-                      color="#999999" 
+                      color={isDarkMode ? '#CCCCCC' : '#999999'} 
                     />
                     <Text style={{
                       marginLeft: 8,
                       fontSize: 16,
-                      color: '#000000'
+                      color: isDarkMode ? '#FFFFFF' : '#000000'
                     }}>
                       {itemType === 'event' ? (item as CalendarEvent).event_time : (item as CalendarSouvenir).memory_time}
                        </Text>
@@ -914,8 +914,8 @@ export default function ItemDetailsPage() {
                   paddingVertical: 12,
                   borderRadius: 8,
                   borderWidth: 1,
-                  borderColor: '#E5E5E5',
-                  backgroundColor: '#FFFFFF'
+                  borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                  backgroundColor: isDarkMode ? '#000000' : '#FFFFFF'
                 }}>
                  <TextInput
                    value={editPlace}
@@ -927,7 +927,7 @@ export default function ItemDetailsPage() {
                     style={{
                       flex: 1,
                       fontSize: 16,
-                      color: '#000000'
+                      color: isDarkMode ? '#FFFFFF' : '#000000'
                     }}
                     placeholderTextColor="#999999"
                   />
@@ -937,7 +937,7 @@ export default function ItemDetailsPage() {
                     <MaterialCommunityIcons 
                       name="map-marker" 
                       size={20} 
-                      color="#999999" 
+                      color={isDarkMode ? '#CCCCCC' : '#999999'} 
                     />
                   )}
                        </View>
@@ -948,8 +948,8 @@ export default function ItemDetailsPage() {
                     marginTop: 4,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: '#E5E5E5',
-                    backgroundColor: '#FFFFFF',
+                    borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                    backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
                     maxHeight: 200,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 2 },
@@ -966,12 +966,12 @@ export default function ItemDetailsPage() {
                             paddingHorizontal: 16,
                             paddingVertical: 12,
                             borderBottomWidth: index < placeSuggestions.length - 1 ? 1 : 0,
-                            borderBottomColor: '#E5E5E5'
+                            borderBottomColor: isDarkMode ? '#000000' : '#E5E5E5'
                           }}
                         >
                           <Text style={{
                             fontSize: 14,
-                            color: '#000000',
+                            color: isDarkMode ? '#FFFFFF' : '#000000',
                             lineHeight: 18
                           }}>
                             {place.display_name}
@@ -990,13 +990,13 @@ export default function ItemDetailsPage() {
                 paddingVertical: 12,
                 borderRadius: 8,
                 borderWidth: 1,
-                borderColor: '#E5E5E5',
-                backgroundColor: '#FFFFFF'
+                borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                backgroundColor: isDarkMode ? '#000000' : '#FFFFFF'
               }}>
                 <Text style={{
                   flex: 1,
                   fontSize: 16,
-                  color: '#000000'
+                  color: isDarkMode ? '#FFFFFF' : '#000000'
                 }}>
                   {item.place || 'Aucun lieu spécifié'}
                 </Text>
@@ -1038,7 +1038,7 @@ export default function ItemDetailsPage() {
                     width: 50,
                     height: 30,
                     borderRadius: 15,
-                    backgroundColor: editAlarmable ? '#007AFF' : '#E5E5E5',
+                    backgroundColor: editAlarmable ? '#007AFF' : (isDarkMode ? '#000000' : '#E5E5E5'),
                     justifyContent: 'center',
                     alignItems: editAlarmable ? 'flex-end' : 'flex-start',
                     paddingHorizontal: 2
@@ -1048,7 +1048,7 @@ export default function ItemDetailsPage() {
                     width: 26,
                     height: 26,
                     borderRadius: 13,
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.2,
@@ -1084,7 +1084,7 @@ export default function ItemDetailsPage() {
                   overflow: 'hidden',
                   borderWidth: 2,
                   borderColor: '#FFB6C1',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
                   aspectRatio: 16/9,
                   maxHeight: 80
                 }}>
@@ -1110,7 +1110,7 @@ export default function ItemDetailsPage() {
                       justifyContent: 'center'
                     }}
                   >
-                    <MaterialCommunityIcons name="close" size={12} color="#FFFFFF" />
+                    <MaterialCommunityIcons name="close" size={12} color={isDarkMode ? '#FFFFFF' : '#FFFFFF'} />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -1206,10 +1206,10 @@ export default function ItemDetailsPage() {
                   paddingVertical: 12,
                   borderRadius: 8,
                   borderWidth: 1,
-                  borderColor: '#E5E5E5',
-                  backgroundColor: '#FFFFFF',
+                  borderColor: isDarkMode ? '#000000' : '#E5E5E5',
+                  backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
                   fontSize: 16,
-                  color: '#000000',
+                  color: isDarkMode ? '#FFFFFF' : '#000000',
                   textAlignVertical: 'top',
                   minHeight: 80
                 }}
@@ -1358,7 +1358,7 @@ export default function ItemDetailsPage() {
      borderRadius: 12,
      borderWidth: 1,
                 borderColor: '#FFB6C1',
-                backgroundColor: '#FFFFFF'
+                backgroundColor: isDarkMode ? '#000000' : '#FFFFFF'
               }}
             >
               {isDeleting ? (

@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 // import { dailyQuestionScheduler } from '../../lib/dailyQuestionScheduler';
@@ -29,6 +29,7 @@ export default function QuestionsPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showSearchInput, setShowSearchInput] = useState<boolean>(false);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -196,6 +197,20 @@ export default function QuestionsPage() {
       console.error('Error loading questions:', error);
     } finally {
       setLoadingQuestions(false);
+    }
+  };
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (!user) return;
+    
+    setIsRefreshing(true);
+    try {
+      await loadData();
+    } catch (error) {
+      console.error('Error refreshing questions:', error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -732,6 +747,14 @@ export default function QuestionsPage() {
             keyExtractor={(item) => item.id}
             style={styles.questionsList}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                colors={['#4CAF50']}
+                tintColor="#4CAF50"
+              />
+            }
           />
         )}
       </View>

@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, RefreshControl, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { CoupleMoodDisplay } from '../../components/CoupleMoodDisplay';
 import { MoodSelector } from '../../components/MoodSelector';
 import { ReceivedPulse } from '../../components/ReceivedPulse';
@@ -47,6 +47,7 @@ export default function AccueilPage() {
   const [joinCode, setJoinCode] = useState<string>('');
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showJoinSection, setShowJoinSection] = useState<boolean>(false);
   const [quizThemes, setQuizThemes] = useState<any[]>([]);
   const [isLoadingThemes, setIsLoadingThemes] = useState(false);
@@ -323,6 +324,26 @@ export default function AccueilPage() {
     }
   };
 
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (!user) return;
+    
+    setIsRefreshing(true);
+    try {
+      // Refresh all main data
+      await Promise.all([
+        fetchQuizResultsCount(),
+        fetchCoupleMoods(),
+        fetchTodayQuestion(),
+        loadQuizThemes()
+      ]);
+    } catch (error) {
+      console.log('Error refreshing data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Handle pulse sending
   const handlePulseSend = async (emoji: string) => {
     if (!user) return;
@@ -535,10 +556,21 @@ export default function AccueilPage() {
 
   return (
     <AppLayout>
-      <ScrollView className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} px-5`} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} px-5`} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#4CAF50']}
+            tintColor="#4CAF50"
+          />
+        }
+      >
 
         {/* Header Section - Compatibility & Profile Pictures */}
-        <View className="mb-8">
+        <View className="mb-8 mt-4">
           <View className="flex-row justify-between items-center mb-6">
             <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('home.compatibility')}</Text>
             <TouchableOpacity 

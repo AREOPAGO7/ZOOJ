@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Pressable,
+    RefreshControl,
     ScrollView,
     Text,
     TouchableOpacity,
@@ -83,6 +84,7 @@ export default function CalendrierPage() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -155,6 +157,24 @@ export default function CalendrierPage() {
     } catch (error) {
       console.error('Error loading calendar data:', error);
       Alert.alert(t('calendar.error'), 'Impossible de charger les données du calendrier');
+    }
+  };
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (!coupleId) return;
+    
+    setIsRefreshing(true);
+    try {
+      // Refresh calendar data and upcoming events
+      await Promise.all([
+        loadCalendarData(),
+        refreshUpcomingEvents()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing calendar data:', error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -516,6 +536,14 @@ export default function CalendrierPage() {
         className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={calendarStyles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#4CAF50']}
+            tintColor="#4CAF50"
+          />
+        }
       >
         {/* Header */}
         <View style={calendarStyles.header}>
