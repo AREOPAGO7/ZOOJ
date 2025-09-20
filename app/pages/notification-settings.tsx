@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Switch, Text, TouchableOpacity, Vibration, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
@@ -25,6 +26,7 @@ export default function NotificationSettingsPage() {
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { isDarkMode } = useDarkTheme();
   const { t } = useLanguage();
+  const [vibrationEnabled, setVibrationEnabled] = React.useState(true);
 
   // Use global state instead of local state
   const { 
@@ -73,11 +75,99 @@ export default function NotificationSettingsPage() {
 
   // Toggle sound setting - uses global state only
   const handleToggleSoundSetting = async (value: boolean) => {
+    console.log('🔊 Sound toggle button pressed, value:', value);
+    
     try {
       // Update global state immediately (this will also save to AsyncStorage)
       await toggleSoundSetting(value);
+      console.log('✅ Sound setting updated in global state');
+      
+      // Play sound when enabling
+      if (value) {
+        console.log('🎵 Attempting to play notification sound...');
+        
+        try {
+          // Method 1: Try the local WAV file
+          console.log('📁 Loading notification.wav file...');
+          const { sound } = await Audio.Sound.createAsync(
+            require('../../assets/sounds/notification.wav'),
+            { shouldPlay: true, volume: 1.0, isLooping: false }
+          );
+          
+          console.log('✅ WAV file loaded successfully');
+          console.log('🔊 Playing sound at volume 1.0...');
+          
+          // Wait for the sound to finish, then clean up
+          sound.setOnPlaybackStatusUpdate((status) => {
+            console.log('📊 Sound status update:', status);
+            if (status.isLoaded && status.didJustFinish) {
+              console.log('✅ Sound finished playing, cleaning up...');
+              sound.unloadAsync();
+            }
+          });
+          
+          // Also try to play it again after a short delay to ensure it works
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Attempting to play sound again...');
+              await sound.replayAsync();
+            } catch (replayError) {
+              console.log('❌ Replay failed:', replayError);
+            }
+          }, 100);
+          
+        } catch (soundError) {
+          console.log('❌ WAV file method failed:', soundError);
+          
+          // Method 2: Try a simple system beep using data URI
+          try {
+            console.log('🔔 Trying system beep method...');
+            const { sound } = await Audio.Sound.createAsync(
+              { uri: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjuBzvLZizEIHm7A7+OZURE=' },
+              { shouldPlay: true, volume: 1.0 }
+            );
+            console.log('✅ System beep loaded');
+            setTimeout(() => sound.unloadAsync(), 2000);
+          } catch (beepError) {
+            console.log('❌ System beep also failed:', beepError);
+            
+            // Method 3: Use HapticFeedback as fallback
+            try {
+              console.log('📳 Using haptic feedback as sound alternative...');
+              const Haptics = await import('expo-haptics');
+              await Haptics.default.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              console.log('✅ Haptic feedback triggered');
+            } catch (hapticError) {
+              console.log('❌ Haptic feedback failed:', hapticError);
+            }
+          }
+        }
+      } else {
+        console.log('🔇 Sound disabled');
+      }
     } catch (error) {
-      console.log('Error updating sound setting:', error);
+      console.log('❌ Error updating sound setting:', error);
+    }
+  };
+
+  // Toggle vibration setting
+  const handleToggleVibrationSetting = async (value: boolean) => {
+    console.log('📳 Vibration toggle button pressed, value:', value);
+    
+    try {
+      setVibrationEnabled(value);
+      console.log('✅ Vibration setting updated in local state');
+      
+      // Trigger vibration when enabling
+      if (value) {
+        console.log('📳 Triggering phone vibration for 200ms...');
+        Vibration.vibrate(200); // Vibrate for 200ms
+        console.log('✅ Vibration triggered successfully');
+      } else {
+        console.log('📳 Vibration disabled');
+      }
+    } catch (error) {
+      console.log('❌ Error updating vibration setting:', error);
     }
   };
 
@@ -287,10 +377,10 @@ export default function NotificationSettingsPage() {
                   </Text>
                 </View>
                 <Switch
-                  value={true} // This could be connected to a vibration setting
-                  onValueChange={() => {}} // Placeholder for vibration toggle
+                  value={vibrationEnabled}
+                  onValueChange={handleToggleVibrationSetting}
                   trackColor={{ false: isDarkMode ? '#333333' : '#E5E7EB', true: '#34D399' }}
-                  thumbColor="#FFFFFF"
+                  thumbColor={vibrationEnabled ? '#FFFFFF' : isDarkMode ? '#666666' : '#FFFFFF'}
                 />
               </View>
             </View>

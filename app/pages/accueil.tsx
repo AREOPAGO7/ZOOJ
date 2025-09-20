@@ -548,7 +548,7 @@ export default function AccueilPage() {
             </View>
           )}
 
-          <Text className={`${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} text-center mb-6`}>Demandez à votre partenaire d'entrer ce code pour vous rejoindre.</Text>
+          <Text className={`${isDarkMode ? 'text-dark-text' : 'text-text'} text-center mb-6 text-lg font-semibold`}>Attendez votre partenaire pour rejoindre.</Text>
         </ScrollView>
       </AppLayout>
     );

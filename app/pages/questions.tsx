@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
@@ -14,6 +14,7 @@ import AppLayout from '../app-layout';
 
 export default function QuestionsPage() {
   const router = useRouter();
+  const { highlightQuestionId } = useLocalSearchParams<{ highlightQuestionId?: string }>();
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
@@ -30,6 +31,7 @@ export default function QuestionsPage() {
   const [showSearchInput, setShowSearchInput] = useState<boolean>(false);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [highlightedQuestionId, setHighlightedQuestionId] = useState<string | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -44,6 +46,22 @@ export default function QuestionsPage() {
       loadData();
     }
   }, [user, loading]);
+
+  // Handle highlighting question from notification
+  useEffect(() => {
+    if (highlightQuestionId && allQuestions.length > 0) {
+      setHighlightedQuestionId(highlightQuestionId);
+      // Auto-expand the highlighted question
+      setExpandedQuestionId(highlightQuestionId);
+      
+      // Clear the highlight after 5 seconds
+      const timer = setTimeout(() => {
+        setHighlightedQuestionId(null);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [highlightQuestionId, allQuestions]);
 
   const loadData = async () => {
     try {
@@ -516,6 +534,7 @@ export default function QuestionsPage() {
     const isAnswered = item.userAnswered;
     const isExpanded = expandedQuestionId === item.id;
     const showChatButton = item.bothAnswered;
+    const isHighlighted = highlightedQuestionId === item.id;
 
     return (
       <View style={styles.questionItemContainer}>
@@ -524,7 +543,8 @@ export default function QuestionsPage() {
             styles.questionItem,
             { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border },
             !isAnswered && styles.newQuestionItem,
-            isAnswered && styles.answeredQuestionItem
+            isAnswered && styles.answeredQuestionItem,
+            isHighlighted && styles.highlightedQuestionItem
           ]}
           onPress={() => handleQuestionPress(item)}
         >
@@ -860,6 +880,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     shadowColor: '#87CEEB',
     shadowOpacity: 0.1,
+  },
+  highlightedQuestionItem: {
+    borderColor: '#FFD700',
+    borderWidth: 3,
+    shadowColor: '#FFD700',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   questionIconContainer: {
     position: 'relative',

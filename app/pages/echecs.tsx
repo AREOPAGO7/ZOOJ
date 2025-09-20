@@ -312,6 +312,7 @@ export default function EchecsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [gameStats, setGameStats] = useState<any>(null);
+  const [botGameStats, setBotGameStats] = useState<any>(null);
   const [selectedSquare, setSelectedSquare] = useState<Position | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Position[]>([]);
   const animatedValue = useState(new Animated.Value(0))[0];
@@ -365,6 +366,18 @@ export default function EchecsPage() {
     }
   }, [coupleId]);
 
+  // Load bot game statistics for chess
+  const loadBotGameStats = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const botStats = await gameStatsService.getBotGameStats(user.id);
+      setBotGameStats(botStats);
+    } catch (error) {
+      console.error('Error loading bot game stats:', error);
+    }
+  }, [user]);
+
   // Initialize game on mount
   useEffect(() => {
     const initialize = async () => {
@@ -387,6 +400,13 @@ export default function EchecsPage() {
     }
   }, [coupleId, loadGameStats]);
 
+  // Load bot game stats when user is available
+  useEffect(() => {
+    if (user) {
+      loadBotGameStats();
+    }
+  }, [user, loadBotGameStats]);
+
   // Save game statistics
   const saveGameStats = useCallback(async (gameState: GameState, couple: any) => {
     if (!couple || !coupleId) return;
@@ -403,22 +423,17 @@ export default function EchecsPage() {
         player2_id: couple.user2_id,
         winner_id: winnerId,
         is_draw: gameState.winner === undefined,
-        game_duration: gameDuration,
-        player1_score: gameState.winner === 'white' ? 1 : 0,
-        player2_score: gameState.winner === 'black' ? 1 : 0,
-        chess_pieces_captured_player1: gameState.piecesCapturedPlayer1,
-        chess_pieces_captured_player2: gameState.piecesCapturedPlayer2,
-        chess_checkmate: gameState.checkmate,
-        chess_stalemate: gameState.stalemate,
+        is_bot_game: true, // This is a bot game
       };
 
       await gameStatsService.saveGameStats(stats);
       // Reload stats after saving
       loadGameStats();
+      loadBotGameStats();
     } catch (error) {
       console.error('Error saving game stats:', error);
     }
-  }, [coupleId, loadGameStats]);
+  }, [coupleId, loadGameStats, loadBotGameStats]);
 
   // Handle square selection
   const handleSquarePress = useCallback((row: number, col: number) => {
@@ -568,6 +583,35 @@ export default function EchecsPage() {
             <Text className={`text-lg font-semibold text-center mb-4 ${isDarkMode ? 'text-white' : 'text-text'}`}>
               {gameState.gameStatus}
             </Text>
+            
+            {/* Win/Loss Statistics */}
+            {botGameStats && (
+              <View style={styles.statsContainer}>
+                <Text className={`text-sm font-medium text-center mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Statistiques
+                </Text>
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-text'}`}>
+                      {botGameStats.human_wins || 0}
+                    </Text>
+                    <Text className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                      Vous
+                    </Text>
+                  </View>
+                  <Text className={`text-lg font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`}>-</Text>
+                  <View style={styles.statItem}>
+                    <Text className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-text'}`}>
+                      {botGameStats.bot_wins || 0}
+                    </Text>
+                    <Text className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                      Bot
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+            
             <View style={styles.playerInfo}>
               <View style={styles.playerIndicator}>
                 <Text style={[styles.playerPiece, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>♔</Text>
@@ -722,6 +766,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     fontWeight: '500',
+  },
+  statsContainer: {
+    marginBottom: 15,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 10,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 20,
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: 4,
   },
   boardContainer: {
     flex: 1,

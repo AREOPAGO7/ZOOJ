@@ -12,6 +12,7 @@ export interface Notification {
   created_at: string
   expires_at?: string
   priority: 'low' | 'normal' | 'high' | 'urgent'
+  quiz_id?: string
 }
 
 export interface NotificationSettings {
@@ -153,14 +154,15 @@ export const notificationService = {
   },
 
   // Create quiz invite notification
-  async createQuizInviteNotification(receiverId: string, senderName: string, quizTitle?: string, message?: string): Promise<{ data: Notification | null; error: any }> {
+  async createQuizInviteNotification(receiverId: string, senderName: string, quizId?: string, quizTitle?: string, message?: string): Promise<{ data: Notification | null; error: any }> {
     return this.createNotification({
       user_id: receiverId,
       title: 'Invitation au quiz',
       message: `${senderName} vous invite à participer à un quiz${quizTitle ? `: ${quizTitle}` : ''}`,
       type: 'quiz_invite',
-      data: { senderName, quizTitle, message },
-      priority: 'high'
+      data: { senderName, quizId, quizTitle, message },
+      priority: 'high',
+      quiz_id: quizId // Add quiz_id field for direct navigation
     })
   },
 

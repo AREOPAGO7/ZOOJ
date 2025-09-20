@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
+    RefreshControl,
     ScrollView,
     Text,
     TextInput,
@@ -82,9 +83,10 @@ export default function BonsPlansPage() {
   const [selectedCity, setSelectedCity] = useState('Sélectionnez votre ville');
   const [showCitySelector, setShowCitySelector] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const { categories, loading: categoriesLoading, error: categoriesError } = useServiceCategories();
-  const { subcategories, loading: subcategoriesLoading, error: subcategoriesError } = useServiceSubcategories();
+  const { categories, loading: categoriesLoading, error: categoriesError, refetch: refetchCategories } = useServiceCategories();
+  const { subcategories, loading: subcategoriesLoading, error: subcategoriesError, refetch: refetchSubcategories } = useServiceSubcategories();
 
   // Debug logging
   console.log('Categories:', categories.length, 'Loading:', categoriesLoading, 'Error:', categoriesError);
@@ -114,6 +116,24 @@ export default function BonsPlansPage() {
         ...(selectedCity !== 'Sélectionnez votre ville' && { city: selectedCity })
       }
     });
+  };
+
+  const handleRefresh = async () => {
+    console.log('🔄 Refreshing bons plans data...');
+    setIsRefreshing(true);
+    
+    try {
+      // Refresh both categories and subcategories data
+      await Promise.all([
+        refetchCategories(),
+        refetchSubcategories('') // Pass empty string to fetch all subcategories
+      ]);
+      console.log('✅ Bons plans data refreshed successfully');
+    } catch (error) {
+      console.log('❌ Error refreshing bons plans data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const cities = ['Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Agadir', 'Tanger'];
@@ -259,7 +279,18 @@ export default function BonsPlansPage() {
         )}
 
         {/* Categories and Subcategories */}
-        <ScrollView className={`flex-1 px-4 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          className={`flex-1 px-4 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={isDarkMode ? '#FFFFFF' : '#F47CC6'}
+              colors={['#F47CC6']}
+            />
+          }
+        >
           {categoriesWithSubcategories.map((category) => (
             <CategoryCard
               key={category.id}

@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -30,6 +30,55 @@ import AppLayout from '../app-layout';
 const BRAND_BLUE = "#2DB6FF";
 const BRAND_PINK = "#F47CC6";
 const BRAND_GRAY = "#6C6C6C";
+
+// Circular Progress Component
+interface CircularProgressProps {
+  percentage: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  backgroundColor?: string;
+}
+
+const CircularProgress: React.FC<CircularProgressProps> = ({
+  percentage,
+  size = 80,
+  strokeWidth = 3,
+  color = BRAND_PINK,
+  backgroundColor = '#E5E7EB'
+}) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDasharray = circumference;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <Svg width={size} height={size} style={{ position: 'absolute' }}>
+      {/* Background circle */}
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={backgroundColor}
+        strokeWidth={strokeWidth}
+        fill="transparent"
+      />
+      {/* Progress circle */}
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="transparent"
+        strokeDasharray={strokeDasharray}
+        strokeDashoffset={strokeDashoffset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+    </Svg>
+  );
+};
 
 // Game Statistics Component
 interface GameStatisticsSectionProps {
@@ -383,6 +432,9 @@ export default function NotreCouplePage() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [botGameStats, setBotGameStats] = useState<BotGameStats | null>(null);
   const [partnerBotGameStats, setPartnerBotGameStats] = useState<BotGameStats | null>(null);
+  const [pulsesCount, setPulsesCount] = useState<number>(0);
+  const [souvenirsCount, setSouvenirsCount] = useState<number>(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Function declarations
   const loadCoupleData = async () => {
@@ -439,6 +491,9 @@ export default function NotreCouplePage() {
       // Load game stats for sharing
       await loadGameStatsForSharing(user?.id, partnerId);
       
+      // Load pulses and souvenirs counts
+      await loadPulsesAndSouvenirsCounts(couple.id, partnerId);
+      
     } catch (error) {
       console.error('Error loading couple data:', error);
     } finally {
@@ -490,6 +545,36 @@ export default function NotreCouplePage() {
       }
     } catch (error) {
       console.error('Error loading game stats for sharing:', error);
+    }
+  };
+
+  const loadPulsesAndSouvenirsCounts = async (coupleId: string, partnerId: string) => {
+    try {
+      // Load pulses count - count all pulses sent between the couple
+      const { count: pulsesCount, error: pulsesError } = await supabase
+        .from('pulses')
+        .select('*', { count: 'exact', head: true })
+        .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user?.id})`);
+
+      if (pulsesError) {
+        console.log('Error loading pulses count:', pulsesError);
+      } else {
+        setPulsesCount(pulsesCount || 0);
+      }
+
+      // Load souvenirs count
+      const { count: souvenirsCount, error: souvenirsError } = await supabase
+        .from('calendar_souvenirs')
+        .select('*', { count: 'exact', head: true })
+        .eq('couple_id', coupleId);
+
+      if (souvenirsError) {
+        console.log('Error loading souvenirs count:', souvenirsError);
+      } else {
+        setSouvenirsCount(souvenirsCount || 0);
+      }
+    } catch (error) {
+      console.log('Error loading pulses and souvenirs counts:', error);
     }
   };
 
@@ -987,6 +1072,18 @@ Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj'
           className="flex-1 px-5" 
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={async () => {
+                setIsRefreshing(true);
+                await loadCoupleData();
+                setIsRefreshing(false);
+              }}
+              colors={['#2DB6FF', '#F47CC6']}
+              tintColor="#2DB6FF"
+            />
+          }
         >
           {/* Couple Overview Card */}
           <View className={`rounded-xl p-4 mb-4 shadow-sm ${isDarkMode ? 'bg-dark-surface' : 'bg-white'}`}>
@@ -1114,7 +1211,14 @@ Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj'
             {/* Individual Progress Circles */}
             <View style={styles.progressSection}>
               <View style={styles.progressCircle}>
-                <View style={styles.circleOutline}>
+                <View style={styles.circleContainer}>
+                  <CircularProgress 
+                    percentage={personalInsights?.averageScore || 0}
+                    size={80}
+                    strokeWidth={3}
+                    color={BRAND_PINK}
+                    backgroundColor={isDarkMode ? '#333333' : '#E5E7EB'}
+                  />
                   <Text style={styles.progressPercentage}>
                     {personalInsights ? `${personalInsights.averageScore}%` : '0%'}
                   </Text>
@@ -1126,7 +1230,14 @@ Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj'
               </View>
 
               <View style={styles.progressCircle}>
-                <View style={styles.circleOutline}>
+                <View style={styles.circleContainer}>
+                  <CircularProgress 
+                    percentage={user2CompatibilityScore}
+                    size={80}
+                    strokeWidth={3}
+                    color={BRAND_PINK}
+                    backgroundColor={isDarkMode ? '#333333' : '#E5E7EB'}
+                  />
                   <Text style={styles.progressPercentage}>
                     {user2CompatibilityScore}%
                   </Text>
@@ -1157,7 +1268,6 @@ Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj'
                 placeholder="01/01/1900"
                 placeholderTextColor={isDarkMode ? '#CCCCCC' : '#333333'}
               />
-              <MaterialCommunityIcons name="pencil" size={20} color={BRAND_BLUE} />
             </View>
             <Pressable style={styles.updateDateButton} onPress={updateAnniversaryDate}>
               <Text style={styles.updateDateButtonText}>{isUpdatingDate ? t('ourCouple.updating') : t('ourCouple.updateDate')}</Text>
@@ -1176,7 +1286,7 @@ Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj'
 
             <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
               <MaterialCommunityIcons name="heart-outline" size={24} color={BRAND_PINK} />
-              <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>0</Text>
+              <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{pulsesCount}</Text>
               <Text style={[styles.statLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.pulsesSent')}</Text>
             </View>
 
@@ -1190,149 +1300,11 @@ Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj'
 
             <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
               <MaterialCommunityIcons name="image-outline" size={24} color={BRAND_PINK} />
-              <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>0</Text>
+              <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{souvenirsCount}</Text>
               <Text style={[styles.statLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.sharedMemories')}</Text>
             </View>
           </View>
 
-          {/* Existing Compatibility Dashboard - Moved to Bottom */}
-          {coupleInsights && (
-            <View style={styles.compatibilitySection}>
-              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.compatibilityDashboard')}</Text>
-              
-              {/* Overall Compatibility Score */}
-              <View style={styles.compatibilityCard}>
-                <LinearGradient
-                  colors={[BRAND_BLUE, BRAND_PINK]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.compatibilityGradient}
-                >
-                  <Text style={styles.compatibilityTitle}>{t('ourCouple.globalCompatibility')}</Text>
-                  <View style={styles.scoreContainer}>
-                    <Text style={styles.scoreText}>{coupleInsights.overallCompatibility}%</Text>
-                    <Text style={styles.scoreEmoji}>{getScoreEmoji(coupleInsights.overallCompatibility)}</Text>
-                  </View>
-                  <Text style={styles.compatibilitySubtitle}>
-                    {t('ourCouple.basedOn')} {coupleInsights.totalQuizzes} {coupleInsights.totalQuizzes > 1 ? t('ourCouple.quizzes') : t('ourCouple.quiz')}
-                  </Text>
-                </LinearGradient>
-              </View>
-
-              {/* Communication Style */}
-              <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
-                <View style={styles.cardHeader}> 
-                  <MaterialCommunityIcons name="message-text" size={24} color={BRAND_BLUE} />
-                  <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.communicationStyle')}</Text>
-                </View>
-                <Text style={[styles.insightText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{coupleInsights.communicationStyle}</Text>
-              </View>
-
-              {/* Strengths and Growth Areas */}
-              <View style={styles.insightsGrid}>
-                {/* Strengths */}
-                <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
-                  <View style={styles.cardHeader}> 
-                    <MaterialCommunityIcons name="star" size={24} color="#4CAF50" />
-                    <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.strengths')}</Text>
-                  </View>
-                  {coupleInsights.strongestAreas.length > 0 ? (
-                    coupleInsights.strongestAreas.map((area, index) => (
-                      <Text key={index} style={[styles.insightItem, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>• {area}</Text>
-                    ))
-                  ) : (
-                    <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.continueExploring')}</Text>
-                  )}
-                </View>
-
-                {/* Growth Areas */}
-                <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
-                  <View style={styles.cardHeader}> 
-                    <MaterialCommunityIcons name="trending-up" size={24} color="#FF9800" />
-                    <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.growthAreas')}</Text>
-                  </View>
-                  {coupleInsights.growthAreas.length > 0 ? (
-                    coupleInsights.growthAreas.map((area, index) => (
-                      <Text key={index} style={[styles.insightItem, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>• {area}</Text>
-                    ))
-                  ) : (
-                    <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.excellentWork')}</Text>
-                  )}
-                </View>
-              </View>
-
-              {/* Personal Insights */}
-              {personalInsights && (
-                <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
-                  <View style={styles.cardHeader}> 
-                    <MaterialCommunityIcons name="account" size={24} color={BRAND_PINK} />
-                    <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.personalInsights')}</Text>
-                  </View>
-                  
-                  <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.responsePatterns')}</Text>
-                    <Text style={[styles.insightValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{personalInsights.responsePatterns}</Text>
-                  </View>
-
-                  <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.favoriteTopics')}</Text>
-                    {personalInsights.favoriteTopics.length > 0 ? (
-                      personalInsights.favoriteTopics.map((topic, index) => (
-                        <Text key={index} style={[styles.insightValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>• {topic}</Text>
-                      ))
-                    ) : (
-                      <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.continueExploringPersonal')}</Text>
-                    )}
-                  </View>
-
-                  <View style={styles.personalInsight}>
-                    <Text style={[styles.insightLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.growthZones')}</Text>
-                    {personalInsights.growthAreas.length > 0 ? (
-                      personalInsights.growthAreas.map((area, index) => (
-                        <Text key={index} style={[styles.insightValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>• {area}</Text>
-                      ))
-                    ) : (
-                      <Text style={[styles.noDataText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.onRightTrack')}</Text>
-                    )}
-                  </View>
-                </View>
-              )}
-
-              {/* Detailed Quiz Results */}
-              {quizResults.length > 0 && (
-                <View style={[styles.insightCard, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}> 
-                  <View style={styles.cardHeader}> 
-                    <MaterialCommunityIcons name="chart-line" size={24} color={BRAND_BLUE} />
-                    <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.detailedResults')}</Text>
-                  </View>
-                  
-                  {quizResults.map((result, index) => (
-                    <View key={index} style={[styles.quizResultItem, { backgroundColor: isDarkMode ? '#1F2937' : colors.border }]}> 
-                      <View style={styles.quizResultHeader}>
-                        <Text style={[styles.quizTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{result.quiz_title}</Text>
-                        <View style={styles.quizScore}>
-                          <Text style={[styles.quizScoreText, { color: getScoreColor(result.score) }]}> 
-                            {result.score}%
-                          </Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.quizDetails}> 
-                        <View style={styles.quizDetail}>
-                          <Text style={[styles.detailLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{userNames?.user1 || t('ourCouple.you')}:</Text>
-                          <Text style={[styles.detailValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{result.user1_percent}%</Text>
-                        </View>
-                        <View style={styles.quizDetail}>
-                          <Text style={styles.detailLabel}>{userNames?.user2 || t('ourCouple.partner')}:</Text>
-                          <Text style={[styles.detailValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{result.user2_percent}%</Text>
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
 
           {/* Game Statistics Section */}
           <GameStatisticsSection 
@@ -1505,20 +1477,20 @@ const styles = StyleSheet.create({
   progressCircle: {
     alignItems: 'center',
   },
-  circleOutline: {
+  circleContainer: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: BRAND_PINK,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
+    position: 'relative',
   },
   progressPercentage: {
     fontSize: 18,
     fontWeight: '700',
     color: BRAND_PINK,
+    position: 'absolute',
+    zIndex: 1,
   },
   progressName: {
     fontSize: 16,
@@ -1847,3 +1819,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

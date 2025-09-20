@@ -33,9 +33,9 @@ export const notificationUtils = {
   },
 
   // Send quiz invite notification to a user
-  async sendQuizInviteNotification(receiverId: string, senderName: string, quizTitle?: string, message?: string) {
+  async sendQuizInviteNotification(receiverId: string, senderName: string, quizId?: string, quizTitle?: string, message?: string) {
     try {
-      const result = await notificationService.createQuizInviteNotification(receiverId, senderName, quizTitle, message)
+      const result = await notificationService.createQuizInviteNotification(receiverId, senderName, quizId, quizTitle, message)
       if (result.error) {
         console.error('Error sending quiz invite notification:', result.error)
       }
@@ -120,6 +120,7 @@ export const notificationUtils = {
         receiverId,
         senderName,
         quizId,
+        undefined, // quizTitle - we don't have it in this context
         message
       )
       console.log('Notification result:', notificationResult);
@@ -229,8 +230,8 @@ export const sendEventReminder = (userId: string, eventTitle: string, eventDate:
 export const sendDailyQuestion = (userId: string, questionText: string) =>
   notificationUtils.sendDailyQuestionNotification(userId, questionText)
 
-export const sendQuizInvite = (senderId: string, receiverId: string, quizTitle?: string, message?: string) =>
-  notificationUtils.sendQuizInvite(senderId, receiverId, undefined, message)
+export const sendQuizInvite = (senderId: string, receiverId: string, quizId?: string, message?: string) =>
+  notificationUtils.sendQuizInvite(senderId, receiverId, quizId, message)
 
 export const sendCoupleUpdate = (userId: string, updateType: string, message: string) =>
   notificationUtils.sendCoupleUpdateNotification(userId, updateType, message)

@@ -995,7 +995,13 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <PanGestureHandler onGestureEvent={handleSwipeRight}>
           <View style={{ flex: 1 }}>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "space-between", paddingVertical: 40, paddingTop: '5%' }}>
+      <View style={{ 
+        flex: 1, 
+        alignItems: "center", 
+        justifyContent: (screen === "welcome" || screen === "auth" || screen === "signup") ? "center" : "space-between", 
+        paddingVertical: 40, 
+        paddingTop: (screen === "welcome" || screen === "auth" || screen === "signup") ? '38%' : '5%' 
+      }}>
               {(screen === "welcome" || screen === "auth" || screen === "signup") && (
                 <HeaderBar variant="logo" tagline="L'amour se construit chaque jour" taglineColor={BRAND_GRAY} />
         )}
@@ -1335,7 +1341,28 @@ export default function App() {
 
           {screen === "interests" && (
             <>
-              <HeaderBar variant="title" title="Vos centres d'intérêts" onBack={() => setScreen("profile")} />
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 30, marginBottom: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Pressable onPress={() => setScreen("profile")}>
+                    <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
+                  </Pressable>
+                  <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: colors.text }}>Vos centres d'intérêts</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <MaterialCommunityIcons
+                    name="heart"
+                    size={44}
+                    color={BRAND_PINK}
+                    style={{ marginRight: -17, transform: [{ rotate: "-46deg" }] }}
+                  />
+                  <MaterialCommunityIcons 
+                    name="heart" 
+                    size={44} 
+                    color={BRAND_BLUE} 
+                    style={{ transform: [{ rotate: "46deg" }] }} 
+                  />
+                </View>
+              </View>
 
               <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10 }}>
                 {isLoadingInterests ? (
@@ -1463,7 +1490,7 @@ export default function App() {
                                   lineHeight: 22,
                                   fontWeight: 'bold',
                                 }}>
-                                  Partagez le code avec votre partenaire
+                                  Attendez votre partenaire pour rejoindre
                                 </Text>
                               </>
                             ) : (
@@ -1686,17 +1713,19 @@ export default function App() {
 
         </View>
 
-        <View style={{ alignItems: "center" }}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <MaterialCommunityIcons
-              name="heart"
-              size={44}
-              color={BRAND_BLUE}
-              style={{ marginRight: -17, transform: [{ rotate: "-46deg" }] }}
-            />
-            <MaterialCommunityIcons name="heart" size={44} color={BRAND_PINK} style={{ marginRight: 0, transform: [{ rotate: "46deg" }] }} />
+        {screen !== "interests" && (
+          <View style={{ alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name="heart"
+                size={44}
+                color={BRAND_BLUE}
+                style={{ marginRight: -17, transform: [{ rotate: "-46deg" }] }}
+              />
+              <MaterialCommunityIcons name="heart" size={44} color={BRAND_PINK} style={{ marginRight: 0, transform: [{ rotate: "46deg" }] }} />
+            </View>
           </View>
-        </View>
+        )}
       </View>
             </View>
         </PanGestureHandler>

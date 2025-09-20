@@ -591,8 +591,6 @@ export default function CalendrierPage() {
               
               const isSelected = day.toDateString() === selectedDate.toDateString();
               const isToday = day.toDateString() === new Date().toDateString();
-              const dayEvents = getItemsForDate(day).events;
-              const hasEvents = dayEvents.length > 0;
 
               return (
                 <Pressable
@@ -607,7 +605,6 @@ export default function CalendrierPage() {
                   <Text className={`text-center text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} ${isSelected ? 'text-white' : ''} ${isToday ? 'font-bold' : ''}`}>
                     {day.getDate()}
                   </Text>
-                  {hasEvents && <View style={calendarStyles.eventIndicator} />}
                 </Pressable>
               );
             })}

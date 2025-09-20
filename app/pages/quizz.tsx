@@ -1,8 +1,9 @@
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -102,11 +103,7 @@ export default function QuizzPage() {
   const [isCheckingResults, setIsCheckingResults] = useState(false);
   const [userNames, setUserNames] = useState<{ user1: string; user2: string } | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<any>(null);
-  
-  // Cache for quiz data to reduce REST requests
-  const [quizCache, setQuizCache] = useState<Map<string, any>>(new Map());
   const [isSendingInvite, setIsSendingInvite] = useState(false);
-  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   // Couple/invite state
   const [isCheckingCouple, setIsCheckingCouple] = useState(false);
   const [isInCouple, setIsInCouple] = useState<boolean | null>(null);
@@ -120,23 +117,13 @@ export default function QuizzPage() {
   const [showSearchInput, setShowSearchInput] = useState<boolean>(false);
   const [filteredQuizzes, setFilteredQuizzes] = useState<Quiz[]>([]);
 
-  // Function to check for pending quiz invites
-  const checkPendingInvites = async () => {
-    if (!user || !coupleId) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('quiz_invites')
-        .select('*')
-        .eq('receiver_id', user.id)
-        .eq('status', 'pending');
-      
-      if (!error && data) {
-        setPendingInvites(data);
-      }
-    } catch (error) {
-      console.error('Error checking pending invites:', error);
-    }
+  // Navigation helper functions for URL-based routing
+  const navigateToQuiz = (quizId: string, action: 'take' | 'results' | 'invite' = 'take') => {
+    router.push(`/pages/quizz?quizId=${quizId}&action=${action}`);
+  };
+
+  const navigateToQuizList = () => {
+    router.push('/pages/quizz');
   };
 
   // Function to send quiz invite to partner
@@ -212,48 +199,6 @@ export default function QuizzPage() {
     }
   };
 
-  // Function to accept quiz invite
-  const handleAcceptInvite = async (invite: any) => {
-    try {
-      // Update invite status to accepted
-      const { error } = await supabase
-        .from('quiz_invites')
-        .update({ status: 'accepted' })
-        .eq('id', invite.id);
-
-      if (error) throw error;
-
-      // Remove from pending invites
-      setPendingInvites(prev => prev.filter(inv => inv.id !== invite.id));
-
-      Alert.alert(t('common.success'), t('quiz.invitationAccepted'));
-    } catch (error) {
-      console.error('Error accepting invite:', error);
-      Alert.alert(t('common.error'), t('quiz.errorAcceptingInvite'));
-    }
-  };
-
-  // Function to decline quiz invite
-  const handleDeclineInvite = async (invite: any) => {
-    try {
-      // Update invite status to declined
-      const { error } = await supabase
-        .from('quiz_invites')
-        .update({ status: 'declined' })
-        .eq('id', invite.id);
-
-      if (error) throw error;
-
-      // Remove from pending invites
-      setPendingInvites(prev => prev.filter(inv => inv.id !== invite.id));
-
-      Alert.alert(t('common.success'), t('quiz.invitationDeclined'));
-    } catch (error) {
-      console.error('Error declining invite:', error);
-      Alert.alert(t('common.error'), t('quiz.errorDecliningInvite'));
-    }
-  };
-
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -304,7 +249,6 @@ export default function QuizzPage() {
       loadUserProfile();
       loadQuizzes();
       loadThemes();
-      checkPendingInvites();
     }
   }, [user, isProfileComplete]);
 
@@ -497,38 +441,6 @@ export default function QuizzPage() {
 
   const startQuiz = async (quiz: Quiz) => {
     try {
-      // Check cache first
-      const cacheKey = `quiz_${quiz.id}`;
-      const cachedData = quizCache.get(cacheKey);
-      
-      if (cachedData && Date.now() - cachedData.timestamp < 300000) { // 5 minutes cache
-        console.log('Using cached quiz data for:', quiz.id);
-        setQuizQuestions(cachedData.questions);
-        setSelectedQuiz(quiz);
-        setPartnerAnswers(cachedData.partnerAnswers || []);
-        
-        if (cachedData.userAnswers && cachedData.userAnswers.length > 0) {
-          setHasAnsweredQuiz(true);
-          setPreviousAnswers(cachedData.userAnswers);
-          setAnswers([]);
-          
-          if (cachedData.partnerAnswers && cachedData.partnerAnswers.length > 0) {
-            setIsTakingQuiz(false);
-            await calculateAndStoreResults();
-          } else {
-            setIsTakingQuiz(true);
-            setQuizResult(null);
-          }
-        } else {
-          setHasAnsweredQuiz(false);
-          setPreviousAnswers([]);
-          setAnswers([]);
-          setIsTakingQuiz(true);
-          setQuizResult(null);
-        }
-        return;
-      }
-
       // Load quiz questions and answers in parallel for better performance
       const [questionsResult, userAnswersResult, partnerAnswersResult] = await Promise.all([
         supabase
@@ -556,14 +468,6 @@ export default function QuizzPage() {
       const questions = questionsResult.data;
       const existingAnswers = userAnswersResult.data;
       const partnerAnswersData = partnerAnswersResult.data;
-
-      // Cache the data
-      setQuizCache(prev => new Map(prev.set(cacheKey, {
-        questions,
-        userAnswers: existingAnswers,
-        partnerAnswers: partnerAnswersData,
-        timestamp: Date.now()
-      })));
 
       setQuizQuestions(questions);
       setSelectedQuiz(quiz);
@@ -680,15 +584,6 @@ export default function QuizzPage() {
         setQuizResult(null);
       }
 
-      // Clear cache to ensure fresh data
-      if (selectedQuiz) {
-        const cacheKey = `quiz_${selectedQuiz.id}`;
-        setQuizCache(prev => {
-          const newCache = new Map(prev);
-          newCache.delete(cacheKey);
-          return newCache;
-        });
-      }
     } catch (error) {
       console.error('Error submitting quiz:', error);
       Alert.alert(t('common.error'), t('quiz.errorSubmittingQuiz'));
@@ -909,17 +804,6 @@ export default function QuizzPage() {
 
       setPartnerAnswers(partnerAnswersData || []);
       
-      // Update cache
-      const cacheKey = `quiz_${selectedQuiz.id}`;
-      const cachedData = quizCache.get(cacheKey);
-      if (cachedData) {
-        setQuizCache(prev => new Map(prev.set(cacheKey, {
-          ...cachedData,
-          partnerAnswers: partnerAnswersData,
-          timestamp: Date.now()
-        })));
-      }
-
       // If partner has now answered, calculate results
       if (partnerAnswersData && partnerAnswersData.length > 0 && hasAnsweredQuiz) {
         setIsTakingQuiz(false);
@@ -933,23 +817,8 @@ export default function QuizzPage() {
   };
 
   const resetQuiz = () => {
-    setSelectedQuiz(null);
-    setQuizQuestions([]);
-    setAnswers([]);
-    setIsTakingQuiz(false);
-    setQuizResult(null);
-    setHasAnsweredQuiz(false);
-    setPreviousAnswers([]);
-    setPartnerAnswers([]);
-    // Clear cache for this quiz
-    if (selectedQuiz) {
-      const cacheKey = `quiz_${selectedQuiz.id}`;
-      setQuizCache(prev => {
-        const newCache = new Map(prev);
-        newCache.delete(cacheKey);
-        return newCache;
-      });
-    }
+    // Navigate back to quiz list instead of resetting state
+    navigateToQuizList();
   };
 
   const selectTheme = async (theme: any) => {
@@ -968,8 +837,8 @@ export default function QuizzPage() {
   };
 
   const resetTheme = () => {
-    setSelectedTheme(null);
-    setThemeQuizzes([]);
+    // Navigate back to quiz list instead of resetting state
+    navigateToQuizList();
   };
 
   const onRefresh = async () => {
@@ -1034,6 +903,39 @@ export default function QuizzPage() {
       }
     }
   }, [targetQuizId, quizzes]);
+
+  // Handle URL-based quiz navigation - use useCallback to prevent infinite loops
+  const handleUrlNavigation = useCallback(() => {
+    const quizId = params.quizId as string;
+    const action = params.action as string; // 'take', 'results', 'invite'
+    
+    if (quizId && quizzes.length > 0) {
+      const quiz = quizzes.find(q => q.id === quizId);
+      if (quiz) {
+        if (action === 'take') {
+          // Navigate to quiz taking mode
+          startQuiz(quiz);
+        } else if (action === 'results') {
+          // Navigate to results view
+          startQuiz(quiz);
+          // The startQuiz function will handle loading results if they exist
+        } else if (action === 'invite') {
+          // Navigate to invite view
+          setSelectedQuiz(quiz);
+          setIsTakingQuiz(false);
+          setQuizResult(null);
+        } else {
+          // Default behavior - start quiz
+          startQuiz(quiz);
+        }
+      }
+    }
+  }, [params.quizId, params.action, quizzes]);
+
+  // Use useEffect with proper dependencies
+  useEffect(() => {
+    handleUrlNavigation();
+  }, [handleUrlNavigation]);
 
   // Show loading while checking auth or profile completion
   if (loading || profileLoading || isCheckingCouple || isInCouple === null) {
@@ -1192,12 +1094,6 @@ export default function QuizzPage() {
             </Pressable>
             <View style={styles.quizTitleContainer}>
               <Text style={[styles.quizTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{selectedQuiz.title}</Text>
-              {pendingInvites.length > 0 && (
-                <View style={styles.quizNotificationBadge}>
-                  <MaterialCommunityIcons name="bell" size={16} color="#FFFFFF" />
-                  <Text style={styles.quizNotificationBadgeText}>{pendingInvites.length}</Text>
-                </View>
-              )}
             </View>
             <View style={{ width: 24 }} />
           </View>
@@ -1224,29 +1120,6 @@ export default function QuizzPage() {
                 </Text>
               </View>
 
-              {/* Refresh Button */}
-              <Pressable
-                onPress={refreshResults}
-                disabled={isLoadingResults}
-                style={styles.refreshButton}
-              >
-                <LinearGradient
-                  colors={[BRAND_BLUE, BRAND_PINK]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.refreshButtonGradient}
-                >
-                  <MaterialCommunityIcons 
-                    name="refresh" 
-                    size={20} 
-                    color="#FFFFFF" 
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={styles.refreshButtonText}>
-                    {isLoadingResults ? t('quiz.refreshing') : t('quiz.refreshResults')}
-                  </Text>
-                </LinearGradient>
-              </Pressable>
 
               {/* Your Responses Section */}
               <View style={styles.yourResponsesSection}>
@@ -1414,78 +1287,6 @@ export default function QuizzPage() {
                     </View>
                   )                })}
               </ScrollView>
-
-              {/* Verification Buttons Container */}
-              <View style={styles.verificationButtonsContainer}>
-                {/* Check Results Button */}
-                <View style={styles.smallButtonContainer}>
-                  <Pressable
-                    onPress={checkQuizResults}
-                    disabled={isCheckingResults}
-                    style={[
-                      styles.checkResultsButton,
-                      isCheckingResults && styles.submitButtonDisabled
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={isCheckingResults ? [BRAND_GRAY, BRAND_GRAY] : [BRAND_BLUE, BRAND_PINK]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.checkResultsButtonGradient}
-                    >
-                      {isCheckingResults ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
-                          <Text style={styles.checkResultsButtonText}>
-                            {t('quiz.checking')}
-                          </Text>
-                        </View>
-                      ) : (
-                        <Text style={styles.checkResultsButtonText}>
-                          {t('quiz.checkResults')}
-                        </Text>
-                      )}
-                    </LinearGradient>
-                  </Pressable>
-                </View>
-
-                {/* Refresh Partner Answers Button */}
-                <View style={styles.smallButtonContainer}>
-                  <Pressable
-                    onPress={refreshPartnerAnswers}
-                    disabled={isLoadingPartnerAnswers}
-                    style={styles.refreshButton}
-                  >
-                    {/* <LinearGradient
-                      colors={[BRAND_BLUE, BRAND_PINK]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.refreshButtonGradient}
-                    >
-                      {isLoadingPartnerAnswers ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
-                          <Text style={styles.checkResultsButtonText}>
-                            Vérification...
-                          </Text>
-                        </View>
-                      ) : (
-                        <>
-                          <MaterialCommunityIcons 
-                            name="refresh" 
-                            size={20} 
-                            color="#FFFFFF" 
-                            style={{ marginRight: 8 }}
-                          />
-                          <Text style={styles.checkResultsButtonText}>
-                            Vérifier si le partenaire a répondu
-                          </Text>
-                        </>
-                      )}
-                    </LinearGradient> */}
-                  </Pressable>
-                </View>
-              </View>
             </>
           ) : (
             // Show quiz taking interface - COMPLETELY REBUILT
@@ -1546,11 +1347,9 @@ export default function QuizzPage() {
                       </View>
                     );
                   })}
-                </ScrollView>
-              </View>
-
-              {/* Quiz Taking Invite Section - Only show when user hasn't answered yet */}
-              {!hasAnsweredQuiz && (
+                  
+                  {/* Quiz Taking Invite Section - Only show when user hasn't answered yet */}
+                  {!hasAnsweredQuiz && (
                 <View style={[styles.quizTakingInviteSection, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA' }]}>
                   <Text style={[styles.quizTakingInviteTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.invitePartner')}</Text>
                   <Text style={[styles.quizTakingInviteDescription, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>
@@ -1583,7 +1382,9 @@ export default function QuizzPage() {
                     </LinearGradient>
                   </Pressable>
                 </View>
-              )}
+                  )}
+                </ScrollView>
+              </View>
 
               {/* Submit Button - Fixed at bottom - Only show if user hasn't answered yet */}
               {!hasAnsweredQuiz && (
@@ -1659,29 +1460,6 @@ export default function QuizzPage() {
               </Text>
             </View>
 
-            {/* Refresh Button */}
-            <Pressable
-              onPress={refreshResults}
-              disabled={isLoadingResults}
-              style={styles.refreshButton}
-            >
-              <LinearGradient
-                colors={[BRAND_BLUE, BRAND_PINK]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.refreshButtonGradient}
-              >
-                <MaterialCommunityIcons 
-                  name="refresh" 
-                  size={20} 
-                  color="#FFFFFF" 
-                  style={{ marginRight: 8 }}
-                />
-                <Text style={styles.refreshButtonText}>
-                  {isLoadingResults ? t('quiz.refreshing') : t('quiz.refreshResults')}
-                </Text>
-              </LinearGradient>
-            </Pressable>
 
             {/* Your Responses Section */}
             <View style={styles.yourResponsesSection}>
@@ -1830,7 +1608,7 @@ export default function QuizzPage() {
                 <Pressable
                   key={quiz.id}
                   style={[styles.quizCard, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}
-                  onPress={() => startQuiz(quiz)}
+                  onPress={() => navigateToQuiz(quiz.id, 'take')}
                 >
                   <View style={styles.quizCardContent}>
                     <View style={[styles.quizThumbnail, { backgroundColor: isDarkMode ? '#333333' : colors.surface }]}>
@@ -1915,52 +1693,6 @@ export default function QuizzPage() {
             <Pressable style={styles.closeSearchButton} onPress={toggleSearchInput}>
               <MaterialCommunityIcons name="close" size={20} color={isDarkMode ? '#CCCCCC' : '#7A7A7A'} />
             </Pressable>
-          </View>
-        )}
-
-        {/* Pending Quiz Invites */}
-        {pendingInvites.length > 0 && (
-          <View style={styles.pendingInvitesSection}>
-            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
-              {t('quiz.pendingInvites')} ({pendingInvites.length})
-            </Text>
-            {pendingInvites.map((invite) => (
-              <View key={invite.id} style={[styles.pendingInviteCard, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
-                <View style={styles.pendingInviteContent}>
-                  <MaterialCommunityIcons
-                    name="heart"
-                    size={24}
-                    color={colors.primary}
-                  />
-                  <View style={styles.pendingInviteInfo}>
-                    <Text style={[styles.pendingInviteTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
-                      {t('quiz.quizInvitation')}
-                    </Text>
-                    <Text style={[styles.pendingInviteMessage, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
-                      {invite.message || t('quiz.inviteMessage')}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.pendingInviteActions}>
-                  <Pressable
-                    style={[styles.acceptInviteButton, { backgroundColor: colors.success }]}
-                    onPress={() => handleAcceptInvite(invite)}
-                  >
-                    <Text style={[styles.acceptInviteButtonText, { color: colors.surface }]}>
-                      {t('quiz.accept')}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.declineInviteButton, { backgroundColor: colors.error }]}
-                    onPress={() => handleDeclineInvite(invite)}
-                  >
-                    <Text style={[styles.declineInviteButtonText, { color: colors.surface }]}>
-                      {t('quiz.decline')}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
           </View>
         )}
 
@@ -2075,7 +1807,7 @@ export default function QuizzPage() {
               >
                 <Pressable
                   style={styles.quizCardContent}
-                  onPress={() => startQuiz(quiz)}
+                  onPress={() => navigateToQuiz(quiz.id, 'take')}
                 >
                   <View style={[styles.quizThumbnail, { backgroundColor: isDarkMode ? '#333333' : colors.surface }]}>
                     {quiz.image ? (
@@ -2122,9 +1854,6 @@ export default function QuizzPage() {
             </View>
           )}
         </View>
-
-        {/* Partner Invitation */}
-      
       </ScrollView>
     </AppLayout>
   );
@@ -2434,46 +2163,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: BRAND_GRAY,
   },
-  invitationSection: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  invitationCard: {
-    backgroundColor: '#E8EAF6',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-  },
-  invitationIcon: {
-    marginBottom: 12,
-  },
-  invitationContent: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  invitationTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    marginBottom: 8,
-  },
-  invitationSubtext: {
-    fontSize: 14,
-    color: BRAND_GRAY,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  invitationButton: {
-    backgroundColor: BRAND_PINK,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  invitationButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   // Quiz taking styles
   quizContainer: {
     flex: 1,
@@ -2542,13 +2231,6 @@ const styles = StyleSheet.create({
   
     
   },
-  verificationButtonsContainer: {
-  
-    
-    height: 100,
-   
-
-  },
   submitButton: {
     borderRadius: 12,
     overflow: 'hidden',
@@ -2591,21 +2273,6 @@ const styles = StyleSheet.create({
   },
   answerOptionReadOnly: {
     // Read-only styling - no pointer events
-  },
-  checkResultsButton: {
-    
-    borderRadius: 12,
-    overflow: 'hidden',
-
-  },
-  checkResultsButtonGradient: {
-    paddingVertical: 31,
-    alignItems: 'center',
-  },
-  checkResultsButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
   },
   mainQuestionCard: {
     backgroundColor: '#F8F9FA',
@@ -2780,23 +2447,6 @@ const styles = StyleSheet.create({
   scoreSubtext: {
     fontSize: 16,
     color: BRAND_GRAY,
-  },
-  refreshButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 24,
-  },
-  refreshButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  refreshButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
   },
   detailedResultsContainer: {
     marginBottom: 24,
@@ -3059,62 +2709,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
-  },
-  // Pending invites styles
-  pendingInvitesSection: {
-    marginBottom: 24,
-    paddingHorizontal: 20,
-  },
-  pendingInviteCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  pendingInviteContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  pendingInviteInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  pendingInviteTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  pendingInviteMessage: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  pendingInviteActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  acceptInviteButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  acceptInviteButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  declineInviteButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  declineInviteButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   // Quiz invite section styles
   quizInviteSection: {

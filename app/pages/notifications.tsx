@@ -6,16 +6,17 @@ import { notificationService } from '@/lib/notificationService';
 import { useNotificationSettingsStore } from '@/lib/notificationSettingsStore';
 import { simpleChatNotificationService } from '@/lib/simpleChatNotificationService';
 import { supabase } from '@/lib/supabase';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import AppLayout from '../app-layout';
 
@@ -34,6 +35,7 @@ interface CombinedNotification {
   message_preview?: string;
   emoji?: string;
   quiz_title?: string;
+  quiz_id?: string;
 }
 
 // Upcoming event interface
@@ -147,6 +149,10 @@ export default function NotificationsPage() {
     const quizInviteNotifications = notifications.filter(n => 
       n.type === 'quiz_invite'
     ).slice(0, 3);
+
+    console.log('🧠 Quiz invite notifications found:', quizInviteNotifications.length);
+    console.log('🧠 Quiz invite settings:', notificationSettings?.quiz_invite);
+    console.log('🧠 Quiz invite notifications:', quizInviteNotifications);
 
     if (quizInviteNotifications.length > 0 && notificationSettings?.quiz_invite !== false) {
       sections.push({
@@ -422,6 +428,7 @@ export default function NotificationsPage() {
               priority: notification.priority,
               sender_name: senderName,
               quiz_title: quizName,
+              quiz_id: notification.quiz_id, // Include quiz_id field
               data: notification.data,
             });
           });
@@ -456,6 +463,10 @@ export default function NotificationsPage() {
             created_at: notification.created_at,
             sender_name: notification.sender_name,
             question_content: notification.question_content,
+            data: {
+              question_id: notification.question_id,
+              thread_id: notification.thread_id,
+            },
           });
         });
       }
@@ -471,6 +482,10 @@ export default function NotificationsPage() {
             is_read: notification.is_read,
             created_at: notification.created_at,
             question_content: notification.question_content,
+            data: {
+              question_id: notification.question_id,
+              daily_question_id: notification.daily_question_id,
+            },
           });
         });
       }
@@ -486,6 +501,11 @@ export default function NotificationsPage() {
             is_read: false, // Simple chat notifications don't have is_read field
             created_at: notification.created_at,
             message_preview: notification.message_preview,
+            data: {
+              question_id: notification.question_id,
+              sender_id: notification.sender_id,
+              couple_id: notification.couple_id,
+            },
           });
         });
       }
@@ -522,6 +542,11 @@ export default function NotificationsPage() {
         title: n.title, 
         created_at: n.created_at 
       })));
+      
+      // Debug quiz invitations specifically
+      const quizInvites = combinedNotifications.filter(n => n.type === 'quiz_invite');
+      console.log('🧠 Quiz invitations in combined notifications:', quizInvites.length);
+      console.log('🧠 Quiz invitations details:', quizInvites);
 
       // Group notifications by type and limit to 3 per section
       const groupedNotifications = groupNotificationsByType(combinedNotifications);
@@ -542,44 +567,82 @@ export default function NotificationsPage() {
     setIsRefreshing(false);
   }, [fetchAllNotifications, refreshNotifications]);
 
-  // Mark notification as read
-  const markAsRead = async (notification: CombinedNotification) => {
+  // Handle notification click - just navigate, no mark as read
+  const handleNotificationClick = async (notification: CombinedNotification) => {
+    console.log('🔔 Notification clicked:', notification.type, notification.id);
+    console.log('🔔 Full notification:', notification);
+    
     try {
       switch (notification.type) {
         case 'notification':
-          await notificationService.markAsRead(notification.id);
+          // Check if this is a calendar notification and navigate accordingly
+          if (notification.data) {
+            try {
+              const data = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+              const itemType = data.item_type || data.calendar_item_type;
+              const itemId = data.item_id || data.calendar_item_id;
+              
+              if (itemType && itemId && ['event', 'souvenir', 'todo'].includes(itemType)) {
+                // Navigate to the appropriate detail page
+                if (itemType === 'todo') {
+                  router.push(`/pages/todo-details?todoId=${itemId}` as any);
+                } else {
+                  router.push(`/pages/item-details?itemType=${itemType}&itemId=${itemId}` as any);
+                }
+              }
+            } catch (error) {
+              console.error('Error parsing notification data:', error);
+            }
+          }
           break;
         case 'chat':
-          await supabase
-            .from('chat_notifications')
-            .update({ is_read: true })
-            .eq('id', notification.id);
+          // Navigate to question chat page with the specific question ID
+          if (notification.data?.question_id) {
+            router.push(`/pages/question-chat?questionId=${notification.data.question_id}` as any);
+          }
           break;
         case 'daily_question':
-          await dailyQuestionNotificationService.markAsRead(notification.id);
+          // Navigate to questions page with the specific question ID
+          if (notification.data?.question_id) {
+            router.push(`/pages/questions?highlightQuestionId=${notification.data.question_id}` as any);
+          } else {
+            router.push('/pages/questions' as any);
+          }
           break;
         case 'simple_chat':
-          await simpleChatNotificationService.deleteNotification(notification.id);
+          // Navigate to question chat page with the specific question ID
+          if (notification.data?.question_id) {
+            router.push(`/pages/question-chat?questionId=${notification.data.question_id}` as any);
+          }
           break;
         case 'pulse':
-          await supabase
-            .from('pulses')
-            .update({ is_read: true })
-            .eq('id', notification.id);
+          // No navigation for pulses
           break;
         case 'upcoming_event':
-          // Upcoming events are just visual notifications, no need to mark as read in database
+          // Navigate to event details page
+          if (notification.data?.event_id) {
+            router.push(`/pages/item-details?itemType=event&itemId=${notification.data.event_id}` as any);
+          }
           break;
         case 'quiz_invite':
+          console.log('🧠 Quiz invite case reached!');
           // Navigate to the quiz when clicked
           try {
-            const quizData = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data || {};
-            let quizId = quizData.quiz_id || quizData.id;
+            // First try to get quiz_id from the notification's quiz_id field
+            let quizId = notification.quiz_id;
             
-            console.log('🧠 Quiz notification clicked, quizData:', quizData);
-            console.log('🧠 Initial quizId:', quizId);
+            console.log('🧠 Quiz notification clicked, quiz_id field:', quizId);
+            console.log('🧠 Notification data:', notification.data);
             
-            // If no quiz ID in data, try to extract UUID from message
+            // If no quiz_id field, fallback to data field
+            if (!quizId && notification.data) {
+              const quizData = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data || {};
+              quizId = quizData.quizId || quizData.quiz_id || quizData.id || quizData.quizTitle;
+              console.log('🧠 Fallback to data field, quizId:', quizId);
+              console.log('🧠 Parsed quizData:', quizData);
+            }
+            
+            // If still no quiz ID, try to extract UUID from message
             if (!quizId && notification.message) {
               const uuidMatch = notification.message.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi);
               if (uuidMatch && uuidMatch.length > 0) {
@@ -591,31 +654,23 @@ export default function NotificationsPage() {
             console.log('🧠 Final quizId:', quizId);
             
             if (quizId) {
-              console.log('🧠 Navigating to quiz:', `/quizz?quizId=${quizId}`);
-              router.push(`/quizz?quizId=${quizId}` as any);
+              console.log('🧠 Navigating to quiz:', `/pages/quizz?quizId=${quizId}`);
+              router.push(`/pages/quizz?quizId=${quizId}` as any);
             } else {
               console.log('🧠 No quizId found, cannot navigate');
+              console.log('🧠 Available data:', { 
+                quiz_id: notification.quiz_id, 
+                data: notification.data, 
+                message: notification.message 
+              });
             }
           } catch (error) {
             console.error('Error navigating to quiz:', error);
           }
           break;
       }
-
-      // Update local state
-      setNotificationSections(prev => 
-        prev.map(section => ({
-          ...section,
-          notifications: section.notifications.map(n => 
-            n.id === notification.id 
-              ? { ...n, is_read: true }
-              : n
-          )
-        }))
-      );
     } catch (err) {
-      console.error('Error marking notification as read:', err);
-      Alert.alert('Erreur', 'Impossible de marquer la notification comme lue');
+      console.error('Error handling notification click:', err);
     }
   };
 
@@ -729,23 +784,34 @@ export default function NotificationsPage() {
 
   // Get notification icon based on type and data
   const getNotificationIcon = (notification: CombinedNotification) => {
-    // Return empty string to remove all emojis
-    return '';
-  };
-
-  // Get priority color
-  const getPriorityColor = (priority?: string) => {
-    switch (priority) {
-      case 'urgent':
-        return '#FF4444';
-      case 'high':
-        return '#FF8800';
-      case 'normal':
-        return '#4CAF50';
-      case 'low':
-        return '#9E9E9E';
+    switch (notification.type) {
+      case 'quiz_invite':
+        return '🧠'; // Quiz icon
+      case 'daily_question':
+        return '❓'; // Question mark icon
+      case 'notification':
+        // Check if it's a calendar-related notification
+        if (notification.data) {
+          try {
+            const data = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+            const itemType = data.item_type || data.calendar_item_type;
+            if (['event', 'souvenir', 'todo'].includes(itemType)) {
+              return '📅'; // Calendar icon for events/souvenirs/todos
+            }
+          } catch (error) {
+            console.error('Error parsing notification data for icon:', error);
+          }
+        }
+        return '📅'; // Default calendar icon
+      case 'upcoming_event':
+        return '📅'; // Calendar icon
+      case 'pulse':
+        return '💖'; // Heart icon
+      case 'chat':
+      case 'simple_chat':
+        return '💬'; // Chat icon
       default:
-        return '#4CAF50';
+        return '🔔'; // Default notification icon
     }
   };
 
@@ -754,21 +820,16 @@ export default function NotificationsPage() {
     <TouchableOpacity
       className={`rounded-xl p-4 mb-3 border ${
         isDarkMode 
-          ? `${item.type === 'upcoming_event' ? 'bg-red-900/20 border-red-500' : !item.is_read ? 'bg-dark-surface border-gray-600' : 'bg-dark-surface border-dark-border'}`
-          : `${item.type === 'upcoming_event' ? 'bg-red-50 border-red-500' : !item.is_read ? 'bg-blue-50 border-gray-300' : 'bg-gray-50 border-gray-200'}`
+          ? `${item.type === 'upcoming_event' ? 'bg-red-900/20 border-red-500' : 'bg-dark-surface border-dark-border'}`
+          : `${item.type === 'upcoming_event' ? 'bg-red-50 border-red-500' : 'bg-gray-50 border-gray-200'}`
       }`}
-      onPress={() => markAsRead(item)}
+      onPress={() => handleNotificationClick(item)}
       onLongPress={() => deleteNotification(item)}
     >
       <View className="flex-row items-start">
         <View className="flex-1 mr-3">
           <View className="flex-row items-center mb-1.5">
-            {item.type === 'upcoming_event' && (
-              <Text className="text-lg mr-2">🚨</Text>
-            )}
-            {item.type === 'quiz_invite' && (
-              <Text className="text-lg mr-2">🧠</Text>
-            )}
+            <Text className="text-lg mr-2">{getNotificationIcon(item)}</Text>
             <Text className={`text-base font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
               {item.title}
             </Text>
@@ -823,18 +884,9 @@ export default function NotificationsPage() {
           )}
         </View>
         <View className="items-end">
-          <Text className={`text-xs mb-1 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
+          <Text className={`text-xs ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
             {getTimeAgo(item.created_at)}
           </Text>
-          {item.priority && (
-            <View
-              className="w-2 h-2 rounded-full mb-1"
-              style={{ backgroundColor: getPriorityColor(item.priority) }}
-            />
-          )}
-          {!item.is_read && (
-            <View className="w-2 h-2 rounded-full bg-green-500" />
-          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -881,10 +933,6 @@ export default function NotificationsPage() {
     );
   }
 
-  const unreadCount = notificationSections.reduce((total, section) => 
-    total + section.notifications.filter(n => !n.is_read).length, 0
-  );
-
   return (
     <AppLayout>
       <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
@@ -895,18 +943,15 @@ export default function NotificationsPage() {
               className="mr-3 p-2"
               onPress={() => router.back()}
             >
-              <Text className={`text-lg ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>←</Text>
+              <MaterialCommunityIcons 
+                name="chevron-left" 
+                size={28} 
+                color={isDarkMode ? '#ffffff' : '#1a1a1a'} 
+              />
             </TouchableOpacity>
             <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
               Notifications
             </Text>
-          </View>
-          <View className="flex-row items-center">
-            {unreadCount > 0 && (
-              <View className="bg-red-500 rounded-full px-2 py-1">
-                <Text className="text-white text-xs font-bold">{unreadCount}</Text>
-              </View>
-            )}
           </View>
         </View>
 
@@ -954,4 +999,5 @@ export default function NotificationsPage() {
     </AppLayout>
   );
 }
+
 
