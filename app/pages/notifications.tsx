@@ -10,14 +10,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import AppLayout from '../app-layout';
 
 // Combined notification type for unified display
@@ -63,6 +64,7 @@ export default function NotificationsPage() {
   const { refreshNotifications, pulses } = useNotifications();
   const { isDarkMode } = useDarkTheme();
   const { settings: notificationSettings, initializeSettings } = useNotificationSettingsStore();
+  const { t } = useLanguage();
   const [notificationSections, setNotificationSections] = useState<NotificationSection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -80,7 +82,7 @@ export default function NotificationsPage() {
 
     if (upcomingEventNotifications.length > 0 && notificationSettings?.upcoming_events !== false) {
       sections.push({
-        title: 'Événements à venir',
+        title: t('notifications.sections.upcomingEvents'),
         notifications: upcomingEventNotifications,
         icon: ''
       });
@@ -93,7 +95,7 @@ export default function NotificationsPage() {
     
     if (messageNotifications.length > 0 && notificationSettings?.messages !== false) {
       sections.push({
-        title: 'Messages',
+        title: t('notifications.sections.messages'),
         notifications: messageNotifications,
         icon: ''
       });
@@ -113,7 +115,7 @@ export default function NotificationsPage() {
 
     if (calendarNotifications.length > 0) {
       sections.push({
-        title: 'Calendrier',
+        title: t('notifications.sections.calendar'),
         notifications: calendarNotifications,
         icon: ''
       });
@@ -126,7 +128,7 @@ export default function NotificationsPage() {
 
     if (dailyQuestionNotifications.length > 0 && notificationSettings?.daily_questions !== false) {
       sections.push({
-        title: 'Questions quotidiennes',
+        title: t('notifications.sections.dailyQuestions'),
         notifications: dailyQuestionNotifications,
         icon: ''
       });
@@ -139,7 +141,7 @@ export default function NotificationsPage() {
 
     if (pulseNotifications.length > 0 && notificationSettings?.pulse !== false) {
       sections.push({
-        title: 'Pulses',
+        title: t('notifications.sections.pulses'),
         notifications: pulseNotifications,
         icon: ''
       });
@@ -156,7 +158,7 @@ export default function NotificationsPage() {
 
     if (quizInviteNotifications.length > 0 && notificationSettings?.quiz_invite !== false) {
       sections.push({
-        title: 'Invitations au quiz',
+        title: t('notifications.sections.quizInvites'),
         notifications: quizInviteNotifications,
         icon: ''
       });
@@ -175,7 +177,7 @@ export default function NotificationsPage() {
 
     if (otherNotifications.length > 0) {
       sections.push({
-        title: 'Autres',
+        title: t('notifications.sections.others'),
         notifications: otherNotifications,
         icon: ''
       });
@@ -245,8 +247,8 @@ export default function NotificationsPage() {
           upcomingEventNotifications.push({
             id: `upcoming_event_${event.id}`,
             type: 'upcoming_event',
-            title: `Événement à venir: ${event.title}`,
-            message: `${event.title} ${timeMessage}${event.place ? ` à ${event.place}` : ''}`,
+            title: `${t('notifications.types.upcomingEvent')}: ${event.title}`,
+            message: `${event.title} ${t('notifications.messages.eventUpcoming')} ${timeMessage}${event.place ? ` ${t('notifications.messages.eventAt')} ${event.place}` : ''}`,
             created_at: event.created_at,
             is_read: false,
             priority: 'high',
@@ -421,7 +423,7 @@ export default function NotificationsPage() {
             combinedNotifications.push({
               id: notification.id,
               type: 'quiz_invite',
-              title: `Invitation au quiz: ${quizName}`,
+              title: `${t('notifications.types.quizInvite')}: ${quizName}`,
               message: cleanMessage,
               is_read: notification.is_read,
               created_at: notification.created_at,
@@ -457,8 +459,8 @@ export default function NotificationsPage() {
           combinedNotifications.push({
             id: notification.id,
             type: 'chat',
-            title: 'Nouveau message',
-            message: notification.message_preview || 'Vous avez reçu un nouveau message',
+            title: t('notifications.types.newMessage'),
+            message: notification.message_preview || t('notifications.messages.newMessageReceived'),
             is_read: notification.is_read,
             created_at: notification.created_at,
             sender_name: notification.sender_name,
@@ -477,7 +479,7 @@ export default function NotificationsPage() {
           combinedNotifications.push({
             id: notification.id,
             type: 'daily_question',
-            title: 'Question quotidienne',
+            title: t('notifications.types.dailyQuestion'),
             message: notification.question_content,
             is_read: notification.is_read,
             created_at: notification.created_at,
@@ -496,8 +498,8 @@ export default function NotificationsPage() {
           combinedNotifications.push({
             id: notification.id,
             type: 'simple_chat',
-            title: 'Message de chat',
-            message: notification.message_preview || 'Nouveau message dans le chat',
+            title: t('notifications.types.chatMessage'),
+            message: notification.message_preview || t('notifications.messages.newChatMessage'),
             is_read: false, // Simple chat notifications don't have is_read field
             created_at: notification.created_at,
             message_preview: notification.message_preview,
@@ -516,8 +518,8 @@ export default function NotificationsPage() {
           combinedNotifications.push({
             id: pulse.id,
             type: 'pulse',
-            title: 'Pulse reçu',
-            message: pulse.message || 'Vous avez reçu un pulse',
+            title: t('notifications.types.pulseReceived'),
+            message: pulse.message || t('notifications.messages.pulseReceived'),
             is_read: pulse.is_read,
             created_at: pulse.created_at,
             emoji: pulse.emoji,
@@ -553,7 +555,7 @@ export default function NotificationsPage() {
       setNotificationSections(groupedNotifications);
     } catch (err) {
       console.error('Error fetching notifications:', err);
-      setError('Erreur lors du chargement des notifications');
+      setError(t('notifications.errorLoading'));
     } finally {
       setIsLoading(false);
     }
@@ -677,12 +679,12 @@ export default function NotificationsPage() {
   // Delete notification
   const deleteNotification = async (notification: CombinedNotification) => {
     Alert.alert(
-      'Supprimer la notification',
-      'Êtes-vous sûr de vouloir supprimer cette notification ?',
+      t('notifications.deleteNotification'),
+      t('notifications.deleteNotificationMessage'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('notifications.cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('notifications.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -729,7 +731,7 @@ export default function NotificationsPage() {
               );
             } catch (err) {
               console.error('Error deleting notification:', err);
-              Alert.alert('Erreur', 'Impossible de supprimer la notification');
+              Alert.alert(t('common.error'), t('notifications.errorDeleting'));
             }
           },
         },
@@ -740,12 +742,12 @@ export default function NotificationsPage() {
   // Mark all as read
   const markAllAsRead = async () => {
     Alert.alert(
-      'Marquer tout comme lu',
-      'Êtes-vous sûr de vouloir marquer toutes les notifications comme lues ?',
+      t('notifications.markAllAsRead'),
+      t('notifications.markAllAsReadMessage'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('notifications.cancel'), style: 'cancel' },
         {
-          text: 'Marquer tout',
+          text: t('notifications.markAll'),
           onPress: async () => {
             try {
               if (user?.id) {
@@ -762,7 +764,7 @@ export default function NotificationsPage() {
               }
             } catch (err) {
               console.error('Error marking all as read:', err);
-              Alert.alert('Erreur', 'Impossible de marquer toutes les notifications comme lues');
+              Alert.alert(t('common.error'), t('notifications.errorMarkingAll'));
             }
           },
         },
@@ -776,10 +778,10 @@ export default function NotificationsPage() {
     const date = new Date(dateString);
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
 
-    if (diffInMinutes < 1) return 'À l\'instant';
-    if (diffInMinutes < 60) return `Il y a ${diffInMinutes} min`;
-    if (diffInMinutes < 1440) return `Il y a ${Math.floor(diffInMinutes / 60)}h`;
-    return `Il y a ${Math.floor(diffInMinutes / 1440)}j`;
+    if (diffInMinutes < 1) return t('notifications.time.now');
+    if (diffInMinutes < 60) return t('notifications.time.minutesAgo').replace('{count}', diffInMinutes.toString());
+    if (diffInMinutes < 1440) return t('notifications.time.hoursAgo').replace('{count}', Math.floor(diffInMinutes / 60).toString());
+    return t('notifications.time.daysAgo').replace('{count}', Math.floor(diffInMinutes / 1440).toString());
   };
 
   // Get notification icon based on type and data
@@ -839,7 +841,7 @@ export default function NotificationsPage() {
           </Text>
           {item.sender_name && item.type !== 'pulse' && (
             <Text className={`text-xs italic mt-1 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
-              De: {item.sender_name}
+              {t('notifications.messages.from')} {item.sender_name}
             </Text>
           )}
           {item.type === 'pulse' && item.emoji && (
@@ -910,7 +912,7 @@ export default function NotificationsPage() {
         <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
           <ActivityIndicator size="large" color="#4CAF50" />
           <Text className={`mt-4 text-base ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-            Chargement des notifications...
+            {t('notifications.loading')}
           </Text>
         </View>
       </AppLayout>
@@ -926,7 +928,7 @@ export default function NotificationsPage() {
             className="bg-green-500 px-5 py-2.5 rounded-lg"
             onPress={fetchAllNotifications}
           >
-            <Text className="text-white font-semibold text-center">Réessayer</Text>
+            <Text className="text-white font-semibold text-center">{t('notifications.retry')}</Text>
           </TouchableOpacity>
         </View>
       </AppLayout>
@@ -950,7 +952,7 @@ export default function NotificationsPage() {
               />
             </TouchableOpacity>
             <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-              Notifications
+              {t('notifications.title')}
             </Text>
           </View>
         </View>
@@ -960,10 +962,10 @@ export default function NotificationsPage() {
           <View className="flex-1 justify-center items-center px-10">
             <Text className="text-6xl mb-5">🔔</Text>
             <Text className={`text-xl font-bold mb-3 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-              Aucune notification
+              {t('notifications.noNotifications')}
             </Text>
             <Text className={`text-center ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} leading-6`}>
-              Vous n'avez pas de nouvelles notifications pour le moment.
+              {t('notifications.noNotificationsMessage')}
             </Text>
           </View>
         ) : (

@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { Language, useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
@@ -20,6 +20,7 @@ const languages: LanguageOption[] = [
   { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷' },
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
   { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦' },
+  { code: 'ma', name: 'Ma', nativeName: 'Ma', flag: '🇲🇦' },
 ];
 
 export default function LanguePage() {
@@ -73,7 +74,13 @@ export default function LanguePage() {
           <View style={{ width: 40 }} />
         </View>
         
-        <View className="flex-1 px-5 pt-5">
+        <ScrollView 
+          className="flex-1" 
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="px-5 pt-5">
           {/* Current Language Display */}
           <View className="mb-8">
             <Text className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-dark-text' : 'text-gray-700'}`}>{t('language.currentLanguage')}</Text>
@@ -136,18 +143,25 @@ export default function LanguePage() {
           </View>
 
           {/* Save Button */}
-          <TouchableOpacity
-            className={`flex-row items-center justify-center px-6 py-3 rounded-full mb-5 shadow-lg ${
-              selectedLanguage === currentLanguage 
-                ? 'bg-gray-400' 
-                : 'bg-blue-500'
-            }`}
-            onPress={handleSave}
-            disabled={selectedLanguage === currentLanguage}
-          >
-            <MaterialCommunityIcons name="content-save" size={20} color="#FFFFFF" />
-            <Text className="text-white text-base font-semibold ml-2">{t('language.save')}</Text>
-          </TouchableOpacity>
+          <View className="mb-5">
+            <TouchableOpacity
+              className={`flex-row items-center justify-center px-6 py-4 rounded-full shadow-lg ${
+                selectedLanguage === currentLanguage 
+                  ? 'bg-green-500' 
+                  : 'bg-blue-500'
+              }`}
+              onPress={handleSave}
+            >
+              <MaterialCommunityIcons 
+                name={selectedLanguage === currentLanguage ? "check" : "content-save"} 
+                size={20} 
+                color="#FFFFFF" 
+              />
+              <Text className="text-white text-base font-semibold ml-2">
+                {selectedLanguage === currentLanguage ? t('language.confirm') : t('language.save')}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Saved Message */}
           {showSaved && (
@@ -156,7 +170,8 @@ export default function LanguePage() {
               <Text className="text-green-600 text-sm font-semibold ml-2">{t('language.saved')}</Text>
             </View>
           )}
-        </View>
+          </View>
+        </ScrollView>
       </View>
     </AppLayout>
   );

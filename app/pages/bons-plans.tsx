@@ -11,6 +11,7 @@ import {
     View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useServiceCategories, useServiceSubcategories } from '../../hooks/useServiceData';
 import { useAuth } from '../../lib/auth';
@@ -78,9 +79,10 @@ export default function BonsPlansPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { isDarkMode } = useDarkTheme();
+  const { t } = useLanguage();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('Sélectionnez votre ville');
+  const [selectedCity, setSelectedCity] = useState('');
   const [showCitySelector, setShowCitySelector] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -104,7 +106,7 @@ export default function BonsPlansPage() {
       params: { 
         subcategoryId: subcategory.id,
         subcategoryName: subcategory.name,
-        ...(selectedCity !== 'Sélectionnez votre ville' && { city: selectedCity })
+        ...(selectedCity !== '' && { city: selectedCity })
       }
     });
   };
@@ -113,7 +115,7 @@ export default function BonsPlansPage() {
     router.push({
       pathname: '/pages/search-results',
       params: { 
-        ...(selectedCity !== 'Sélectionnez votre ville' && { city: selectedCity })
+        ...(selectedCity !== '' && { city: selectedCity })
       }
     });
   };
@@ -156,7 +158,7 @@ export default function BonsPlansPage() {
         <View className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
           <ActivityIndicator size="large" color="#F47CC6" />
           <Text className={`mt-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-            Chargement...
+            {t('bonsPlans.loading')}
           </Text>
         </View>
       </AppLayout>
@@ -173,7 +175,7 @@ export default function BonsPlansPage() {
             color="#DC2626" 
           />
           <Text className={`text-lg font-medium mt-4 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Erreur de chargement
+            {t('bonsPlans.error')}
           </Text>
           <Text className={`text-sm text-center mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
             {categoriesError || subcategoriesError}
@@ -197,7 +199,7 @@ export default function BonsPlansPage() {
               />
             </Pressable>
             <Text className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Bons plans
+              {t('bonsPlans.title')}
             </Text>
             <Pressable onPress={() => setShowSearchInput(!showSearchInput)}>
               <MaterialCommunityIcons 
@@ -209,7 +211,7 @@ export default function BonsPlansPage() {
           </View>
           
           <Text className={`text-sm mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            Choisissez la catégorie du service que vous cherchez
+            {t('bonsPlans.description')}
           </Text>
           
           {/* Collapsible Search Input */}
@@ -220,7 +222,7 @@ export default function BonsPlansPage() {
                   ? 'bg-dark-bg border-dark-border text-white' 
                   : 'bg-white border-gray-200 text-gray-900'
               }`}
-              placeholder="Rechercher une catégorie..."
+              placeholder={t('bonsPlans.search.placeholder')}
               placeholderTextColor={isDarkMode ? '#9CA3AF' : '#9CA3AF'}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -238,11 +240,11 @@ export default function BonsPlansPage() {
             }`}
             onPress={() => setShowCitySelector(!showCitySelector)}
           >
-            <Text className={selectedCity !== 'Sélectionnez votre ville' 
+            <Text className={selectedCity !== '' 
               ? (isDarkMode ? 'text-white' : 'text-gray-900')
               : (isDarkMode ? 'text-gray-300' : 'text-gray-500')
             }>
-              {selectedCity}
+              {selectedCity || t('bonsPlans.city.select')}
             </Text>
             <MaterialCommunityIcons 
               name="chevron-down" 

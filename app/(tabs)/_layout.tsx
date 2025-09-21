@@ -5,11 +5,13 @@ import { View } from 'react-native';
 import { NotificationBadge } from '@/components/NotificationBadge';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const pathname = usePathname();
 
   // Hide tab bar on the index page (first page)
@@ -43,7 +45,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="calendrier"
         options={{
-          title: 'Calendrier',
+          title: t('nav.calendar'),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="calendar" size={size} color={color} />
           ),
@@ -52,7 +54,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="questions"
         options={{
-          title: 'Questions',
+          title: t('nav.questions'),
           tabBarIcon: ({ color, size }) => (
             <View style={{ position: 'relative' }}>
               <MaterialCommunityIcons name="chat" size={size} color={color} />
@@ -64,7 +66,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="quizz"
         options={{
-          title: 'Quizz',
+          title: t('nav.quiz'),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="heart" size={size} color={color} />
           ),
@@ -73,7 +75,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="reglages"
         options={{
-          title: 'Réglages',
+          title: t('nav.settings'),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="cog" size={size} color={color} />
           ),

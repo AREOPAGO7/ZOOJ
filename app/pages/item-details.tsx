@@ -126,7 +126,7 @@ export default function ItemDetailsPage() {
 
       if (error) {
         console.error('Error fetching item:', error);
-        Alert.alert('Erreur', 'Impossible de charger l\'élément');
+        Alert.alert(t('calendarDetails.error'), t('calendarDetails.errorLoading'));
         return;
       }
 
@@ -150,7 +150,7 @@ export default function ItemDetailsPage() {
       }
     } catch (error) {
       console.error('Error fetching item:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(t('calendarDetails.error'), t('calendarDetails.errorOccurred'));
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +160,7 @@ export default function ItemDetailsPage() {
     if (!item) return;
     
     if (!editTitle.trim()) {
-      Alert.alert('Erreur', 'Le titre est requis');
+      Alert.alert(t('calendarDetails.error'), t('calendarDetails.titleRequired'));
       return;
     }
     
@@ -185,7 +185,7 @@ export default function ItemDetailsPage() {
 
         if (deleteError) {
           console.error('Error deleting old item:', deleteError);
-          Alert.alert('Erreur', 'Impossible de supprimer l\'ancien élément');
+          Alert.alert(t('calendarDetails.error'), t('calendarDetails.errorDeleting'));
           return;
         }
 
@@ -211,7 +211,7 @@ export default function ItemDetailsPage() {
 
         if (insertError) {
           console.error('Error inserting new item:', insertError);
-          Alert.alert('Erreur', 'Impossible de créer le nouvel élément');
+          Alert.alert(t('calendarDetails.error'), t('calendarDetails.errorSaving'));
         return;
       }
 
@@ -246,7 +246,7 @@ export default function ItemDetailsPage() {
 
         if (error) {
           console.error('Error updating item:', error);
-          Alert.alert('Erreur', 'Impossible de sauvegarder les modifications');
+          Alert.alert(t('calendarDetails.error'), t('calendarDetails.errorSaving'));
           return;
         }
 
@@ -262,7 +262,7 @@ export default function ItemDetailsPage() {
       }
     } catch (error) {
       console.error('Error updating item:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(t('calendarDetails.error'), t('calendarDetails.errorOccurred'));
     } finally {
       setIsSaving(false);
     }
@@ -270,15 +270,15 @@ export default function ItemDetailsPage() {
 
   const handleDelete = () => {
     Alert.alert(
-      'Supprimer l\'élément',
+      t('calendarDetails.deleteItem'),
       `Êtes-vous sûr de vouloir supprimer "${item.title}" ?\n\nCette action est irréversible et supprimera définitivement cet ${itemType === 'event' ? 'événement' : 'souvenir'} de votre calendrier.`,
       [
         {
-          text: 'Annuler',
+          text: t('calendarDetails.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Supprimer définitivement',
+          text: t('calendarDetails.delete'),
           style: 'destructive',
           onPress: confirmDelete,
         },
@@ -311,7 +311,7 @@ export default function ItemDetailsPage() {
 
       if (error) {
         console.error('Error deleting item:', error);
-        Alert.alert('Erreur', 'Impossible de supprimer l\'élément');
+        Alert.alert(t('calendarDetails.error'), t('calendarDetails.errorDeleting'));
       return;
     }
     
@@ -327,7 +327,7 @@ export default function ItemDetailsPage() {
       );
     } catch (error) {
       console.error('Error deleting item:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(t('calendarDetails.error'), t('calendarDetails.errorOccurred'));
     } finally {
       setIsDeleting(false);
     }
@@ -529,7 +529,7 @@ export default function ItemDetailsPage() {
         <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text className={`mt-4 ${isDarkMode ? 'text-white' : 'text-gray-600'}`}>
-            Chargement de l'élément...
+            {t('calendarDetails.loading')}
           </Text>
         </View>
       </AppLayout>
@@ -609,7 +609,7 @@ export default function ItemDetailsPage() {
               fontWeight: '600',
               color: isDarkMode ? '#FFFFFF' : '#000000'
             }}>
-              {isEditing ? (editItemType === 'event' ? 'Événement' : 'Souvenir') : (itemType === 'event' ? `Détails de l'évènement` : `Détails du souvenir`)}
+              {isEditing ? (editItemType === 'event' ? t('calendarDetails.types.event') : t('calendarDetails.types.souvenir')) : (itemType === 'event' ? t('calendarDetails.title') : `${t('calendarDetails.title')} ${t('calendarDetails.types.souvenir')}`)}
             </Text>
                   </View>
                 </View>
@@ -624,7 +624,7 @@ export default function ItemDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Type du moment partagé
+              {t('calendarDetails.types.sharedMoment')}
             </Text>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
@@ -660,7 +660,7 @@ export default function ItemDetailsPage() {
                   fontWeight: '500',
                   color: (isEditing ? editItemType : itemType) === 'event' ? '#4682B4' : '#999999'
                 }}>
-                     Evènement
+                     {t('calendarDetails.types.event')}
                    </Text>
               </TouchableOpacity>
               
@@ -697,7 +697,7 @@ export default function ItemDetailsPage() {
                   fontWeight: '500',
                   color: (isEditing ? editItemType : itemType) === 'souvenir' ? '#DC143C' : '#999999'
                 }}>
-                     Souvenir
+                     {t('calendarDetails.types.souvenir')}
                    </Text>
               </TouchableOpacity>
                </View>
@@ -711,13 +711,13 @@ export default function ItemDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Titre
+              {t('calendarDetails.fields.title')}
             </Text>
             {isEditing ? (
               <TextInput
                 value={editTitle}
                 onChangeText={setEditTitle}
-                placeholder="Donnez un nom à votre moment"
+                placeholder={t('calendarDetails.placeholders.title')}
                 style={{
                   paddingHorizontal: 16,
                   paddingVertical: 12,
@@ -749,7 +749,7 @@ export default function ItemDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Date
+              {t('calendarDetails.fields.date')}
             </Text>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {/* Date Input */}
@@ -903,7 +903,7 @@ export default function ItemDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Lieu
+              {t('calendarDetails.fields.place')}
             </Text>
            {isEditing ? (
               <View>
@@ -923,7 +923,7 @@ export default function ItemDetailsPage() {
                       setEditPlace(text);
                       searchPlaces(text);
                     }}
-                    placeholder="Rechercher un lieu"
+                    placeholder={t('calendarDetails.placeholders.place')}
                     style={{
                       flex: 1,
                       fontSize: 16,
@@ -1029,7 +1029,7 @@ export default function ItemDetailsPage() {
                     fontSize: 16,
                     color: isDarkMode ? '#FFFFFF' : '#000000'
                   }}>
-                    Alarme
+                    {t('calendarDetails.fields.alarmable')}
                              </Text>
                    </View>
                 <TouchableOpacity
@@ -1076,7 +1076,7 @@ export default function ItemDetailsPage() {
                 color: isDarkMode ? '#FFFFFF' : '#000000',
                 marginBottom: 12
               }}>
-                Photos
+                {t('calendarDetails.fields.image')}
               </Text>
               {editImage ? (
                 <View style={{
@@ -1192,13 +1192,13 @@ export default function ItemDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Description
+              {t('calendarDetails.fields.description')}
             </Text>
            {isEditing ? (
                <TextInput
                  value={editDescription}
                  onChangeText={setEditDescription}
-                placeholder="Ajoutez une note (facultatif)"
+                placeholder={t('calendarDetails.placeholders.description')}
                  multiline
                  numberOfLines={4}
                 style={{
@@ -1238,7 +1238,7 @@ export default function ItemDetailsPage() {
                   color={isDarkMode ? '#60A5FA' : '#2563EB'} 
                 />
                 <Text className={`ml-2 text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Image
+                  {t('calendarDetails.fields.image')}
                 </Text>
               </View>
               {(item as CalendarSouvenir).image_url ? (
@@ -1276,7 +1276,7 @@ export default function ItemDetailsPage() {
                     color={isDarkMode ? '#666' : '#999'} 
                   />
                   <Text className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Aucune image
+                    {t('calendarDetails.placeholders.noImage')}
                   </Text>
                 </View>
               )}
@@ -1311,7 +1311,7 @@ export default function ItemDetailsPage() {
     color: 'white',
     fontWeight: '600',
                     fontSize: 16
-                  }}>Sauvegarde...</Text>
+                  }}>{t('calendarDetails.save')}...</Text>
                 </View>
               ) : (
                 <Text style={{
@@ -1319,7 +1319,7 @@ export default function ItemDetailsPage() {
     fontWeight: '600',
                   fontSize: 16,
                   textAlign: 'center'
-                }}>Sauvegarder</Text>
+                }}>{t('calendarDetails.save')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -1347,7 +1347,7 @@ export default function ItemDetailsPage() {
     fontWeight: '600',
     fontSize: 16,
                 textAlign: 'center'
-              }}>Modifier {itemType === 'event' ? 'l\'événement' : 'le souvenir'}</Text>
+              }}>{t('calendarDetails.modifyItem')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -1369,7 +1369,7 @@ export default function ItemDetailsPage() {
                     color: '#DC143C',
                     fontWeight: '600',
                     fontSize: 16
-                  }}>Suppression...</Text>
+                  }}>{t('calendarDetails.delete')}...</Text>
                 </View>
               ) : (
                 <Text style={{
@@ -1377,7 +1377,7 @@ export default function ItemDetailsPage() {
                   fontWeight: '600',
      fontSize: 16,
                   textAlign: 'center'
-                }}>Supprimer {itemType === 'event' ? 'l\'événement' : 'le souvenir'}</Text>
+                }}>{t('calendarDetails.deleteItem')}</Text>
               )}
             </TouchableOpacity>
           </View>

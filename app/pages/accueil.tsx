@@ -684,11 +684,18 @@ export default function AccueilPage() {
                     key={theme.id} 
                     className="mr-4 items-center"
                     onPress={() => navigateToQuizTheme(theme)}
+                    style={{ width: 80 }}
                   >
                     <View className="w-16 h-16 rounded-full justify-center items-center mb-2" style={{ backgroundColor: themeColor }}>
                       <Text className="text-2xl">{themeEmoji}</Text>
                     </View>
-                    <Text className={`text-sm font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} text-center`}>{theme.name}</Text>
+                    <Text 
+                      className={`text-xs font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} text-center`}
+                      numberOfLines={2}
+                      style={{ width: 80 }}
+                    >
+                      {theme.name}
+                    </Text>
                   </Pressable>
                 );
               })

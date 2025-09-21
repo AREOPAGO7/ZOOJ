@@ -3,7 +3,7 @@ import React, { createContext, ReactNode, useCallback, useContext, useEffect, us
 import translations from '../lib/translations.json';
 
 // Language types
-export type Language = 'fr' | 'en' | 'ar';
+export type Language = 'fr' | 'en' | 'ar' | 'ma';
 
 // Language context type
 interface LanguageContextType {
@@ -31,7 +31,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     const loadLanguage = async () => {
       try {
         const savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
-        if (savedLanguage && ['fr', 'en', 'ar'].includes(savedLanguage)) {
+        if (savedLanguage && ['fr', 'en', 'ar', 'ma'].includes(savedLanguage)) {
           setLanguageState(savedLanguage as Language);
         }
       } catch (error) {

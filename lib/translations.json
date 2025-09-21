@@ -208,6 +208,7 @@
       "currentLanguage": "Langue actuelle",
       "selectLanguage": "Sélectionner une langue",
       "save": "Sauvegarder",
+      "confirm": "Confirmer",
       "saved": "Langue sauvegardée !",
       "loading": "Chargement..."
     },
@@ -507,6 +508,149 @@
     "placeholder": {
       "title": "Page en cours de développement",
       "description": "Cette fonctionnalité sera bientôt disponible"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "loading": "Chargement des notifications...",
+      "noNotifications": "Aucune notification",
+      "noNotificationsMessage": "Vous n'avez pas de nouvelles notifications pour le moment.",
+      "markAllAsRead": "Marquer tout comme lu",
+      "markAllAsReadMessage": "Êtes-vous sûr de vouloir marquer toutes les notifications comme lues ?",
+      "cancel": "Annuler",
+      "markAll": "Marquer tout",
+      "deleteNotification": "Supprimer la notification",
+      "deleteNotificationMessage": "Êtes-vous sûr de vouloir supprimer cette notification ?",
+      "delete": "Supprimer",
+      "retry": "Réessayer",
+      "errorLoading": "Erreur lors du chargement des notifications",
+      "errorDeleting": "Impossible de supprimer la notification",
+      "errorMarkingAll": "Impossible de marquer toutes les notifications comme lues",
+      "sections": {
+        "upcomingEvents": "Événements à venir",
+        "messages": "Messages",
+        "calendar": "Calendrier",
+        "dailyQuestions": "Questions quotidiennes",
+        "pulses": "Pulses",
+        "quizInvites": "Invitations au quiz",
+        "others": "Autres"
+      },
+      "types": {
+        "newMessage": "Nouveau message",
+        "dailyQuestion": "Question quotidienne",
+        "chatMessage": "Message de chat",
+        "pulseReceived": "Pulse reçu",
+        "quizInvite": "Invitation au quiz",
+        "upcomingEvent": "Événement à venir"
+      },
+      "messages": {
+        "newMessageReceived": "Vous avez reçu un nouveau message",
+        "newChatMessage": "Nouveau message dans le chat",
+        "pulseReceived": "Vous avez reçu un pulse",
+        "quizInviteReceived": "vous invite à participer au quiz",
+        "eventUpcoming": "dans",
+        "eventAt": "à",
+        "from": "De:"
+      },
+      "time": {
+        "now": "À l'instant",
+        "minutesAgo": "Il y a {count} min",
+        "hoursAgo": "Il y a {count}h",
+        "daysAgo": "Il y a {count}j"
+      }
+    },
+    "calendarDetails": {
+      "title": "Détails de l'évènement",
+      "loading": "Chargement...",
+      "error": "Erreur",
+      "errorLoading": "Impossible de charger l'élément",
+      "errorSaving": "Impossible de sauvegarder les modifications",
+      "errorDeleting": "Impossible de supprimer l'élément",
+      "errorOccurred": "Une erreur est survenue",
+      "success": "Succès",
+      "itemUpdated": "Élément mis à jour avec succès",
+      "itemDeleted": "Élément supprimé avec succès",
+      "invalidItemType": "Type d'élément invalide",
+      "titleRequired": "Le titre est requis",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "save": "Sauvegarder",
+      "deleteItem": "Supprimer l'élément",
+      "modifyItem": "Modifier l'élément",
+      "types": {
+        "event": "Évènement",
+        "souvenir": "Souvenir",
+        "sharedMoment": "Type du moment partagé"
+      },
+      "fields": {
+        "title": "Titre",
+        "date": "Date",
+        "time": "Heure",
+        "place": "Lieu",
+        "description": "Description",
+        "image": "Image",
+        "alarmable": "Activer les rappels",
+        "priority": "Priorité",
+        "status": "Statut"
+      },
+      "placeholders": {
+        "title": "Entrez un titre",
+        "place": "Rechercher un lieu",
+        "description": "Ajoutez une description",
+        "searching": "Recherche en cours...",
+        "placesFound": "Lieux trouvés:",
+        "noPlacesFound": "Aucun lieu trouvé",
+        "noImage": "Aucune image"
+      },
+      "priorities": {
+        "urgent": "Urgent",
+        "normal": "Normal",
+        "canWait": "Peut attendre"
+      },
+      "statuses": {
+        "toDo": "À faire",
+        "inProgress": "En cours",
+        "completed": "Terminé"
+      },
+      "actions": {
+        "selectDate": "Sélectionner une date",
+        "selectTime": "Sélectionner une heure",
+        "takePhoto": "Prendre une photo",
+        "chooseFromGallery": "Choisir depuis la galerie",
+        "removeImage": "Supprimer l'image",
+        "chooseImage": "Choisir une image"
+      }
+    },
+    "bonsPlans": {
+      "title": "Bons plans",
+      "loading": "Chargement...",
+      "error": "Erreur de chargement",
+      "description": "Choisissez la catégorie du service que vous cherchez",
+      "search": {
+        "placeholder": "Rechercher une catégorie...",
+        "noResults": "Aucune catégorie trouvée"
+      },
+      "city": {
+        "select": "Sélectionnez votre ville",
+        "selecting": "Sélection de la ville"
+      },
+      "categories": {
+        "title": "Catégories",
+        "noCategories": "Aucune catégorie disponible",
+        "loadingCategories": "Chargement des catégories..."
+      },
+      "subcategories": {
+        "title": "Sous-catégories",
+        "noSubcategories": "Aucune sous-catégorie disponible",
+        "loadingSubcategories": "Chargement des sous-catégories..."
+      },
+      "actions": {
+        "back": "Retour",
+        "search": "Rechercher",
+        "refresh": "Actualiser",
+        "select": "Sélectionner"
+      }
     }
   },
   "en": {
@@ -718,6 +862,7 @@
       "currentLanguage": "Current language",
       "selectLanguage": "Select a language",
       "save": "Save",
+      "confirm": "Confirm",
       "saved": "Language saved!",
       "loading": "Loading..."
     },
@@ -1017,6 +1162,149 @@
     "placeholder": {
       "title": "Page under development",
       "description": "This feature will be available soon"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "loading": "Loading notifications...",
+      "noNotifications": "No notifications",
+      "noNotificationsMessage": "You have no new notifications at the moment.",
+      "markAllAsRead": "Mark all as read",
+      "markAllAsReadMessage": "Are you sure you want to mark all notifications as read?",
+      "cancel": "Cancel",
+      "markAll": "Mark all",
+      "deleteNotification": "Delete notification",
+      "deleteNotificationMessage": "Are you sure you want to delete this notification?",
+      "delete": "Delete",
+      "retry": "Retry",
+      "errorLoading": "Error loading notifications",
+      "errorDeleting": "Unable to delete notification",
+      "errorMarkingAll": "Unable to mark all notifications as read",
+      "sections": {
+        "upcomingEvents": "Upcoming Events",
+        "messages": "Messages",
+        "calendar": "Calendar",
+        "dailyQuestions": "Daily Questions",
+        "pulses": "Pulses",
+        "quizInvites": "Quiz Invitations",
+        "others": "Others"
+      },
+      "types": {
+        "newMessage": "New message",
+        "dailyQuestion": "Daily question",
+        "chatMessage": "Chat message",
+        "pulseReceived": "Pulse received",
+        "quizInvite": "Quiz invitation",
+        "upcomingEvent": "Upcoming event"
+      },
+      "messages": {
+        "newMessageReceived": "You have received a new message",
+        "newChatMessage": "New message in chat",
+        "pulseReceived": "You have received a pulse",
+        "quizInviteReceived": "invites you to participate in the quiz",
+        "eventUpcoming": "in",
+        "eventAt": "at",
+        "from": "From:"
+      },
+      "time": {
+        "now": "Just now",
+        "minutesAgo": "{count} min ago",
+        "hoursAgo": "{count}h ago",
+        "daysAgo": "{count}d ago"
+      }
+    },
+    "calendarDetails": {
+      "title": "Event Details",
+      "loading": "Loading...",
+      "error": "Error",
+      "errorLoading": "Unable to load item",
+      "errorSaving": "Unable to save changes",
+      "errorDeleting": "Unable to delete item",
+      "errorOccurred": "An error occurred",
+      "success": "Success",
+      "itemUpdated": "Item updated successfully",
+      "itemDeleted": "Item deleted successfully",
+      "invalidItemType": "Invalid item type",
+      "titleRequired": "Title is required",
+      "confirmDelete": "Are you sure you want to delete this item?",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "save": "Save",
+      "deleteItem": "Delete item",
+      "modifyItem": "Modify item",
+      "types": {
+        "event": "Event",
+        "souvenir": "Memory",
+        "sharedMoment": "Type of shared moment"
+      },
+      "fields": {
+        "title": "Title",
+        "date": "Date",
+        "time": "Time",
+        "place": "Location",
+        "description": "Description",
+        "image": "Image",
+        "alarmable": "Enable reminders",
+        "priority": "Priority",
+        "status": "Status"
+      },
+      "placeholders": {
+        "title": "Enter a title",
+        "place": "Search for a place",
+        "description": "Add a description",
+        "searching": "Searching...",
+        "placesFound": "Places found:",
+        "noPlacesFound": "No places found",
+        "noImage": "No image"
+      },
+      "priorities": {
+        "urgent": "Urgent",
+        "normal": "Normal",
+        "canWait": "Can wait"
+      },
+      "statuses": {
+        "toDo": "To do",
+        "inProgress": "In progress",
+        "completed": "Completed"
+      },
+      "actions": {
+        "selectDate": "Select a date",
+        "selectTime": "Select a time",
+        "takePhoto": "Take a photo",
+        "chooseFromGallery": "Choose from gallery",
+        "removeImage": "Remove image",
+        "chooseImage": "Choose an image"
+      }
+    },
+    "bonsPlans": {
+      "title": "Good Deals",
+      "loading": "Loading...",
+      "error": "Loading error",
+      "description": "Choose the category of service you are looking for",
+      "search": {
+        "placeholder": "Search for a category...",
+        "noResults": "No category found"
+      },
+      "city": {
+        "select": "Select your city",
+        "selecting": "City selection"
+      },
+      "categories": {
+        "title": "Categories",
+        "noCategories": "No categories available",
+        "loadingCategories": "Loading categories..."
+      },
+      "subcategories": {
+        "title": "Subcategories",
+        "noSubcategories": "No subcategories available",
+        "loadingSubcategories": "Loading subcategories..."
+      },
+      "actions": {
+        "back": "Back",
+        "search": "Search",
+        "refresh": "Refresh",
+        "select": "Select"
+      }
     }
   },
   "ar": {
@@ -1228,6 +1516,7 @@
       "currentLanguage": "اللغة الحالية",
       "selectLanguage": "اختر لغة",
       "save": "حفظ",
+      "confirm": "تأكيد",
       "saved": "تم حفظ اللغة!",
       "loading": "جاري التحميل..."
     },
@@ -1527,6 +1816,775 @@
     "placeholder": {
       "title": "الصفحة قيد التطوير",
       "description": "هذه الميزة ستكون متاحة قريباً"
+    },
+    "notifications": {
+      "title": "الإشعارات",
+      "loading": "جاري تحميل الإشعارات...",
+      "noNotifications": "لا توجد إشعارات",
+      "noNotificationsMessage": "ليس لديك إشعارات جديدة في الوقت الحالي.",
+      "markAllAsRead": "تحديد الكل كمقروء",
+      "markAllAsReadMessage": "هل أنت متأكد من تحديد جميع الإشعارات كمقروءة؟",
+      "cancel": "إلغاء",
+      "markAll": "تحديد الكل",
+      "deleteNotification": "حذف الإشعار",
+      "deleteNotificationMessage": "هل أنت متأكد من حذف هذا الإشعار؟",
+      "delete": "حذف",
+      "retry": "إعادة المحاولة",
+      "errorLoading": "خطأ في تحميل الإشعارات",
+      "errorDeleting": "لا يمكن حذف الإشعار",
+      "errorMarkingAll": "لا يمكن تحديد جميع الإشعارات كمقروءة",
+      "sections": {
+        "upcomingEvents": "الأحداث القادمة",
+        "messages": "الرسائل",
+        "calendar": "التقويم",
+        "dailyQuestions": "الأسئلة اليومية",
+        "pulses": "النبضات",
+        "quizInvites": "دعوات الاختبارات",
+        "others": "أخرى"
+      },
+      "types": {
+        "newMessage": "رسالة جديدة",
+        "dailyQuestion": "سؤال يومي",
+        "chatMessage": "رسالة دردشة",
+        "pulseReceived": "نبضة مستلمة",
+        "quizInvite": "دعوة اختبار",
+        "upcomingEvent": "حدث قادم"
+      },
+      "messages": {
+        "newMessageReceived": "لقد تلقيت رسالة جديدة",
+        "newChatMessage": "رسالة جديدة في الدردشة",
+        "pulseReceived": "لقد تلقيت نبضة",
+        "quizInviteReceived": "يدعوك للمشاركة في الاختبار",
+        "eventUpcoming": "في",
+        "eventAt": "في",
+        "from": "من:"
+      },
+      "time": {
+        "now": "الآن",
+        "minutesAgo": "منذ {count} دقيقة",
+        "hoursAgo": "منذ {count} ساعة",
+        "daysAgo": "منذ {count} يوم"
+      }
+    },
+    "calendarDetails": {
+      "title": "تفاصيل الحدث",
+      "loading": "جاري التحميل...",
+      "error": "خطأ",
+      "errorLoading": "لا يمكن تحميل العنصر",
+      "errorSaving": "لا يمكن حفظ التغييرات",
+      "errorDeleting": "لا يمكن حذف العنصر",
+      "errorOccurred": "حدث خطأ",
+      "success": "نجح",
+      "itemUpdated": "تم تحديث العنصر بنجاح",
+      "itemDeleted": "تم حذف العنصر بنجاح",
+      "invalidItemType": "نوع عنصر غير صالح",
+      "titleRequired": "العنوان مطلوب",
+      "confirmDelete": "هل أنت متأكد من حذف هذا العنصر؟",
+      "cancel": "إلغاء",
+      "delete": "حذف",
+      "edit": "تعديل",
+      "save": "حفظ",
+      "deleteItem": "حذف العنصر",
+      "modifyItem": "تعديل العنصر",
+      "types": {
+        "event": "حدث",
+        "souvenir": "ذكرى",
+        "sharedMoment": "نوع اللحظة المشتركة"
+      },
+      "fields": {
+        "title": "العنوان",
+        "date": "التاريخ",
+        "time": "الوقت",
+        "place": "المكان",
+        "description": "الوصف",
+        "image": "الصورة",
+        "alarmable": "تفعيل التذكيرات",
+        "priority": "الأولوية",
+        "status": "الحالة"
+      },
+      "placeholders": {
+        "title": "أدخل عنواناً",
+        "place": "ابحث عن مكان",
+        "description": "أضف وصفاً",
+        "searching": "جاري البحث...",
+        "placesFound": "الأماكن الموجودة:",
+        "noPlacesFound": "لم يتم العثور على أماكن",
+        "noImage": "لا توجد صورة"
+      },
+      "priorities": {
+        "urgent": "عاجل",
+        "normal": "عادي",
+        "canWait": "يمكن الانتظار"
+      },
+      "statuses": {
+        "toDo": "للقيام",
+        "inProgress": "قيد التنفيذ",
+        "completed": "مكتمل"
+      },
+      "actions": {
+        "selectDate": "اختر تاريخاً",
+        "selectTime": "اختر وقتاً",
+        "takePhoto": "التقاط صورة",
+        "chooseFromGallery": "اختيار من المعرض",
+        "removeImage": "إزالة الصورة",
+        "chooseImage": "اختر صورة"
+      }
+    },
+    "bonsPlans": {
+      "title": "العروض الجيدة",
+      "loading": "جاري التحميل...",
+      "error": "خطأ في التحميل",
+      "description": "اختر فئة الخدمة التي تبحث عنها",
+      "search": {
+        "placeholder": "ابحث عن فئة...",
+        "noResults": "لم يتم العثور على فئة"
+      },
+      "city": {
+        "select": "اختر مدينتك",
+        "selecting": "اختيار المدينة"
+      },
+      "categories": {
+        "title": "الفئات",
+        "noCategories": "لا توجد فئات متاحة",
+        "loadingCategories": "جاري تحميل الفئات..."
+      },
+      "subcategories": {
+        "title": "الفئات الفرعية",
+        "noSubcategories": "لا توجد فئات فرعية متاحة",
+        "loadingSubcategories": "جاري تحميل الفئات الفرعية..."
+      },
+      "actions": {
+        "back": "رجوع",
+        "search": "بحث",
+        "refresh": "تحديث",
+        "select": "اختيار"
+      }
+    }
+  },
+  "ma": {
+    "nav": {
+      "home": "الدار",
+      "calendar": "الكاليندر",
+      "questions": "الأسئلة",
+      "quiz": "لكويز",
+      "settings": "الإعدادات",
+      "games": "الألعاب",
+      "profile": "البروفيل",
+      "notifications": "نوتيفيكاسيونات",
+      "about": "عني",
+      "privacy": "الخصوصية",
+      "help": "لمساعدة",
+      "language": "اللغة",
+      "themes": "السمات",
+      "couple": "زوجنا",
+      "plans": "العروض الزوينين"
+    },
+    "home": {
+     "compatibility": "لتوافق",
+    "yourMoodToday": "المود ديالك اليوم",
+    "setYourMood": "حدد المود ديالك",
+    "howDoYouFeel": "كيف داير اليوم؟",
+    "sendPulse": "صيفط نبضة لشريكك",
+    "pulseDescription": "بإيموجي زوين ولا رقيق تشاركوه مع شريكك بواحد الكليكة. دورك!",
+    "quizThemes": "مواضيع لكويزات",
+    "dailyQuestion": "سؤال النهار",
+    "answer": "جاوب",
+    "seeQuestions": "شوف لأسئلة",
+    "noQuestionAvailable": "ماكاين حتى سؤال ديال النهار",
+    "loadingQuestion": "كنحمّلو فالسؤال...",
+    "loading": "كنحمّلو...",
+    "games": "الألعاب",
+    "playWithPartner": "لعب مع شريكك",
+    "gamesDescription": "تفرّجو مع بعضياتكم فالألعاب ديال الكوبل",
+      "pulseOptions": {
+        "flower": "وردة",
+        "heart": "قلب",
+        "happy": "فرحان",
+        "naughty": "مشاكس",
+        "cloud": "سحابة"
+      },
+      "quizCategories": {
+        "reading": "لقراية",
+        "fitness": "الرياضة",
+        "nature": "لطبيعة"
+      },
+      "moodDescriptions": {
+        "joyeux": "كتشعّ فالسعادة",
+      "content": "راسك هاني",
+      "neutre": "مسترخي",
+      "triste": "خاصك ترتاح",
+      "enerve": "مقلّق"
+      }
+    },
+    "calendar": {
+      "title": "الكاليندر",
+      "loading": "كنحمّلو...",
+      "viewAll": "شوف للكل",
+      "addToCalendar": "زِيد للكاليندر",
+      "events": "الإيفانات",
+      "souvenirs": "ذكريات",
+      "todos": "تودو",
+      "activeTasks": "تاسكات خدامة",
+      "completedTasks": "تاسكات سالاو",
+      "noEvents": "ماكاين حتى إيفان",
+      "noSouvenirs": "ماكايناش ذكريات باقي",
+      "ourEvents": "الإيفانات ديالنا",
+      "preciousMoments": "لحظات غالية",
+      "remindersOn": "روميندر شاعل",
+      "remindersOff": "روميندر طافي",
+      "event": "إيفان",
+      "souvenir": "ذكرى",
+      "todo": "مهمة",
+      "titleField": "العنوان",
+      "dateTime": "تاريخ و الوقت",
+      "place": "بلاصة",
+      "description": "الوصف",
+      "priority": "الأولوية",
+      "status": "الحالة",
+      "photos": "تصاور",
+      "enableReminders": "شعل الروميندر",
+      "save": "سيفط",
+      "urgent": "مستعجل",
+      "normal": "نورمال",
+      "canWait": "يقدر يستنّا",
+      "toDo": "خاصة تدار",
+      "inProgress": "خدام فيها",
+      "completed": "كملات",
+      "camera": "لكاميرا",
+      "gallery": "لكاليري",
+      "addImage": "زيد صورة لهاد الذكرى",
+      "addNote": "زيد نوتة (اختياري)",
+      "reminderDescription": "غادي توصلك نوتيفيكاسيون نهار قبل الإيفان",
+      "noReminderDescription": "ما غاديش توصلك نوتيفيكاسيون",
+      "selectDate": "اختار نهار",
+      "selectTime": "اختار ساعة",
+      "hours": "لسوايع",
+      "minutes": "الدقايق",
+      "confirm": "أكد",
+      "searchPlace": "قلب على بلاصة (مثال: صافي، كورس صافي...)",
+      "searching": "كنقلبو...",
+      "placesFound": "البلايص لي تلقاو:",
+      "noPlacesFound": "ما لقيناش بلاصة",
+      "searchingPlaces": "كنقلبو...",
+      "eventTitle": "عطي سميّة للإيفان",
+      "souvenirTitle": "عطي سميّة للذكرى",
+      "todoTitle": "عطي سميّة للمهمة",
+      "success": "نجح",
+      "error": "خطأ",
+      "itemAdded": "تزاد العنصر",
+      "itemUpdated": "تبدّل التاريخ",
+      "itemDeleted": "تحيّد العنصر",
+      "taskUpdated": "تبدّلات حالة التاسك",
+      "remindersEnabled": "تشعل الروميندر لهاد الإيفان",
+      "remindersDisabled": "تطفي الروميندر لهاد الإيفان",
+      "confirmDelete": "بغيتي تحيّد هاد العنصر؟",
+      "cancel": "إلغاء",
+      "delete": "حيّد",
+      "today": "اليوم",
+      "yesterday": "البارح",
+      "allItems": "جميع العناصر",
+      "itemsFound": "عنصر تلقى",
+      "itemsFoundPlural": "عناصر تلقاو",
+      "all": "الكل",
+      "noItems": "ماكايناش عناصر",
+      "noEventsFilter": "ماكايناش إيفانات",
+      "noSouvenirsFilter": "ماكايناش ذكريات",
+      "noTodosFilter": "ماكايناش تاسكات",
+      "startCreating": "بدا صنع أول عنصر فالكاليندر"
+    },
+    "games": {
+     "title": "الألعاب",
+    "playWithPartner": "لعب مع شريكي",
+    "chess": "الشطرنج",
+    "uno": "أونو",
+    "pong": "بونغ",
+    "connect4": "كونكت فور",
+    "quiz": "اختبار الزوجين",
+    "truthOrDare": "الصراحة ولا التحدي",
+    "memory": "ذاكرة الزوجين",
+    "photoChallenge": "تحدي التصاور",
+    "crosswords": "الكلمات المتقاطعة",
+    "rolePlay": "لعب الأدوار",
+    "invitePartner": "عيط ل شريكك",
+    "playTogether": "لعبو بجوج ف الوقت الحقيقي",
+    "rating": "التقييم",
+    "players": "جوج ديال اللعابة"
+    },
+    "chess": {
+      "yourTurn": "دورك",
+    "botTurn": "دور البوت",
+    "youWin": "ربحتي!",
+    "botWins": "البوت ربح!",
+    "stalemate": "تعادل!",
+    "check": "كش!",
+    "reset": "لعبة جديدة",
+    "loading": "كيتشارجي اللعبة...",
+    "back": "رجوع"
+    },
+   
+    "pong": {
+     "yourTurn": "دورك",
+    "botTurn": "دور البوت",
+    "youWin": "ربحتي!",
+    "botWins": "البوت ربح!",
+    "start": "بدا",
+    "pause": "وقف شوية",
+    "newGame": "لعبة جديدة",
+    "instructions": "لمس و جر ف الملعب باش تحرك المضرب ديالك",
+    "loading": "كيتشارجي اللعبة...",
+    "back": "رجوع",
+    "score": "السكور"
+    },
+    
+    "language": {
+      "title": "اللغة",
+    "subtitle": "اختار اللغة ديالك المفضلة",
+    "currentLanguage": "اللغة الحالية",
+    "selectLanguage": "اختار لغة",
+    "save": "سيفط",
+    "confirm": "تأكد",
+    "saved": "تخزنت اللغة!",
+    "loading": "كيتشارجي..."
+    },
+    "common": {
+      "loading": "كيتشارجي...",
+    "back": "رجوع",
+    "reset": "ريسط",
+    "save": "سيفط",
+    "cancel": "كنسل",
+    "confirm": "أكد",
+    "close": "سيد",
+    "next": "الموالي",
+    "previous": "السابق",
+    "done": "صافي",
+    "error": "خطأ",
+    "success": "نجح",
+    "warning": "تنبيه",
+    "info": "معلومة",
+    "play": "لعب",
+    "invite": "عيط"
+    },
+    "questions": {
+      "title": "الأسئلة و الجوبات",
+      "loading": "كيتشارجي...",
+      "all": "كولشي",
+      "unread": "ما تقراوش",
+      "myTurn": "دوري",
+      "theirTurn": "الدور ديالو",
+      "noItems": "ماكايناش عناصر",
+      "questionOfDay": "سؤال النهار",
+      "partnerAnswered": "💬 شريكك جاوب",
+      "canDiscuss": "✨ دابا تقدرو تهضرو!",
+      "discuss": "ناقش",
+      "typeAnswer": "كتب الجواب ديالك...",
+      "send": "صيفط",
+      "today": "اليوم",
+      "yesterday": "بارح",
+      "daysAgo": "أيام",
+      "weekAgo": "سيمانة",
+      "weeksAgo": "سيمانات",
+      "monthAgo": "شهر",
+      "yearAgo": "عام",
+      "yearsAgo": "سنين",
+      "coupleNotFound": "خطأ: الزوج ما كاينش",
+      "invalidQuestionId": "خطأ: الكود ديال السؤال ما صالحش",
+      "errorCreatingQuestion": "خطأ ف إنشاء السؤال ديال النهار",
+      "dailyQuestionNotFound": "خطأ: السؤال ديال النهار ما كاينش",
+      "alreadyAnswered": "جاوبتي على هاد السؤال اليوم",
+      "errorSubmittingAnswer": "خطأ ف صيفط الجواب",
+      "questionNotFound": "السؤال ما كاينش ل هاد الزوج",
+      "waitForPartner": "سنا حتى يجاوب شريكك على هاد السؤال تاني",
+      "errorCheckingAnswers": "خطأ ف التشييك على الجوبات"
+    },
+    "questionChat": {
+      "title": "سؤال النهار",
+      "loading": "كيتشارج...",
+      "questionClosed": "السؤال تسد - سالا النقاش",
+      "yourAnswers": "الجوابات ديالكم:",
+      "me": "أنا",
+      "myPartner": "شريكي",
+      "typeAnswer": "كتب الجواب ديالك...",
+      "send": "صيفط",
+      "discussion": "نقاش",
+      "answerFirst": "جاوب على السؤال اللول باش يبدا النقاش",
+      "message": "ميساج...",
+      "coupleNotFound": "خطأ: الكوبل ما كاينش",
+      "errorCreatingQuestion": "وقع مشكل فصناعة سؤال النهار",
+      "errorCreatingDailyQuestion": "خطأ: ما تقدرش تصاوب سؤال النهار",
+      "errorSubmittingAnswer": "وقع مشكل فالإرسال ديال الجواب"
+    },
+    "quiz": {
+      "title": "الاختبار",
+      "subtitle": "اكتاشفو التوافق ديالكم",
+      "loading": "كيتشارج...",
+      "themes": "المواضيع",
+      "quizzesForYou": "اختبارات ليك",
+      "quizzesSubtitle": "كليكي على اختبار باش تبدا ولا عيط لشريكك",
+      "noThemes": "ما كايناش مواضيع متاحة",
+      "noQuizzes": "ما كايناش اختبارات",
+      "noQuizzesTheme": "ما كايناش اختبارات فهاد الموضوع",
+      "questionsAnswered": "الأسئلة لي تجوابو",
+      "submitQuiz": "صيفط الاختبار",
+      "sending": "كيتصيفط...",
+      "alreadyAnswered": "راه جاوبتي على هاد الاختبار قبل",
+      "previousAnswer": "الجواب ديالك قبل:",
+      "checkResults": "تشوف النتايج",
+      "checking": "كيتشيك...",
+      "checkPartner": "تشوف جواب شريكك",
+      "congratulations": "مبروك!",
+      "quizCompleted": "كملتي الاختبار بنجاح",
+      "globalCompatibility": "التوافق العام",
+      "excellentScore": "نتيجة زوينة بزاف!",
+      "goodScore": "نتيجة مزيانة!",
+      "needsImprovement": "خاصها تتحسن",
+      "refreshResults": "ريفري النتايج",
+      "refreshing": "كيتريفري...",
+      "yourResponses": "الجوابات ديالكم",
+      "responsesDescription": "النقط الخضراء قوية، و الحمر خاصها تحسين فالعلاقة ديالكم.",
+      "detailedResults": "النتايج مفصلة",
+      "strengths": "النقط القوية",
+      "strengthBadge": "نقطة قوية",
+      "weaknesses": "نقط خاصها تحسين",
+      "weaknessBadge": "خاص تحسين",
+      "quizResults": "نتايج الاختبار",
+      "quizResultsDescription": "هاد الصفحة كاتبن واش الموضوع \"{title}\" لايق مع العلاقة ديالك.",
+      "invitePartner": "عيط لشريكك",
+      "inviteDescription": "شريكك ما جاوبش على هاد الاختبار. صيفط ليه دعوة باش يشارك!",
+      "sendingInvite": "كيتصيفط الدعوة...",
+      "shareQuiz": "شارك الاختبار!",
+      "shareDescription": "كملتي الاختبار بنجاح! عيط لشريكك ياخذو حتى هو باش تقارنو النتايج.",
+      "invitePartnerQuiz": "عيط لشريكك",
+      "whileTaking": "و نتيا كاتجاوب على الأسئلة، عيط لشريكك يشارك!",
+      "pendingInvites": "دعوات فالإنتظار",
+      "quizInvitation": "دعوة للاختبار",
+      "inviteMessage": "شريكك كاعيط لك باش تشارك فاختبار",
+      "accept": "قبل",
+      "decline": "رفض",
+      "invitationSent": "تصيفطات الدعوة!",
+      "invitationSentMessage": "شريكك توصل بدعوة للاختبار \"{title}\"",
+      "invitationPartial": "تصيفطات الدعوة جزئياً",
+      "invitationPartialMessage": "الدعوة تخلقات ولكن النوتيف ما تصيفطش",
+      "invitationAccepted": "شريكك قبل الدعوة! دابا تقدروا تشاركوا فالاختبار.",
+      "invitationDeclined": "شريكك رفض الدعوة",
+      "errorSendingInvite": "ما تقدرش تصيفط الدعوة",
+      "errorSendingInviteMessage": "وقع مشكل فالإرسال ديال الدعوة",
+      "errorAcceptingInvite": "ما تقدرش تقبل الدعوة",
+      "errorDecliningInvite": "ما تقدرش ترفض الدعوة",
+      "errorStartingQuiz": "ما تقدرش تبدا الاختبار",
+      "errorSubmittingQuiz": "ما تقدرش تصيفط الاختبار",
+      "errorCalculatingResults": "ما تقدرش تحسب النتايج",
+      "errorCheckingResults": "ما تقدرش تشيك على النتايج",
+      "quizSubmitted": "تصيفط الاختبار بنجاح! 🎉",
+      "quizSubmittedMessage": "الجوابات ديالكم تسجلو.",
+      "noResultsYet": "ما كايناش نتايج دابا",
+      "noResultsMessage": "شريكك ما جاوبش باقي على الاختبار. استعمل زر \"تشوف جواب شريكك\" وعاود شوف.",
+      "questions": "أسئلة",
+      "minutes": "دقيقة",
+      "user1": "المستخدم 1",
+      "user2": "المستخدم 2"
+    },
+    "settings": {
+      "title": "Settings",
+      "goodDeals": "العروض الزوينة",
+      "ourCouple": "زوجنا",
+      "privacy": "الخصوصية",
+      "language": "اللغة",
+      "themes": "السمات",
+      "games": "الألعاب",
+      "myProfile": "البروفايل ديالي",
+      "helpSupport": "المساعدة و الدعم",
+      "about": "حول"
+    },
+    "ourCouple": {
+      "title": "زوجنا",
+  "loading": "كيتحلل الزوج ديالك...",
+  "togetherSince": "مع بعضكم من",
+  "years": "عام",
+  "yearsPlural": "سنين",
+  "months": "شهر",
+  "days": "نهار",
+  "daysPlural": "أيام",
+  "compatibilityBasedOn": "التوافق مبني على",
+  "quiz": "اختبار",
+  "quizzes": "اختبارات",
+  "anniversaryTitle": "ذكرى الكوبل",
+  "updateDate": "بدل التاريخ",
+  "updating": "كيتبدل...",
+  "questionsAnswered": "الأسئلة لي تجوابو",
+  "pulsesSent": "النبضات لي تصيفطو",
+  "quizzesCompleted": "الاختبارات لي تكملو",
+  "sharedMemories": "الذكريات المشاركة",
+  "compatibilityDashboard": "لوحة التوافق",
+  "globalCompatibility": "التوافق العام",
+  "basedOn": "مبني على",
+  "communicationStyle": "ستايل التواصل",
+  "strengths": "النقط القوية",
+  "growthAreas": "المجالات لي خاصها تنمو",
+  "personalInsights": "الرؤى الشخصية",
+  "responsePatterns": "أنماط الاستجابة:",
+  "favoriteTopics": "المواضيع لي كيعجبوكم:",
+  "growthZones": "مناطق النمو:",
+  "detailedResults": "نتايج مفصلة",
+  "noQuizCompleted": "ما كملتو حتى اختبار",
+  "noQuizMessage": "كملو الاختبارات مع بعضياتكم باش تعرفو التوافق و تاخذو رؤى شخصية.",
+  "continueExploring": "كملو تكتاشفو مع بعضياتكم!",
+  "excellentWork": "خدمة زوينة!",
+  "continueExploringPersonal": "كملو التكتاشف!",
+  "onRightTrack": "راكم فطريق صحيح!",
+  "you": "نتا",
+  "partner": "الشريك",
+  "user1": "المستخدم 1",
+  "user2": "المستخدم 2",
+  "error": "خطأ",
+  "errorUpdatingAnniversary": "ما تقدرش تبدل تاريخ الذكرى",
+  "success": "نجح",
+  "anniversaryUpdated": "تبدل تاريخ الذكرى بنجاح",
+  "unexpectedError": "وقع مشكل ما كانش متوقع",
+  "communicationStyle1": "ستايل تواصل باقي خاصو يبان",
+  "communicationStyle2": "تواصل زوين و محلول",
+  "communicationStyle3": "تواصل مزيان ولكن خاص تحسين",
+  "communicationStyle4": "تواصل ضعيف - فرصة باش تكبرو",
+  "responsePattern1": "أنماط استجابة باقي خاصها تبان",
+  "responsePattern2": "استجابات متحمسة بزاف",
+  "responsePattern3": "استجابات معتدلة و محسوبة",
+  "responsePattern4": "استجابات حذرة بزاف"
+    },
+    "privacy": {
+      "title": "الخصوصية",
+  "termsOfUse": "شروط الاستعمال",
+  "termsDescription": "إيلا استعملتي التطبيق ديالنا، راك قابل الشروط هادو. هاد الشروط ضروريين باش يكون الاستعمال مزيان و آمن.",
+  "copyrightRespect": "احترام حقوق الطبع",
+  "copyrightSubtitle": "حماية الملكية الفكرية",
+  "appropriateUse": "الاستعمال المناسب للخدمات",
+  "appropriateUseSubtitle": "القوانين ديال الاستعمال و السلوك",
+  "dataProtection": "حماية الداتا الشخصية",
+  "dataProtectionSubtitle": "الأمان و السرية",
+  "legalInformation": "معلومات قانونية",
+  "privacyPolicy": "سياسة الخصوصية",
+  "privacyPolicySubtitle": "كيفاش كنحميو الداتا ديالك",
+  "privacyPolicyContent": "حنا ملتازمين نحافظو على الداتا الشخصية ديالك. جميع المعلومات لي عطيتينا كاتخزن بأمان وما كاتشاركش مع شي حد بلا موافقة ديالك. كنعتمدو على بروتوكولات مشفرة و ملتازمين بمعايير GDPR.",
+  "gdpr": "GDPR",
+  "gdprSubtitle": "الحقوق ديالك فالداتا",
+  "gdprContent": "حسب GDPR، عندك الحق توصّل بالداتا ديالك، تبدلها، تمحيها، توقف المعالجة، تنقلها و تعارض على الاستعمال. تقدر تمارس هاد الحقوق بالاتصال بينا.",
+  "cookies": "Cookies",
+  "cookiesSubtitle": "إدارة Cookies و التراكات",
+  "cookiesContent": "التطبيق ديالنا كيستعمل Cookies ضروريين باش يخدم مزيان. هادو ما كيجمعوش معلومات شخصية و ضروريين باش تعيش تجربة مزيانة. تقدر تبدل الإعدادات ديال Cookies فالتلفون ديالك."
+},
+    "profile": {
+      "title": "البروفايل ديالي",
+  "loading": "كيتشارج البروفايل...",
+  "uploading": "كيتشارج...",
+  "changePhotoInstruction": "كليكي على أيقونة الكاميرا باش تبدل",
+  "fullName": "السمية الكاملة",
+  "email": "الإيميل",
+  "password": "كود الباس",
+  "enterFullName": "دخل السمية الكاملة",
+  "enterNewPassword": "دخل كود باس جديد",
+  "notDefined": "ما متحددش",
+  "saveChanges": "حفظ التغييرات",
+  "logout": "تسجيل الخروج",
+  "changeProfilePhoto": "بدل صورة البروفايل",
+  "chooseOption": "اختار واحد الخيار لصورة البروفايل",
+  "takePhoto": "صور بالكاميرا",
+  "chooseFromGallery": "اختار من المعرض",
+  "deletePhoto": "مسح الصورة",
+  "cancel": "إلغاء",
+  "error": "خطأ",
+  "success": "نجح",
+  "nameCannotBeEmpty": "السمية ما تقدرش تكون خاوية",
+  "cannotUpdateName": "ما تقدرش تبدل السمية",
+  "nameUpdated": "تبدلات السمية بنجاح",
+  "unexpectedError": "وقع مشكل ما كانش متوقع",
+  "passwordMinLength": "الباس خاصو يكون فيه 6 حروف على الأقل",
+  "cannotUpdatePassword": "ما تقدرش تبدل الباس",
+  "passwordUpdated": "تبدل الباس بنجاح",
+  "cannotSelectImage": "ما تقدرش تختار الصورة",
+  "permissionDenied": "الاذن مرفوض",
+  "cameraPermissionRequired": "خاص إذن ديال الكاميرا",
+  "cannotTakePhoto": "ما تقدرش تصوّر",
+  "cannotUpdateProfilePicture": "ما تقدرش تبدل صورة البروفايل",
+  "profilePictureUpdated": "تبدلات صورة البروفايل",
+  "cannotUploadImage": "ما تقدرش تحمّل صورة البروفايل",
+  "cannotDeletePhoto": "ما تقدرش تمسح الصورة",
+  "photoDeleted": "تمسحات الصورة",
+  "deletionError": "وقع مشكل فالحدف"
+    },
+    "themes": {
+      "title": "المظهر",
+  "lightMode": "الوضع الفاتح",
+  "darkMode": "الوضع الغامق"
+    },
+    "helpSupport": {
+     "title": "المساعدة و الدعم",
+  "contactUs": "تاصل بينا",
+  "byEmail": "بإيميل",
+  "byPhone": "بتلفون",
+  "emailAddress": "support@company.com",
+  "phoneNumber": "+1 (555) 123-4567",
+  "faq": "الأسئلة لي كيتعاودو بزاف",
+  "payments": "الخلص",
+  "changePassword": "كيفاش تبدل كود الباس؟",
+  "deleteAccount": "كيفاش تحيد الكونط؟",
+  "ourAddress": "العنوان ديالنا",
+  "companyName": "شركة SARL",
+  "streetAddress": "123 الزنقة الرئيسية",
+  "cityAddress": "نيويورك، نيويورك 10001",
+  "openingHours": "ساعات الخدمة",
+  "weekdayHours": "الاثنين - الجمعة: 9:00 ص - 6:00 م",
+  "saturdayHours": "السبت: 10:00 ص - 4:00 م"
+    },
+    "about": {
+      "title": "حول",
+  "currentVersion": "Version 2.1.0",
+  "versionInfo": "Version 2.0.1",
+  "technicalInfo": "معلومات تقنية"
+    },
+    "placeholder": {
+      "title": "الصفحة ما زال خدامين عليها",
+  "description": "هاد الميزة غادي تكون متاحة قريب"
+    },
+    "notifications": {
+      "title": "نوتيفيكاسيونات",
+      "loading": "كيتشارجو النوتيفيكاسيونات...",
+      "noNotifications": "ما كايناش نوتيفيكاسيونات",
+      "noNotificationsMessage": "ما عندكش نوتيفيكاسيونات جديدة دابا.",
+      "markAllAsRead": "حدد كولشي كيقرا",
+      "markAllAsReadMessage": "بغيتي تحدّد جميع النوتيفيكاسيونات كيقراو؟",
+      "cancel": "إلغاء",
+      "markAll": "حدد كولشي",
+      "deleteNotification": "حيّد النوتيفيكاسيون",
+      "deleteNotificationMessage": "بغيتي تحيّد هاد النوتيفيكاسيون؟",
+      "delete": "حيّد",
+      "retry": "عاود جرب",
+      "errorLoading": "مشكل فتحميل النوتيفيكاسيونات",
+      "errorDeleting": "ما تقدرش تحيّد النوتيفيكاسيون",
+      "errorMarkingAll": "ما تقدرش تحدّد جميع النوتيفيكاسيونات كيقراو",
+      "sections": {
+        "upcomingEvents": "الإيفانات الجايين",
+        "messages": "الميساجات",
+        "calendar": "الكاليندر",
+        "dailyQuestions": "أسئلة النهار",
+        "pulses": "النبضات",
+        "quizInvites": "دعوات لكويزات",
+        "others": "أخرى"
+      },
+      "types": {
+        "newMessage": "ميساج جديد",
+        "dailyQuestion": "سؤال النهار",
+        "chatMessage": "ميساج فالشات",
+        "pulseReceived": "نبضة توصلات",
+        "quizInvite": "دعوة لكويز",
+        "upcomingEvent": "إيفان جاي"
+      },
+      "messages": {
+        "newMessageReceived": "توصلتي بميساج جديد",
+        "newChatMessage": "ميساج جديد فالشات",
+        "pulseReceived": "توصلتي بنبضة",
+        "quizInviteReceived": "كيعيطك تشارك فالكويز",
+        "eventUpcoming": "ف",
+        "eventAt": "ف",
+        "from": "من:"
+      },
+      "time": {
+        "now": "دابا",
+        "minutesAgo": "منذ {count} دقيقة",
+        "hoursAgo": "منذ {count} ساعة",
+        "daysAgo": "منذ {count} نهار"
+      }
+    },
+    "calendarDetails": {
+      "title": "تفاصيل الإيفان",
+      "loading": "كيتشارجي...",
+      "error": "خطأ",
+      "errorLoading": "ما تقدرش تحمّل العنصر",
+      "errorSaving": "ما تقدرش تحفظ التغييرات",
+      "errorDeleting": "ما تقدرش تحيّد العنصر",
+      "errorOccurred": "وقع مشكل",
+      "success": "نجح",
+      "itemUpdated": "تبدّل العنصر بنجاح",
+      "itemDeleted": "تحيّد العنصر بنجاح",
+      "invalidItemType": "نوع العنصر ما صالحش",
+      "titleRequired": "العنوان مطلوب",
+      "confirmDelete": "بغيتي تحيّد هاد العنصر؟",
+      "cancel": "إلغاء",
+      "delete": "حيّد",
+      "edit": "بدل",
+      "save": "سيفط",
+      "deleteItem": "حيّد العنصر",
+      "modifyItem": "بدل العنصر",
+      "types": {
+        "event": "إيفان",
+        "souvenir": "ذكرى",
+        "sharedMoment": "نوع اللحظة لي تشاركتيها"
+      },
+      "fields": {
+        "title": "العنوان",
+        "date": "التاريخ",
+        "time": "الوقت",
+        "place": "بلاصة",
+        "description": "الوصف",
+        "image": "الصورة",
+        "alarmable": "شعل الروميندر",
+        "priority": "الأولوية",
+        "status": "الحالة"
+      },
+      "placeholders": {
+        "title": "دخل عنوان",
+        "place": "قلب على بلاصة",
+        "description": "زيد وصف",
+        "searching": "كنقلبو...",
+        "placesFound": "البلايص لي تلقاو:",
+        "noPlacesFound": "ما لقيناش بلاصة",
+        "noImage": "ما كايناش صورة"
+      },
+      "priorities": {
+        "urgent": "مستعجل",
+        "normal": "نورمال",
+        "canWait": "يقدر يستنّا"
+      },
+      "statuses": {
+        "toDo": "خاصة تدار",
+        "inProgress": "خدام فيها",
+        "completed": "كملات"
+      },
+      "actions": {
+        "selectDate": "اختار نهار",
+        "selectTime": "اختار ساعة",
+        "takePhoto": "صور بالكاميرا",
+        "chooseFromGallery": "اختار من المعرض",
+        "removeImage": "مسح الصورة",
+        "chooseImage": "اختار صورة"
+      }
+    },
+    "bonsPlans": {
+      "title": "البلايص الحلوة",
+      "loading": "كيتشارجي...",
+      "error": "خطأ فالتحميل",
+      "description": "اختار فئة الخدمة لي باغي تلقاها",
+      "search": {
+        "placeholder": "قلب على فئة...",
+        "noResults": "ما لقيتش فئة"
+      },
+      "city": {
+        "select": "اختار مدينتك",
+        "selecting": "اختيار المدينة"
+      },
+      "categories": {
+        "title": "الفئات",
+        "noCategories": "ما كايناش فئات",
+        "loadingCategories": "كيتشارجو الفئات..."
+      },
+      "subcategories": {
+        "title": "الفئات الفرعية",
+        "noSubcategories": "ما كايناش فئات فرعية",
+        "loadingSubcategories": "كيتشارجو الفئات الفرعية..."
+      },
+      "actions": {
+        "back": "رجوع",
+        "search": "قلب",
+        "refresh": "حدّث",
+        "select": "اختار"
+      }
     }
   }
 }
