@@ -8,7 +8,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../lib/auth';
-import { ChatMessage, questionService } from '../../lib/questionService';
+import { ChatMessage, getQuestionContent, questionService } from '../../lib/questionService';
 import { simpleChatNotificationService } from '../../lib/simpleChatNotificationService';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
@@ -29,7 +29,7 @@ export default function QuestionChatPage() {
   const { questionId } = useLocalSearchParams<{ questionId: string }>();
   const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language: currentLanguage } = useLanguage();
   const [question, setQuestion] = useState<any>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -125,6 +125,13 @@ export default function QuestionChatPage() {
       loadChatData();
     }
   }, [user, loading, questionId]);
+
+  // Reload chat data when language changes
+  useEffect(() => {
+    if (user && !loading && questionId && question) {
+      loadChatData();
+    }
+  }, [currentLanguage]);
 
   // Set up real-time subscription for new messages using Supabase Realtime
   useEffect(() => {
@@ -229,7 +236,7 @@ export default function QuestionChatPage() {
     try {
       const { data: questionData, error: questionError } = await supabase
         .from('questions')
-        .select('*')
+        .select('id, content, content_en, content_ar, content_ma, created_at, scheduled_time')
         .eq('id', questionId)
         .single();
 
@@ -605,7 +612,7 @@ export default function QuestionChatPage() {
                 
                 {/* Main Question */}
                 <Text style={styles.mainQuestionText}>
-                  {question?.content || 'Les couples devraient-ils partager leurs mots de passe ?'}
+                  {question ? getQuestionContent(question, currentLanguage) : 'Les couples devraient-ils partager leurs mots de passe ?'}
                 </Text>
                 
                 {/* Privacy Notice */}

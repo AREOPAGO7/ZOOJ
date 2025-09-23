@@ -33,15 +33,93 @@ const BRAND_BLUE = "#2DB6FF";
 const BRAND_PINK = "#F47CC6";
 const BRAND_GRAY = "#6C6C6C";
 
+// Helper function to get the correct content field based on language
+const getQuizQuestionContent = (question: QuizQuestion, language: string): string => {
+  // Default to French if no language specified
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return question.content_en || question.content;
+    case 'ar':
+      return question.content_ar || question.content;
+    case 'ma':
+      return question.content_ma || question.content;
+    case 'fr':
+    default:
+      return question.content;
+  }
+};
+
+// Helper function to get the correct quiz title based on language
+const getQuizTitle = (quiz: Quiz, language: string): string => {
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return quiz.title_en || quiz.title;
+    case 'ar':
+      return quiz.title_ar || quiz.title;
+    case 'ma':
+      return quiz.title_ma || quiz.title;
+    case 'fr':
+    default:
+      return quiz.title;
+  }
+};
+
+// Helper function to get the correct theme name based on language
+const getThemeName = (theme: any, language: string): string => {
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return theme.name_en || theme.name;
+    case 'ar':
+      return theme.name_ar || theme.name;
+    case 'ma':
+      return theme.name_ma || theme.name;
+    case 'fr':
+    default:
+      return theme.name;
+  }
+};
+
+// Helper function to get the correct theme description based on language
+const getThemeDescription = (theme: any, language: string): string => {
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return theme.description_en || theme.description;
+    case 'ar':
+      return theme.description_ar || theme.description;
+    case 'ma':
+      return theme.description_ma || theme.description;
+    case 'fr':
+    default:
+      return theme.description;
+  }
+};
+
 interface Quiz {
   id: string;
   title: string;
+  title_en?: string;
+  title_ar?: string;
+  title_ma?: string;
   description: string;
   image?: string;
   theme: {
     id: string;
     name: string;
+    name_en?: string;
+    name_ar?: string;
+    name_ma?: string;
     description: string;
+    description_en?: string;
+    description_ar?: string;
+    description_ma?: string;
   };
   questions_count: number;
   estimated_time: number;
@@ -50,6 +128,9 @@ interface Quiz {
 interface QuizQuestion {
   id: string;
   content: string;
+  content_en?: string;
+  content_ar?: string;
+  content_ma?: string;
   ord: number;
 }
 
@@ -76,7 +157,7 @@ export default function QuizzPage() {
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language: currentLanguage } = useLanguage();
   const { sendQuizInvite } = useNotificationManager();
   
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -160,7 +241,7 @@ export default function QuizzPage() {
       console.log('Sending quiz invite...');
       const result = await sendQuizInvite(
         partnerId,
-        quiz.title,
+        getQuizTitle(quiz, currentLanguage),
         t('quiz.inviteMessage'),
         quiz.id
       );
@@ -173,7 +254,7 @@ export default function QuizzPage() {
       } else if ('invite' in result && 'notification' in result && result.invite && result.notification) {
         Alert.alert(
           t('quiz.invitationSent'), 
-          t('quiz.invitationSentMessage').replace('{title}', quiz.title)
+          t('quiz.invitationSentMessage').replace('{title}', getQuizTitle(quiz, currentLanguage))
         );
         console.log('✅ Quiz invite and notification sent successfully!');
         console.log('Invite:', result.invite);
@@ -318,8 +399,8 @@ export default function QuizzPage() {
       const { data, error } = await supabase
         .from('quizzes')
         .select(`
-          *,
-          theme:quiz_themes(id, name, description),
+          id, title, title_en, title_ar, title_ma, description, image, theme_id, created_at,
+          theme:quiz_themes(id, name, name_en, name_ar, name_ma, description, description_en, description_ar, description_ma),
           questions:quiz_questions(count)
         `)
         .order('title', { ascending: true });
@@ -330,9 +411,12 @@ export default function QuizzPage() {
       const allQuizzes = (data || []).map(quiz => ({
         id: quiz.id,
         title: quiz.title,
+        title_en: quiz.title_en,
+        title_ar: quiz.title_ar,
+        title_ma: quiz.title_ma,
         description: quiz.description,
         image: quiz.image,
-        theme: quiz.theme,
+        theme: Array.isArray(quiz.theme) ? quiz.theme[0] : quiz.theme,
         questions_count: quiz.questions?.length || 0,
         estimated_time: Math.ceil((quiz.questions?.length || 0) * 0.5) // Rough estimate: 30 seconds per question
       }));
@@ -343,7 +427,8 @@ export default function QuizzPage() {
       if (!showAllQuizzes && userInterests.length > 0) {
         filteredQuizzes = allQuizzes.filter(quiz => {
           // Check if the quiz theme name matches any of the user's interests
-          return userInterests.includes(quiz.theme?.name);
+          const themeName = getThemeName(quiz.theme, currentLanguage);
+          return userInterests.includes(themeName) || userInterests.includes(quiz.theme?.name);
         });
         
         console.log(`Filtered quizzes: ${filteredQuizzes.length} out of ${allQuizzes.length} based on interests:`, userInterests);
@@ -369,7 +454,7 @@ export default function QuizzPage() {
     try {
       const { data, error } = await supabase
         .from('quiz_themes')
-        .select('*')
+        .select('id, name, name_en, name_ar, name_ma, description, description_en, description_ar, description_ma, created_at')
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -411,8 +496,8 @@ export default function QuizzPage() {
       const { data, error } = await supabase
         .from('quizzes')
         .select(`
-          *,
-          theme:quiz_themes(id, name, description),
+          id, title, title_en, title_ar, title_ma, description, image, theme_id, created_at,
+          theme:quiz_themes(id, name, name_en, name_ar, name_ma, description, description_en, description_ar, description_ma),
           questions:quiz_questions(count)
         `)
         .eq('theme_id', themeId)
@@ -424,9 +509,12 @@ export default function QuizzPage() {
       const themeQuizzes = (data || []).map(quiz => ({
         id: quiz.id,
         title: quiz.title,
+        title_en: quiz.title_en,
+        title_ar: quiz.title_ar,
+        title_ma: quiz.title_ma,
         description: quiz.description,
         image: quiz.image,
-        theme: quiz.theme,
+        theme: Array.isArray(quiz.theme) ? quiz.theme[0] : quiz.theme,
         questions_count: quiz.questions?.length || 0,
         estimated_time: Math.ceil((quiz.questions?.length || 0) * 0.5)
       }));
@@ -445,7 +533,7 @@ export default function QuizzPage() {
       const [questionsResult, userAnswersResult, partnerAnswersResult] = await Promise.all([
         supabase
           .from('quiz_questions')
-          .select('*')
+          .select('id, content, content_en, content_ar, content_ma, ord, quiz_id, created_at')
           .eq('quiz_id', quiz.id)
           .order('ord', { ascending: true }),
         supabase
@@ -555,7 +643,7 @@ export default function QuizzPage() {
       Alert.alert(
         t('quiz.quizSubmitted'),
         t('quiz.quizSubmittedMessage'),
-        [{ text: 'OK' }]
+        [{ text: t('common.ok') }]
       );
 
       // Update local state to show read-only view
@@ -672,14 +760,14 @@ export default function QuizzPage() {
         if (question) {
           if (difference <= 1) {
             strengths.push({
-              question: question.content,
+              question: getQuizQuestionContent(question, currentLanguage),
               user_answer: userAnswer.answer_value,
               partner_answer: partnerAnswer.answer_value,
               difference
             });
           } else {
             weaknesses.push({
-              question: question.content,
+              question: getQuizQuestionContent(question, currentLanguage),
               user_answer: userAnswer.answer_value,
               partner_answer: partnerAnswer.answer_value,
               difference
@@ -765,7 +853,7 @@ export default function QuizzPage() {
         Alert.alert(
           t('quiz.noResultsYet'),
           t('quiz.noResultsMessage'),
-          [{ text: 'OK' }]
+          [{ text: t('common.ok') }]
         );
       }
     } catch (error) {
@@ -854,9 +942,9 @@ export default function QuizzPage() {
       setFilteredQuizzes(quizzes);
     } else {
       const filtered = quizzes.filter(quiz => 
-        quiz.title.toLowerCase().includes(query.toLowerCase()) ||
+        getQuizTitle(quiz, currentLanguage).toLowerCase().includes(query.toLowerCase()) ||
         quiz.description.toLowerCase().includes(query.toLowerCase()) ||
-        quiz.theme.name.toLowerCase().includes(query.toLowerCase())
+        getThemeName(quiz.theme, currentLanguage).toLowerCase().includes(query.toLowerCase())
       );
       setFilteredQuizzes(filtered);
     }
@@ -903,6 +991,13 @@ export default function QuizzPage() {
       }
     }
   }, [targetQuizId, quizzes]);
+
+  // Reload quiz data when language changes
+  useEffect(() => {
+    if (selectedQuiz && quizQuestions.length > 0) {
+      startQuiz(selectedQuiz);
+    }
+  }, [currentLanguage]);
 
   // Handle URL-based quiz navigation - use useCallback to prevent infinite loops
   const handleUrlNavigation = useCallback(() => {
@@ -969,7 +1064,7 @@ export default function QuizzPage() {
       if (!user) return;
       const code = joinCode.trim();
       if (!code) {
-        setJoinError('Code invalide');
+        setJoinError(t('couple.invalidCode'));
         return;
       }
       setJoinError(null);
@@ -981,11 +1076,11 @@ export default function QuizzPage() {
           .eq('invite_code', code)
           .single();
         if (partnerErr || !partnerProfile?.id) {
-          setJoinError('Code introuvable');
+          setJoinError(t('couple.codeNotFound'));
           return;
         }
         if (partnerProfile.id === user.id) {
-          setJoinError('Vous ne pouvez pas utiliser votre propre code');
+          setJoinError(t('couple.cannotUseOwnCode'));
           return;
         }
         const { data: existingForMe } = await supabase
@@ -1010,12 +1105,12 @@ export default function QuizzPage() {
           .from('couples')
           .insert({ user1_id: partnerProfile.id, user2_id: user.id });
         if (insertErr) {
-          setJoinError('Impossible de créer le couple');
+          setJoinError(t('couple.cannotCreateCouple'));
           return;
         }
         setIsInCouple(true);
       } catch (e) {
-        setJoinError('Une erreur est survenue');
+        setJoinError(t('common.errorOccurred'));
       } finally {
         setIsJoining(false);
       }
@@ -1026,52 +1121,52 @@ export default function QuizzPage() {
         <ScrollView className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-white'}`} showsVerticalScrollIndicator={false}>
           <View style={styles.inviteHeader}> 
             <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.title')}</Text>
-            <Text style={[styles.inviteSubtitle, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>Partagez votre code pour lier vos comptes</Text>
+            <Text style={[styles.inviteSubtitle, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>{t('couple.shareCodeToLink')}</Text>
           </View>
 
           <View style={[styles.inviteCard, { backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF', borderColor: isDarkMode ? '#333333' : '#8DD8FF' }]}>
             <View style={[styles.inviteHero, { backgroundColor: isDarkMode ? '#333333' : '#FFE6F2' }]}>
               <Text style={styles.inviteHeroEmoji}>💞</Text>
             </View>
-            <Text style={[styles.inviteCodeLabel, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>Votre code d'invitation</Text>
+            <Text style={[styles.inviteCodeLabel, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>{t('couple.yourInviteCode')}</Text>
             <View style={styles.codePillRow}>
               <View style={[styles.codePill, { backgroundColor: isDarkMode ? '#333333' : '#F4FBFF', borderColor: isDarkMode ? '#555555' : '#8DD8FF' }]}>
                 <Text style={[styles.codePillText, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{inviteCode ?? '—'}</Text>
               </View>
               <TouchableOpacity style={styles.inlineCopyButtonAbsolute} onPress={handleCopy} disabled={!inviteCode}>
-                <Text style={styles.inlineCopyText}>Copier</Text>
+                <Text style={styles.inlineCopyText}>{t('common.copy')}</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity style={styles.primaryCopyButton} onPress={handleCopy} disabled={!inviteCode}>
-              <Text style={styles.primaryCopyText}>Copier le code</Text>
+              <Text style={styles.primaryCopyText}>{t('couple.copyCode')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.joinToggleContainer}>
             <TouchableOpacity onPress={() => setShowJoinSection(prev => !prev)}>
-              <Text style={[styles.joinToggleText, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>{showJoinSection ? 'Masquer' : 'Déjà un code ?'}</Text>
+              <Text style={[styles.joinToggleText, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>{showJoinSection ? t('common.hide') : t('couple.alreadyHaveCode')}</Text>
             </TouchableOpacity>
           </View>
 
           {showJoinSection && (
             <View style={[styles.joinCard, { backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF', borderColor: isDarkMode ? '#333333' : '#FFE0F0' }]}>
-              <Text style={[styles.inviteCodeLabel, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>Entrer un code reçu</Text>
+              <Text style={[styles.inviteCodeLabel, { color: isDarkMode ? '#CCCCCC' : '#7A7A7A' }]}>{t('couple.enterReceivedCode')}</Text>
               <View style={styles.joinRow}>
                 <TextInput
                   value={joinCode}
                   onChangeText={setJoinCode}
-                  placeholder="Code partenaire"
+                  placeholder={t('couple.partnerCode')}
                   placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
                   autoCapitalize="characters"
                   style={[styles.joinInput, { backgroundColor: isDarkMode ? '#333333' : '#FAFBFF', borderColor: isDarkMode ? '#555555' : '#E6EAF2', color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}
                 />
                 <TouchableOpacity style={styles.pasteButton} onPress={() => handlePaste()}>
-                  <Text style={styles.pasteButtonText}>Coller</Text>
+                  <Text style={styles.pasteButtonText}>{t('common.paste')}</Text>
                 </TouchableOpacity>
               </View>
               {joinError ? <Text style={styles.joinError}>{joinError}</Text> : null}
               <TouchableOpacity style={[styles.primaryCopyButton, styles.joinPrimaryButton]} onPress={handleJoin} disabled={isJoining || !joinCode.trim()}>
-                <Text style={styles.primaryCopyText}>{isJoining ? 'Connexion…' : 'Rejoindre le couple'}</Text>
+                <Text style={styles.primaryCopyText}>{isJoining ? t('couple.connecting') : t('couple.joinCouple')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1093,7 +1188,7 @@ export default function QuizzPage() {
               <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : '#2D2D2D'} />
             </Pressable>
             <View style={styles.quizTitleContainer}>
-              <Text style={[styles.quizTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{selectedQuiz.title}</Text>
+              <Text style={[styles.quizTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizTitle(selectedQuiz, currentLanguage)}</Text>
             </View>
             <View style={{ width: 24 }} />
           </View>
@@ -1142,7 +1237,7 @@ export default function QuizzPage() {
                         <View style={styles.strengthBadge}>
                           <Text style={styles.strengthBadgeText}>{t('quiz.strengthBadge')}</Text>
                         </View>
-                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{strength.question}</Text>
+                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizQuestionContent(strength, currentLanguage)}</Text>
                         <View style={styles.partnerResponses}>
                           <View style={styles.partnerResponse}>
                             <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
@@ -1195,7 +1290,7 @@ export default function QuizzPage() {
                         <View style={styles.weaknessBadge}>
                           <Text style={styles.weaknessBadgeText}>{t('quiz.weaknessBadge')}</Text>
                         </View>
-                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{weakness.question}</Text>
+                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizQuestionContent(weakness, currentLanguage)}</Text>
                         <View style={styles.partnerResponses}>
                           <View style={styles.partnerResponse}>
                             <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{userNames?.user1 || t('quiz.user1')}</Text>
@@ -1234,7 +1329,7 @@ export default function QuizzPage() {
               <View style={styles.quizResultsSummary}>
                 <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{t('quiz.quizResults')}</Text>
                 <Text style={[styles.summaryText, { color: isDarkMode ? '#CCCCCC' : BRAND_GRAY }]}>
-                  {t('quiz.quizResultsDescription').replace('{title}', selectedQuiz?.title || '')}
+                  {t('quiz.quizResultsDescription').replace('{title}', selectedQuiz ? getQuizTitle(selectedQuiz, currentLanguage) : '')}
                 </Text>
               </View>
 
@@ -1256,7 +1351,7 @@ export default function QuizzPage() {
                   return (
                     <View key={question.id} style={[styles.questionItem, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA', borderColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
                       <Text style={[styles.questionNumber, { color: isDarkMode ? '#2DB6FF' : BRAND_BLUE }]}>Question {index + 1}</Text>
-                      <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{question.content}</Text>
+                      <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizQuestionContent(question, currentLanguage)}</Text>
                       
                       {/* Show Previous Answer (Read-only) */}
                       <View style={styles.previousAnswerContainer}>
@@ -1319,7 +1414,7 @@ export default function QuizzPage() {
                     return (
                       <View key={question.id} style={[styles.questionItem, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}>
                         <Text style={[styles.questionNumber, { color: isDarkMode ? '#2DB6FF' : colors.textSecondary }]}>Question {index + 1}</Text>
-                        <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{question.content}</Text>
+                        <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizQuestionContent(question, currentLanguage)}</Text>
                         
                         {/* Answer Options with Progressive Heart Visibility */}
                         <View style={styles.answerOptions}>
@@ -1482,7 +1577,7 @@ export default function QuizzPage() {
                       <View style={styles.strengthBadge}>
                         <Text style={styles.strengthBadgeText}>{t('quiz.strengthBadge')}</Text>
                       </View>
-                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{strength.question}</Text>
+                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizQuestionContent(strength, currentLanguage)}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
                           <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
@@ -1526,7 +1621,7 @@ export default function QuizzPage() {
                       <View style={styles.weaknessBadge}>
                         <Text style={styles.weaknessBadgeText}>{t('quiz.weaknessBadge')}</Text>
                       </View>
-                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{weakness.question}</Text>
+                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizQuestionContent(weakness, currentLanguage)}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
                           <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
@@ -1585,13 +1680,13 @@ export default function QuizzPage() {
             <Pressable onPress={resetTheme} style={styles.backButton}>
               <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : colors.text} />
             </Pressable>
-            <Text style={[styles.themeTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{selectedTheme.name}</Text>
+            <Text style={[styles.themeTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getThemeName(selectedTheme, currentLanguage)}</Text>
             <View style={{ width: 24 }} />
           </View>
 
           {/* Theme Description */}
           <View style={[styles.themeDescriptionContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}>
-            <Text style={[styles.themeDescription, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{selectedTheme.description}</Text>
+            <Text style={[styles.themeDescription, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>{getThemeDescription(selectedTheme, currentLanguage)}</Text>
           </View>
 
           {/* Quizzes for this theme */}
@@ -1627,7 +1722,7 @@ export default function QuizzPage() {
                       )}
                     </View>
                     <View style={styles.quizInfo}>
-                      <Text style={[styles.quizCardTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{quiz.title}</Text>
+                      <Text style={[styles.quizCardTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizTitle(quiz, currentLanguage)}</Text>
                       <Text style={[styles.quizCardDetails, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                         {quiz.questions_count} {t('quiz.questions')} • {quiz.estimated_time} {t('quiz.minutes')}
                       </Text>
@@ -1739,7 +1834,7 @@ export default function QuizzPage() {
                         color="#FFFFFF"
                         style={styles.themeIcon}
                       />
-                      <Text style={styles.themeTitle}>{theme.name}</Text>
+                      <Text style={styles.themeTitle}>{getThemeName(theme, currentLanguage)}</Text>
                     </LinearGradient>
                   </Pressable>
                 );
@@ -1791,12 +1886,12 @@ export default function QuizzPage() {
                       : (isDarkMode ? '#CCCCCC' : colors.textSecondary)
                   }
                 ]}>
-                  Tout
+                  {t('common.all')}
                 </Text>
               </Pressable>
             </View>
             <Text style={[styles.quizzesSubtitle, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
-              {showAllQuizzes ? 'Tous les quiz disponibles' : t('quiz.quizzesSubtitle')}
+              {showAllQuizzes ? t('quiz.allQuizzesAvailable') : t('quiz.quizzesSubtitle')}
             </Text>
           </View>
           {(searchQuery.trim() !== '' ? filteredQuizzes : quizzes).length > 0 ? (
@@ -1825,7 +1920,7 @@ export default function QuizzPage() {
                     )}
                   </View>
                   <View style={styles.quizInfo}>
-                    <Text style={[styles.quizCardTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{quiz.title}</Text>
+                    <Text style={[styles.quizCardTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizTitle(quiz, currentLanguage)}</Text>
                     <Text style={[styles.quizCardDetails, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
                       {quiz.questions_count} {t('quiz.questions')} • {quiz.estimated_time} {t('quiz.minutes')}
                     </Text>

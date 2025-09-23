@@ -3,6 +3,9 @@ import { supabase } from './supabase';
 export interface Question {
   id: string;
   content: string;
+  content_en?: string;
+  content_ar?: string;
+  content_ma?: string;
   created_at: string;
   scheduled_time: string;
 }
@@ -42,6 +45,24 @@ export interface ChatMessage {
   };
 }
 
+// Helper function to get the correct content field based on language
+export const getQuestionContent = (question: any, language: string): string => {
+  // Default to French if no language specified
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return question.content_en || question.content;
+    case 'ar':
+      return question.content_ar || question.content;
+    case 'ma':
+      return question.content_ma || question.content;
+    case 'fr':
+    default:
+      return question.content;
+  }
+};
+
 export const questionService = {
   // Get today's question for a couple
   async getTodayQuestion(coupleId: string): Promise<{ data: DailyQuestion | null; error: any }> {
@@ -52,7 +73,7 @@ export const questionService = {
       .from('daily_questions')
       .select(`
         *,
-        question:questions(*)
+        question:questions(id, content, content_en, content_ar, content_ma, created_at, scheduled_time)
       `)
       .eq('couple_id', coupleId)
       .eq('scheduled_for', today)
@@ -67,7 +88,7 @@ export const questionService = {
       .from('daily_questions')
       .select(`
         *,
-        question:questions(*)
+        question:questions(id, content, content_en, content_ar, content_ma, created_at, scheduled_time)
       `)
       .is('couple_id', null)
       .eq('scheduled_for', today)
@@ -82,7 +103,7 @@ export const questionService = {
       .from('daily_questions')
       .select(`
         *,
-        question:questions(*)
+        question:questions(id, content, content_en, content_ar, content_ma, created_at, scheduled_time)
       `)
       .is('couple_id', null)
       .order('scheduled_for', { ascending: false })
@@ -101,7 +122,7 @@ export const questionService = {
       .from('daily_questions')
       .select(`
         *,
-        question:questions(*)
+        question:questions(id, content, content_en, content_ar, content_ma, created_at, scheduled_time)
       `)
       .eq('couple_id', coupleId)
       .eq('question_id', questionId)
@@ -118,7 +139,7 @@ export const questionService = {
       .from('daily_questions')
       .select(`
         *,
-        question:questions(*),
+        question:questions(id, content, content_en, content_ar, content_ma, created_at, scheduled_time),
         answers:answers(*)
       `)
       .eq('couple_id', coupleId)
@@ -131,7 +152,7 @@ export const questionService = {
   async getAllQuestions(): Promise<{ data: any[]; error: any }> {
     const { data, error } = await supabase
       .from('questions')
-      .select('*')
+      .select('id, content, content_en, content_ar, content_ma, created_at, scheduled_time')
       .order('created_at', { ascending: false });
 
     return { data: data || [], error };

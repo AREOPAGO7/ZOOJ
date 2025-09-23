@@ -1138,3 +1138,6 @@ export const calendarStyles = StyleSheet.create({
 
 export { BRAND_BLUE, BRAND_GRAY, BRAND_PINK };
 
+// Default export for Expo Router compatibility
+export default calendarStyles;
+

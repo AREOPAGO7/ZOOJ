@@ -8,7 +8,7 @@ import { useAuth } from '../../lib/auth';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Answer, questionService } from '../../lib/questionService';
+import { Answer, getQuestionContent, questionService } from '../../lib/questionService';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
 
@@ -19,7 +19,7 @@ export default function QuestionsPage() {
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language: currentLanguage } = useLanguage();
   const [questions, setQuestions] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [couple, setCouple] = useState<any>(null);
@@ -46,6 +46,13 @@ export default function QuestionsPage() {
       loadData();
     }
   }, [user, loading]);
+
+  // Reload questions when language changes
+  useEffect(() => {
+    if (user && !loading && allQuestions.length > 0) {
+      loadData();
+    }
+  }, [currentLanguage]);
 
   // Handle highlighting question from notification
   useEffect(() => {
@@ -91,6 +98,9 @@ export default function QuestionsPage() {
           question:questions(
             id,
             content,
+            content_en,
+            content_ar,
+            content_ma,
             created_at
           )
         `)
@@ -105,6 +115,9 @@ export default function QuestionsPage() {
           question:questions(
             id,
             content,
+            content_en,
+            content_ar,
+            content_ma,
             created_at
           )
         `)
@@ -156,7 +169,7 @@ export default function QuestionsPage() {
         
         return {
           id: dailyQuestion.question.id,
-          content: dailyQuestion.question.content,
+          content: getQuestionContent(dailyQuestion.question, currentLanguage),
           created_at: dailyQuestion.question.created_at,
           daily_question_id: dailyQuestion.id,
           scheduled_for: dailyQuestion.scheduled_for,
@@ -192,7 +205,7 @@ export default function QuestionsPage() {
         
         return {
           id: dailyQuestion.question.id,
-          content: dailyQuestion.question.content,
+          content: getQuestionContent(dailyQuestion.question, currentLanguage),
           created_at: dailyQuestion.question.created_at,
           daily_question_id: dailyQuestion.id,
           scheduled_for: dailyQuestion.scheduled_for,

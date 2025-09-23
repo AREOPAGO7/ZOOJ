@@ -21,6 +21,39 @@ import {
 import { useLanguage } from '../../contexts/LanguageContext';
 import AppLayout from '../app-layout';
 
+// Helper functions for language-specific content
+const getQuizTitle = (quiz: any, language: string): string => {
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return quiz.title_en || quiz.title;
+    case 'ar':
+      return quiz.title_ar || quiz.title;
+    case 'ma':
+      return quiz.title_ma || quiz.title;
+    case 'fr':
+    default:
+      return quiz.title;
+  }
+};
+
+const getQuestionContent = (question: any, language: string): string => {
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return question.content_en || question.content;
+    case 'ar':
+      return question.content_ar || question.content;
+    case 'ma':
+      return question.content_ma || question.content;
+    case 'fr':
+    default:
+      return question.content;
+  }
+};
+
 // Combined notification type for unified display
 interface CombinedNotification {
   id: string;
@@ -64,7 +97,7 @@ export default function NotificationsPage() {
   const { refreshNotifications, pulses } = useNotifications();
   const { isDarkMode } = useDarkTheme();
   const { settings: notificationSettings, initializeSettings } = useNotificationSettingsStore();
-  const { t } = useLanguage();
+  const { t, language: currentLanguage } = useLanguage();
   const [notificationSections, setNotificationSections] = useState<NotificationSection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -364,20 +397,20 @@ export default function NotificationsPage() {
             }
           }).filter(id => id);
           
-          // Fetch quiz titles from quizzes table
+          // Fetch quiz titles from quizzes table with language fields
           let quizTitles = {};
           if (quizIds.length > 0) {
             const { data: quizzesData, error: quizzesError } = await supabase
               .from('quizzes')
-              .select('id, title')
+              .select('id, title, title_en, title_ar, title_ma')
               .in('id', quizIds);
               
             if (!quizzesError && quizzesData) {
               quizTitles = quizzesData.reduce((acc, quiz) => {
-                acc[quiz.id] = quiz.title;
+                acc[quiz.id] = getQuizTitle(quiz, currentLanguage);
                 return acc;
               }, {});
-              console.log('📚 Quiz titles fetched:', quizTitles);
+              console.log('📚 Quiz titles fetched with language support:', quizTitles);
             }
           }
           
@@ -453,9 +486,30 @@ export default function NotificationsPage() {
         console.log('❌ No general notifications data found');
       }
 
-      // Add chat notifications
+      // Add chat notifications with language-specific content
       if (chatNotifications.data) {
+        // Fetch question content with language fields for chat notifications
+        const chatQuestionIds = chatNotifications.data.map(n => n.question_id).filter(id => id);
+        let chatQuestionContents = {};
+        
+        if (chatQuestionIds.length > 0) {
+          const { data: chatQuestionsData, error: chatQuestionsError } = await supabase
+            .from('questions')
+            .select('id, content, content_en, content_ar, content_ma')
+            .in('id', chatQuestionIds);
+            
+          if (!chatQuestionsError && chatQuestionsData) {
+            chatQuestionContents = chatQuestionsData.reduce((acc, question) => {
+              acc[question.id] = getQuestionContent(question, currentLanguage);
+              return acc;
+            }, {});
+            console.log('💬 Chat question contents fetched with language support:', chatQuestionContents);
+          }
+        }
+        
         chatNotifications.data.forEach(notification => {
+          const translatedQuestionContent = chatQuestionContents[notification.question_id] || notification.question_content;
+          
           combinedNotifications.push({
             id: notification.id,
             type: 'chat',
@@ -464,7 +518,7 @@ export default function NotificationsPage() {
             is_read: notification.is_read,
             created_at: notification.created_at,
             sender_name: notification.sender_name,
-            question_content: notification.question_content,
+            question_content: translatedQuestionContent,
             data: {
               question_id: notification.question_id,
               thread_id: notification.thread_id,
@@ -473,17 +527,38 @@ export default function NotificationsPage() {
         });
       }
 
-      // Add daily question notifications
+      // Add daily question notifications with language-specific content
       if (dailyQuestionNotifications.data) {
+        // Fetch question content with language fields for daily questions
+        const questionIds = dailyQuestionNotifications.data.map(n => n.question_id).filter(id => id);
+        let questionContents = {};
+        
+        if (questionIds.length > 0) {
+          const { data: questionsData, error: questionsError } = await supabase
+            .from('questions')
+            .select('id, content, content_en, content_ar, content_ma')
+            .in('id', questionIds);
+            
+          if (!questionsError && questionsData) {
+            questionContents = questionsData.reduce((acc, question) => {
+              acc[question.id] = getQuestionContent(question, currentLanguage);
+              return acc;
+            }, {});
+            console.log('📝 Question contents fetched with language support:', questionContents);
+          }
+        }
+        
         dailyQuestionNotifications.data.forEach(notification => {
+          const translatedContent = questionContents[notification.question_id] || notification.question_content;
+          
           combinedNotifications.push({
             id: notification.id,
             type: 'daily_question',
             title: t('notifications.types.dailyQuestion'),
-            message: notification.question_content,
+            message: translatedContent,
             is_read: notification.is_read,
             created_at: notification.created_at,
-            question_content: notification.question_content,
+            question_content: translatedContent,
             data: {
               question_id: notification.question_id,
               daily_question_id: notification.daily_question_id,
@@ -492,9 +567,30 @@ export default function NotificationsPage() {
         });
       }
 
-      // Add simple chat notifications
+      // Add simple chat notifications with language-specific content
       if (simpleChatNotifications.data) {
+        // Fetch question content with language fields for simple chat notifications
+        const simpleChatQuestionIds = simpleChatNotifications.data.map(n => n.question_id).filter(id => id);
+        let simpleChatQuestionContents = {};
+        
+        if (simpleChatQuestionIds.length > 0) {
+          const { data: simpleChatQuestionsData, error: simpleChatQuestionsError } = await supabase
+            .from('questions')
+            .select('id, content, content_en, content_ar, content_ma')
+            .in('id', simpleChatQuestionIds);
+            
+          if (!simpleChatQuestionsError && simpleChatQuestionsData) {
+            simpleChatQuestionContents = simpleChatQuestionsData.reduce((acc, question) => {
+              acc[question.id] = getQuestionContent(question, currentLanguage);
+              return acc;
+            }, {});
+            console.log('💬 Simple chat question contents fetched with language support:', simpleChatQuestionContents);
+          }
+        }
+        
         simpleChatNotifications.data.forEach(notification => {
+          const translatedQuestionContent = simpleChatQuestionContents[notification.question_id];
+          
           combinedNotifications.push({
             id: notification.id,
             type: 'simple_chat',
@@ -503,6 +599,7 @@ export default function NotificationsPage() {
             is_read: false, // Simple chat notifications don't have is_read field
             created_at: notification.created_at,
             message_preview: notification.message_preview,
+            question_content: translatedQuestionContent,
             data: {
               question_id: notification.question_id,
               sender_id: notification.sender_id,
@@ -905,6 +1002,13 @@ export default function NotificationsPage() {
     
     initializeAndFetch();
   }, [fetchAllNotifications, initializeSettings]);
+
+  // Reload notifications when language changes
+  useEffect(() => {
+    if (user && !isLoading) {
+      fetchAllNotifications();
+    }
+  }, [currentLanguage]);
 
   if (isLoading) {
     return (

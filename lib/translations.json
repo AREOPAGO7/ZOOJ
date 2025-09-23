@@ -228,7 +228,13 @@
       "warning": "Attention",
       "info": "Information",
       "play": "Jouer",
-      "invite": "Inviter"
+      "invite": "Inviter",
+      "ok": "OK",
+      "all": "Tout",
+      "hide": "Masquer",
+      "paste": "Coller",
+      "copy": "Copier",
+      "errorOccurred": "Une erreur est survenue"
     },
     "questions": {
       "title": "Questions & Réponses",
@@ -347,7 +353,22 @@
       "questions": "questions",
       "minutes": "min",
       "user1": "Utilisateur 1",
-      "user2": "Utilisateur 2"
+      "user2": "Utilisateur 2",
+      "allQuizzesAvailable": "Tous les quiz disponibles"
+    },
+    "couple": {
+      "invalidCode": "Code invalide",
+      "codeNotFound": "Code introuvable",
+      "cannotUseOwnCode": "Vous ne pouvez pas utiliser votre propre code",
+      "cannotCreateCouple": "Impossible de créer le couple",
+      "alreadyHaveCode": "Déjà un code ?",
+      "partnerCode": "Code partenaire",
+      "connecting": "Connexion…",
+      "joinCouple": "Rejoindre le couple",
+      "enterReceivedCode": "Entrer un code reçu",
+      "shareCodeToLink": "Partagez votre code pour lier vos comptes",
+      "copyCode": "Copier le code",
+      "yourInviteCode": "Votre code d'invitation"
     },
     "settings": {
       "title": "Réglages",
@@ -882,7 +903,13 @@
       "warning": "Warning",
       "info": "Information",
       "play": "Play",
-      "invite": "Invite"
+      "invite": "Invite",
+      "ok": "OK",
+      "all": "All",
+      "hide": "Hide",
+      "paste": "Paste",
+      "copy": "Copy",
+      "errorOccurred": "An error occurred"
     },
     "questions": {
       "title": "Questions & Answers",
@@ -1001,7 +1028,22 @@
       "questions": "questions",
       "minutes": "min",
       "user1": "User 1",
-      "user2": "User 2"
+      "user2": "User 2",
+      "allQuizzesAvailable": "All available quizzes"
+    },
+    "couple": {
+      "invalidCode": "Invalid code",
+      "codeNotFound": "Code not found",
+      "cannotUseOwnCode": "You cannot use your own code",
+      "cannotCreateCouple": "Unable to create couple",
+      "alreadyHaveCode": "Already have a code?",
+      "partnerCode": "Partner code",
+      "connecting": "Connecting...",
+      "joinCouple": "Join couple",
+      "enterReceivedCode": "Enter received code",
+      "shareCodeToLink": "Share your code to link your accounts",
+      "copyCode": "Copy code",
+      "yourInviteCode": "Your invitation code"
     },
     "settings": {
       "title": "Settings",
@@ -1536,7 +1578,13 @@
       "warning": "تحذير",
       "info": "معلومات",
       "play": "لعب",
-      "invite": "دعوة"
+      "invite": "دعوة",
+      "ok": "موافق",
+      "all": "الكل",
+      "hide": "إخفاء",
+      "paste": "لصق",
+      "copy": "نسخ",
+      "errorOccurred": "حدث خطأ"
     },
     "questions": {
       "title": "الأسئلة والإجابات",
@@ -1655,7 +1703,22 @@
       "questions": "أسئلة",
       "minutes": "دقيقة",
       "user1": "المستخدم 1",
-      "user2": "المستخدم 2"
+      "user2": "المستخدم 2",
+      "allQuizzesAvailable": "جميع الاختبارات المتاحة"
+    },
+    "couple": {
+      "invalidCode": "كود غير صالح",
+      "codeNotFound": "الكود غير موجود",
+      "cannotUseOwnCode": "لا يمكنك استخدام الكود الخاص بك",
+      "cannotCreateCouple": "لا يمكن إنشاء الزوج",
+      "alreadyHaveCode": "لديك كود بالفعل؟",
+      "partnerCode": "كود الشريك",
+      "connecting": "جاري الاتصال...",
+      "joinCouple": "الانضمام للزوج",
+      "enterReceivedCode": "أدخل الكود المستلم",
+      "shareCodeToLink": "شارك الكود الخاص بك لربط الحسابات",
+      "copyCode": "نسخ الكود",
+      "yourInviteCode": "كود الدعوة الخاص بك"
     },
     "settings": {
       "title": "الإعدادات",
@@ -2162,7 +2225,13 @@
     "warning": "تنبيه",
     "info": "معلومة",
     "play": "لعب",
-    "invite": "عيط"
+    "invite": "عيط",
+    "ok": "زين",
+    "all": "كولشي",
+    "hide": "خبي",
+    "paste": "الصق",
+    "copy": "انسخ",
+    "errorOccurred": "وقع مشكل"
     },
     "questions": {
       "title": "الأسئلة و الجوبات",
@@ -2281,7 +2350,22 @@
       "questions": "أسئلة",
       "minutes": "دقيقة",
       "user1": "المستخدم 1",
-      "user2": "المستخدم 2"
+      "user2": "المستخدم 2",
+      "allQuizzesAvailable": "جميع لكويزات المتاحة"
+    },
+    "couple": {
+      "invalidCode": "الكود ما صالحش",
+      "codeNotFound": "الكود ما كاينش",
+      "cannotUseOwnCode": "ما تقدرش تستعمل الكود ديالك",
+      "cannotCreateCouple": "ما تقدرش تصاوب الكوبل",
+      "alreadyHaveCode": "عندك كود من قبل؟",
+      "partnerCode": "كود الشريك",
+      "connecting": "كيتوصل...",
+      "joinCouple": "انضم للكوبل",
+      "enterReceivedCode": "دخل الكود لي توصلات بيه",
+      "shareCodeToLink": "شارك الكود ديالك باش تربط الحسابات",
+      "copyCode": "انسخ الكود",
+      "yourInviteCode": "كود الدعوة ديالك"
     },
     "settings": {
       "title": "Settings",
