@@ -11,8 +11,9 @@ import {
     View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
-import { useServiceProviders } from '../../hooks/useServiceData';
+import { getProviderDescription, getProviderName, useServiceProviders } from '../../hooks/useServiceData';
 import { useAuth } from '../../lib/auth';
 import { makePhoneCall } from '../../lib/phoneUtils';
 import AppLayout from '../app-layout';
@@ -22,6 +23,7 @@ export default function ServiceDetailsPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { isDarkMode } = useDarkTheme();
+  const { t, language: currentLanguage } = useLanguage();
   
   const [callingProviderId, setCallingProviderId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -105,7 +107,7 @@ export default function ServiceDetailsPage() {
         <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
           <ActivityIndicator size="large" color="#F47CC6" />
           <Text className={`mt-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-            Chargement...
+            {t('serviceDetails.loading')}
           </Text>
         </View>
       </AppLayout>
@@ -122,16 +124,16 @@ export default function ServiceDetailsPage() {
             color="#DC2626" 
           />
           <Text className={`text-lg font-medium mt-4 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Service non trouvé
+            {t('serviceDetails.notFound')}
           </Text>
           <Text className={`text-sm text-center mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-            Le service demandé n'existe pas ou a été supprimé.
+            {t('serviceDetails.notFoundDescription')}
           </Text>
           <Pressable
             className={`mt-6 px-6 py-3 rounded-lg ${isDarkMode ? 'bg-primary' : 'bg-pink-500'}`}
             onPress={() => router.back()}
           >
-            <Text className="text-white font-medium">Retour</Text>
+            <Text className="text-white font-medium">{t('serviceDetails.back')}</Text>
           </Pressable>
         </View>
       </AppLayout>
@@ -152,7 +154,7 @@ export default function ServiceDetailsPage() {
               />
             </Pressable>
             <Text className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              {provider?.name || 'Détails du service'}
+              {provider ? getProviderName(provider, currentLanguage) : t('serviceDetails.title')}
             </Text>
             <View className="w-6" />
           </View>
@@ -183,7 +185,7 @@ export default function ServiceDetailsPage() {
                 <Text className={`text-sm mt-2 ${
                   isDarkMode ? 'text-gray-400' : 'text-gray-500'
                 }`}>
-                  Aucune image
+                  {t('serviceDetails.noImage')}
                 </Text>
               </View>
             </View>
@@ -206,15 +208,15 @@ export default function ServiceDetailsPage() {
             <Text className={`text-xl font-bold mb-3 ${
               isDarkMode ? 'text-white' : 'text-gray-900'
             }`}>
-              {provider.name}
+              {getProviderName(provider, currentLanguage)}
             </Text>
 
             {/* Description */}
-            {provider.description && (
+            {getProviderDescription(provider, currentLanguage) && (
               <Text className={`text-sm leading-relaxed mb-4 ${
                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
               }`}>
-                {provider.description}
+                {getProviderDescription(provider, currentLanguage)}
               </Text>
             )}
 
@@ -244,7 +246,7 @@ export default function ServiceDetailsPage() {
               <Text className={`text-sm ml-2 ${
                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
               }`}>
-                Mar-Sam: 9h00 - 19h00
+                {t('serviceDetails.openingHours')}
               </Text>
             </View>
 
@@ -294,7 +296,7 @@ export default function ServiceDetailsPage() {
                   />
                 )}
                 <Text className="text-white text-base font-medium ml-2">
-                  {callingProviderId === provider.id ? 'Appel...' : 'Appeler'}
+                  {callingProviderId === provider.id ? t('serviceDetails.calling') : t('serviceDetails.call')}
                 </Text>
               </View>
             </Pressable>

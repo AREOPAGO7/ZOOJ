@@ -9,18 +9,48 @@ import { useRouter } from 'expo-router'
 import { useEffect, useState } from "react"
 import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, SafeAreaView, ScrollView, Share, Text, TextInput, View } from "react-native"
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from "react-native-gesture-handler"
+import { useLanguage } from "../../contexts/LanguageContext"
 import { useTheme } from "../../contexts/ThemeContext"
 import { useAuth } from "../../lib/auth"
+import indexTranslations from "../../lib/indexTranslations.json"
 import { supabase } from "../../lib/supabase"
 
 const BRAND_BLUE = "#2DB6FF"
 const BRAND_PINK = "#F47CC6"
 const BRAND_GRAY = "#6C6C6C"
 
+// Translation helper function
+const getTranslation = (key: string, language: string): string => {
+  const keys = key.split('.');
+  let value: any = indexTranslations[language as keyof typeof indexTranslations];
+  
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      return key; // Return key if translation not found
+    }
+  }
+  
+  return typeof value === 'string' ? value : key;
+};
+
+// Helper function to get translated interest name
+const getInterestTranslation = (interestName: string, language: string): string => {
+  const translationKey = `interests.categories.${interestName}`;
+  const translated = getTranslation(translationKey, language);
+  // If translation not found, return original name
+  return translated === translationKey ? interestName : translated;
+};
+
 export default function App() {
   const { user, signUp, signIn, createProfile, updatePassword, loading: authLoading } = useAuth()
   const { colors } = useTheme()
+  const { language } = useLanguage()
   const router = useRouter()
+  
+  // Translation helper
+  const t = (key: string) => getTranslation(key, language);
   const [screen, setScreen] = useState<"welcome" | "auth" | "signup" | "profile" | "interests" | "inviteCodes" | "newPassword">("welcome")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -429,7 +459,7 @@ export default function App() {
 
   const handleAuth = async () => {
     if (!email || !password) {
-      setError("Veuillez remplir tous les champs")
+      setError(t('auth.fillAllFields'))
       return
     }
 
@@ -442,14 +472,14 @@ export default function App() {
       
       if (result.error) {
         console.log("Signin error:", result.error)
-        setError(result.error.message || "Erreur lors de la connexion")
+        setError(result.error.message || t('auth.connectionError'))
       } else {
         console.log("Signin successful")
         // User will be automatically redirected by the useEffect
       }
     } catch (error) {
       console.log("Signin exception:", error)
-      setError("Une erreur inattendue s'est produite")
+      setError(t('auth.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
@@ -457,12 +487,12 @@ export default function App() {
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
-      setError("Veuillez remplir tous les champs")
+      setError(t('auth.fillAllFields'))
       return
     }
 
     if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas")
+      setError(t('signup.passwordsDoNotMatch'))
       return
     }
 
@@ -475,7 +505,7 @@ export default function App() {
       
       if (result.error) {
         console.log("Signup error:", result.error)
-        setError(result.error.message || "Erreur lors de la création du compte")
+        setError(result.error.message || t('signup.accountCreationError'))
       } else {
         console.log("Signup successful, user should be automatically signed in")
         // The user will be automatically signed in and redirected via the useEffect
@@ -483,7 +513,7 @@ export default function App() {
       }
     } catch (error) {
       console.log("Signup exception:", error)
-      setError("Une erreur inattendue s'est produite")
+      setError(t('auth.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
@@ -499,22 +529,22 @@ export default function App() {
     
     // Name validation
     if (!name.trim()) {
-      setNameError("Le nom est obligatoire")
+      setNameError(t('profile.nameRequired'))
       isValid = false
     } else if (name.trim().length < 2) {
-      setNameError("Le nom doit contenir au moins 2 caractères")
+      setNameError(t('profile.nameMinLength'))
       isValid = false
     }
     
     // Gender validation
     if (!gender) {
-      setGenderError("Veuillez sélectionner votre genre")
+      setGenderError(t('profile.selectGender'))
       isValid = false
     }
     
     // Country validation
     if (!selectedCountry) {
-      setCountryError("Veuillez sélectionner votre pays")
+      setCountryError(t('profile.selectCountry'))
       isValid = false
     }
     
@@ -527,7 +557,7 @@ export default function App() {
       // Request media library permissions for mobile
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'Permission d\'accès à la galerie requise');
+        Alert.alert(t('profile.permissionDenied'), t('profile.galleryPermissionRequired'));
         return;
       }
 
@@ -550,7 +580,7 @@ export default function App() {
       }
     } catch (error) {
       console.log('Error picking image:', error);
-      Alert.alert('Erreur', 'Impossible de sélectionner l\'image');
+      Alert.alert(t('profile.selectImageError'), t('profile.selectImageError'));
     }
   };
 
@@ -562,7 +592,7 @@ export default function App() {
       console.log('Camera permission status:', status);
       
       if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'Permission d\'accès à la caméra requise');
+        Alert.alert(t('profile.permissionDenied'), t('profile.cameraPermissionRequired'));
         return;
       }
 
@@ -584,7 +614,7 @@ export default function App() {
       }
     } catch (error) {
       console.log('Error taking photo:', error);
-      Alert.alert('Erreur', 'Impossible de prendre la photo');
+      Alert.alert(t('profile.takePhotoError'), t('profile.takePhotoError'));
     }
   };
 
@@ -629,7 +659,7 @@ export default function App() {
         const errorText = await response.text();
         console.log('Cloudinary response error:', response.status, errorText);
         console.log(`Upload failed: ${response.status}`);
-        Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil. Veuillez réessayer.');
+        Alert.alert(t('profile.uploadError'), t('profile.uploadError'));
         return;
       }
 
@@ -644,15 +674,15 @@ export default function App() {
         setProfilePicture(cleanUrl);
         console.log('Profile picture uploaded successfully:', cleanUrl);
         // Show success feedback
-        Alert.alert('Succès', 'Photo de profil mise à jour avec succès!');
+        Alert.alert(t('profile.uploadSuccess'), t('profile.uploadSuccess'));
       } else {
         console.log('Upload failed - no secure_url in response');
-        Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil. Veuillez réessayer.');
+        Alert.alert(t('profile.uploadError'), t('profile.uploadError'));
         return;
       }
     } catch (error) {
       console.log('Profile picture upload error:', error);
-      Alert.alert('Erreur', 'Impossible de télécharger l\'image de profil. Veuillez réessayer.');
+      Alert.alert(t('profile.uploadError'), t('profile.uploadError'));
     } finally {
       setIsUploadingPicture(false);
     }
@@ -665,7 +695,7 @@ export default function App() {
     }
 
     if (!user) {
-      setError("Utilisateur non connecté")
+      setError(t('profile.userNotConnected'))
       return
     }
 
@@ -681,7 +711,7 @@ export default function App() {
       
       if (profileCheckError && profileCheckError.code !== 'PGRST116') {
         console.log("Error checking existing profile:", profileCheckError)
-        setError("Erreur lors de la vérification du profil")
+        setError(t('profile.profileCheckError'))
         return
       }
 
@@ -704,7 +734,7 @@ export default function App() {
         
         if (error) {
           console.log("Profile update error:", error)
-          setError(error.message || "Erreur lors de la mise à jour du profil")
+          setError(error.message || t('profile.profileUpdateError'))
         } else {
           console.log("Profile updated successfully:", data)
           // Success! Redirect to interests section
@@ -734,7 +764,7 @@ export default function App() {
         
         if (error) {
           console.log("Profile creation error:", error)
-          setError(error.message || "Erreur lors de la création du profil")
+          setError(error.message || t('profile.profileCreationError'))
         } else {
           console.log("Profile created successfully:", data)
           // Success! Redirect to interests section
@@ -743,7 +773,7 @@ export default function App() {
       }
     } catch (error) {
       console.log("Profile creation/update exception:", error)
-      setError("Une erreur inattendue s'est produite")
+      setError(t('auth.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
@@ -751,11 +781,11 @@ export default function App() {
 
   const handleRedeemCode = async () => {
     if (!inviteCode.trim()) {
-      setRedeemError("Veuillez entrer un code d'invitation")
+      setRedeemError(t('inviteCodes.enterInviteCode'))
       return
     }
     if (!user) {
-      setRedeemError("Utilisateur non connecté")
+      setRedeemError(t('profile.userNotConnected'))
       return
     }
 
@@ -768,12 +798,12 @@ export default function App() {
       const { data: partnerProfile, error: findError } = await profileService.findProfileByInviteCode(inviteCode.trim())
       
       if (findError || !partnerProfile) {
-        setRedeemError("Code d'invitation invalide")
+        setRedeemError(t('inviteCodes.invalidCode'))
         return
       }
 
       if (partnerProfile.id === user.id) {
-        setRedeemError("Vous ne pouvez pas utiliser votre propre code")
+        setRedeemError(t('inviteCodes.cannotUseOwnCode'))
         return
       }
 
@@ -781,7 +811,7 @@ export default function App() {
       const { error: coupleError } = await profileService.createCouple(user.id, partnerProfile.id)
       
       if (coupleError) {
-        setRedeemError("Erreur lors de la création de la relation")
+        setRedeemError(t('inviteCodes.relationshipCreationError'))
         return
       }
 
@@ -789,12 +819,12 @@ export default function App() {
       await profileService.updateProfile(user.id, { completed: true })
       await profileService.updateProfile(partnerProfile.id, { completed: true })
 
-      setRedeemSuccess("Relation créée avec succès!")
+      setRedeemSuccess(t('inviteCodes.relationshipCreated'))
       setTimeout(() => {
         router.push('/pages/accueil')
       }, 2000)
     } catch (error) {
-      setRedeemError("Une erreur inattendue s'est produite")
+      setRedeemError(t('auth.unexpectedError'))
     } finally {
       setIsRedeeming(false)
     }
@@ -899,22 +929,22 @@ export default function App() {
 
   const handleUpdatePassword = async () => {
     if (!newPassword.trim()) {
-      setNewPasswordError("Veuillez entrer un nouveau mot de passe")
+      setNewPasswordError(t('newPassword.enterPassword'))
       return
     }
 
     if (newPassword.length < 6) {
-      setNewPasswordError("Le mot de passe doit contenir au moins 6 caractères")
+      setNewPasswordError(t('newPassword.passwordMinLength'))
       return
     }
 
     if (newPassword !== confirmNewPassword) {
-      setNewPasswordError("Les mots de passe ne correspondent pas")
+      setNewPasswordError(t('newPassword.passwordsDoNotMatch'))
       return
     }
 
     if (!recoveryTokens) {
-      setNewPasswordError("Session de récupération invalide. Veuillez utiliser le lien dans votre email.")
+      setNewPasswordError(t('newPassword.invalidRecoverySession'))
       return
     }
 
@@ -932,13 +962,13 @@ export default function App() {
       
       if (sessionError) {
         console.log("Error establishing recovery session:", sessionError)
-        setNewPasswordError("Erreur lors de la récupération de la session")
+        setNewPasswordError(t('newPassword.sessionError'))
         return
       }
       
       if (!sessionData.session) {
         console.log("No session established from recovery tokens")
-        setNewPasswordError("Impossible d'établir la session de récupération")
+        setNewPasswordError(t('newPassword.cannotEstablishSession'))
         return
       }
       
@@ -949,7 +979,7 @@ export default function App() {
       
       if (error) {
         console.log("Password update error:", error)
-        setNewPasswordError(error.message || "Erreur lors de la mise à jour du mot de passe")
+        setNewPasswordError(error.message || t('newPassword.passwordUpdateError'))
         return
       }
       
@@ -963,11 +993,11 @@ export default function App() {
       
       // Show success and redirect to login
       Alert.alert(
-        "Succès", 
-        "Votre mot de passe a été mis à jour avec succès!",
+        t('newPassword.passwordUpdated'), 
+        t('newPassword.passwordUpdated'),
         [
           {
-            text: "OK",
+            text: t('newPassword.ok'),
             onPress: () => setScreen("auth")
           }
         ]
@@ -975,7 +1005,7 @@ export default function App() {
       
     } catch (error) {
       console.log("Password update exception:", error)
-      setNewPasswordError("Une erreur inattendue s'est produite")
+      setNewPasswordError(t('auth.unexpectedError'))
     } finally {
       setIsUpdatingPassword(false)
     }
@@ -985,7 +1015,7 @@ export default function App() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", paddingTop: '5%' }}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ marginTop: 16, color: colors.textSecondary }}>Chargement...</Text>
+        <Text style={{ marginTop: 16, color: colors.textSecondary }}>{t('auth.loading')}</Text>
       </SafeAreaView>
     )
   }
@@ -1003,7 +1033,7 @@ export default function App() {
         paddingTop: (screen === "welcome" || screen === "auth" || screen === "signup") ? '38%' : '5%' 
       }}>
               {(screen === "welcome" || screen === "auth" || screen === "signup") && (
-                <HeaderBar variant="logo" tagline="L'amour se construit chaque jour" taglineColor={BRAND_GRAY} />
+                <HeaderBar variant="logo" tagline={t('welcome.tagline')} taglineColor={BRAND_GRAY} />
         )}
 
         <View style={{ width: "100%", paddingHorizontal: 20, flex: 1 }}>
@@ -1011,7 +1041,7 @@ export default function App() {
             <>
               <Pressable onPress={() => setScreen("auth")} accessibilityRole="button" style={{ borderRadius: 12, overflow: "hidden", marginTop: 24 }}>
                 <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
-                        <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Continuer</Text>
+                        <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>{t('welcome.continue')}</Text>
                 </LinearGradient>
               </Pressable>
 
@@ -1023,7 +1053,7 @@ export default function App() {
                     <View style={{ gap: 12, marginBottom: 8, marginTop: 16 }}>
                 <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
-            placeholder="Email"
+            placeholder={t('auth.email')}
             value={email}
             onChangeText={setEmail}
                     keyboardType="email-address"
@@ -1034,7 +1064,7 @@ export default function App() {
                 </View>
                 <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
-                    placeholder="Mot de passe"
+                    placeholder={t('auth.password')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -1051,20 +1081,20 @@ export default function App() {
                         {isLoading ? (
                           <ActivityIndicator color="#FFFFFF" />
                         ) : (
-                  <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>Se connecter</Text>
+                  <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>{t('auth.signIn')}</Text>
                         )}
                 </LinearGradient>
               </Pressable>
 
               <View style={{ alignItems: "center", marginTop: 12 }}>
                       <Pressable onPress={() => setScreen("signup")}>
-                        <Text style={{ color: colors.primary, fontSize: 16 }}>Créer un compte</Text>
+                        <Text style={{ color: colors.primary, fontSize: 16 }}>{t('auth.createAccount')}</Text>
                 </Pressable>
               </View>
 
               <View style={{ alignItems: "center", marginTop: 8 }}>
                 <Pressable onPress={() => router.push('/pages/password-reset')}>
-                  <Text style={{ color: colors.primary, fontSize: 16 }}>Mot de passe oublié?</Text>
+                  <Text style={{ color: colors.primary, fontSize: 16 }}>{t('auth.forgotPassword')}</Text>
                 </Pressable>
               </View>
 
@@ -1079,7 +1109,7 @@ export default function App() {
                     <View style={{ gap: 12, marginBottom: 8, marginTop: 16 }}>
                       <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                         <TextInput
-                          placeholder="Email"
+                          placeholder={t('auth.email')}
                           value={email}
                           onChangeText={setEmail}
                           keyboardType="email-address"
@@ -1090,7 +1120,7 @@ export default function App() {
                       </View>
                       <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                         <TextInput
-                          placeholder="Mot de passe"
+                          placeholder={t('auth.password')}
                           value={password}
                           onChangeText={setPassword}
                           secureTextEntry
@@ -1100,7 +1130,7 @@ export default function App() {
                       </View>
                       <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                         <TextInput
-                          placeholder="Confirmez le mot de passe"
+                          placeholder={t('signup.confirmPassword')}
                           value={confirmPassword}
                           onChangeText={setConfirmPassword}
                           secureTextEntry
@@ -1117,14 +1147,14 @@ export default function App() {
                         {isLoading ? (
                           <ActivityIndicator color="#FFFFFF" />
                         ) : (
-                          <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>Créer un compte</Text>
+                          <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>{t('signup.createAccount')}</Text>
                         )}
                       </LinearGradient>
                     </Pressable>
 
                     <View style={{ alignItems: "center", marginTop: 12 }}>
                       <Pressable onPress={() => setScreen("auth")}>
-                        <Text style={{ color: colors.primary, fontSize: 16 }}>Déjà un compte? Se connecter</Text>
+                        <Text style={{ color: colors.primary, fontSize: 16 }}>{t('auth.alreadyHaveAccount')}</Text>
                       </Pressable>
               </View>
             </>
@@ -1137,7 +1167,7 @@ export default function App() {
                         <Pressable onPress={() => setScreen("signup")}>
                       <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
                     </Pressable>
-                    <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: colors.text }}>Créez votre profil</Text>
+                    <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: colors.text }}>{t('profile.createProfile')}</Text>
                   </View>
                   <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 8 }} />
 
@@ -1219,19 +1249,19 @@ export default function App() {
                           console.log('Profile picture pressed!');
                           // Show action sheet for mobile compatibility
                           Alert.alert(
-                            'Photo de profil',
-                            'Voulez-vous prendre une photo ou choisir depuis la galerie?',
+                            t('profile.profilePhoto'),
+                            t('profile.profilePhoto'),
                             [
                               {
-                                text: 'Appareil photo',
+                                text: t('profile.camera'),
                                 onPress: () => takePhotoWithCamera()
                               },
                               {
-                                text: 'Galerie',
+                                text: t('profile.gallery'),
                                 onPress: () => pickImageFromGallery()
                               },
                               {
-                                text: 'Annuler',
+                                text: t('profile.cancel'),
                                 style: 'cancel'
                               }
                             ],
@@ -1250,14 +1280,14 @@ export default function App() {
                       marginTop: 10,
                       textAlign: 'center',
                     }}>
-                      {isUploadingPicture ? 'Upload...' : 'Appuyez pour changer la photo'}
+                      {isUploadingPicture ? t('profile.uploading') : t('profile.changePhoto')}
                     </Text>
                   </View>
 
                   <View style={{ gap: 12 }}>
                     <View style={{ backgroundColor: colors.surface, borderColor: nameError ? "#FF5A5F" : colors.border, borderWidth: 1, borderRadius: 12 }}>
                       <TextInput
-                            placeholder="Nom complet"
+                            placeholder={t('profile.fullName')}
                             value={name}
                             onChangeText={(text) => { setName(text); setNameError("") }}
                         style={{ paddingHorizontal: 14, height: 50, color: colors.text }}
@@ -1279,7 +1309,7 @@ export default function App() {
                       }}
                     >
                       <Text style={{ color: birthDate ? colors.text : colors.textSecondary }}>
-                        {birthDate ? new Date(birthDate).getFullYear().toString() : "Date de naissance (optionnel)"}
+                        {birthDate ? new Date(birthDate).getFullYear().toString() : t('profile.birthDate')}
                       </Text>
                     </Pressable>
 
@@ -1296,7 +1326,7 @@ export default function App() {
                           }}
                         >
                           <Text style={{ color: gender ? colors.text : colors.textSecondary }}>
-                            {gender === "male" ? "Homme" : gender === "female" ? "Femme" : gender === "other" ? "Autre" : "Genre"}
+                            {gender === "male" ? t('profile.male') : gender === "female" ? t('profile.female') : gender === "other" ? t('profile.other') : t('profile.gender')}
                           </Text>
                         </Pressable>
                         {genderError ? <Text style={{ color: "#FF5A5F", fontSize: 12, marginTop: 4, marginLeft: 4 }}>{genderError}</Text> : null}
@@ -1314,7 +1344,7 @@ export default function App() {
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ color: selectedCountry ? colors.text : colors.textSecondary }}>{selectedCountry ?? "Pays"}</Text>
+                        <Text style={{ color: selectedCountry ? colors.text : colors.textSecondary }}>{selectedCountry ?? t('profile.country')}</Text>
                       </Pressable>
                     {countryError ? <Text style={{ color: "#FF5A5F", fontSize: 12, marginTop: 4, marginLeft: 4 }}>{countryError}</Text> : null}
                   </View>
@@ -1331,7 +1361,7 @@ export default function App() {
                           {isLoading ? (
                             <ActivityIndicator color="#FFFFFF" />
                           ) : (
-                            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Continuer</Text>
+                            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>{t('profile.continue')}</Text>
                           )}
                     </LinearGradient>
                   </Pressable>
@@ -1346,7 +1376,7 @@ export default function App() {
                   <Pressable onPress={() => setScreen("profile")}>
                     <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
                   </Pressable>
-                  <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: colors.text }}>Vos centres d'intérêts</Text>
+                  <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: colors.text }}>{t('interests.title')}</Text>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <MaterialCommunityIcons
@@ -1368,7 +1398,7 @@ export default function App() {
                 {isLoadingInterests ? (
                   <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={{ marginTop: 16, color: colors.textSecondary }}>Chargement des centres d'intérêts...</Text>
+                    <Text style={{ marginTop: 16, color: colors.textSecondary }}>{t('interests.loading')}</Text>
                   </View>
                 ) : (
                   <>
@@ -1402,7 +1432,7 @@ export default function App() {
                               flex: 1,
                             }}
                           >
-                            {interest.label}
+                            {getInterestTranslation(interest.label, language)}
                           </Text>
                           {selectedInterests.includes(interest.id) && (
                             <MaterialCommunityIcons
@@ -1426,7 +1456,7 @@ export default function App() {
                             <ActivityIndicator color="#FFFFFF" />
                           ) : (
                             <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
-                              {selectedInterests.length === 0 ? "Sélectionnez au moins un centre d'intérêt" : "Terminer"}
+                              {selectedInterests.length === 0 ? t('interests.selectAtLeastOne') : t('interests.finish')}
                             </Text>
                           )}
                         </LinearGradient>
@@ -1440,7 +1470,7 @@ export default function App() {
 
           {screen === "inviteCodes" && (
                   <>
-                    <HeaderBar variant="title" title="Code d'invitation" onBack={() => setScreen("profile")} />
+                    <HeaderBar variant="title" title={t('inviteCodes.title')} onBack={() => setScreen("profile")} />
 
                     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
                       {!showJoinSection ? (
@@ -1490,7 +1520,7 @@ export default function App() {
                                   lineHeight: 22,
                                   fontWeight: 'bold',
                                 }}>
-                                  Attendez votre partenaire pour rejoindre
+                                  {t('inviteCodes.waitForPartner')}
                                 </Text>
                               </>
                             ) : (
@@ -1503,11 +1533,11 @@ export default function App() {
                             <Pressable
                               onPress={async () => {
                                 try {
-                                  const shareMessage = `🔗 Code d'invitation ZOOJ\n\nMon code: ${myInviteCode}\n\nRejoignez-moi sur ZOOJ pour partager nos moments précieux ! 💕\n\nTéléchargez l'app et utilisez ce code pour nous connecter.`
+                                  const shareMessage = t('inviteCodes.shareMessage').replace('{code}', myInviteCode)
                                   
                                   const result = await Share.share({
                                     message: shareMessage,
-                                    title: 'Code d\'invitation ZOOJ',
+                                    title: t('inviteCodes.shareTitle'),
                                     url: Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'
                                   })
                                   
@@ -1518,14 +1548,14 @@ export default function App() {
                                   }
                                 } catch (error) {
                                   console.log('Error sharing code:', error)
-                                  Alert.alert("Erreur", "Impossible de partager le code")
+                                  Alert.alert(t('inviteCodes.shareError'), t('inviteCodes.shareError'))
                                 }
                               }}
                               style={{ borderRadius: 12, overflow: "hidden" }}
                             >
                               <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center", flexDirection: "row", justifyContent: "center" }}>
                                 <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginRight: 8 }}>
-                                  Partager le code
+                                  {t('inviteCodes.shareCode')}
                                 </Text>
                                 <MaterialCommunityIcons name="share-variant" size={20} color="#FFFFFF" />
                               </LinearGradient>
@@ -1535,16 +1565,16 @@ export default function App() {
                               onPress={async () => {
                                 try {
                                   await Clipboard.setStringAsync(myInviteCode)
-                                  Alert.alert("Code copié!", "Le code a été copié dans le presse-papiers")
+                                  Alert.alert(t('inviteCodes.codeCopied'), t('inviteCodes.codeCopiedMessage'))
                                 } catch (error) {
-                                  Alert.alert("Erreur", "Impossible de copier le code")
+                                  Alert.alert(t('inviteCodes.copyError'), t('inviteCodes.copyError'))
                                 }
                               }}
                               style={{ borderRadius: 12, overflow: "hidden" }}
                             >
                               <LinearGradient colors={[BRAND_BLUE, BRAND_PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, borderRadius: 12, alignItems: "center", flexDirection: "row", justifyContent: "center" }}>
                                 <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginRight: 8 }}>
-                                  Copier le code
+                                  {t('inviteCodes.copyCode')}
                                 </Text>
                                 <MaterialCommunityIcons name="content-copy" size={20} color="#FFFFFF" />
                               </LinearGradient>
@@ -1555,7 +1585,7 @@ export default function App() {
                           <View style={{ marginTop: 20, width: "100%", maxWidth: 300, alignItems: 'center' }}>
                             <Pressable onPress={() => setShowJoinSection(true)}>
                               <Text style={{ color: colors.primary, fontWeight: '600', textDecorationLine: 'underline' }}>
-                                Déjà un code ?
+                                {t('inviteCodes.alreadyHaveCode')}
                               </Text>
                             </Pressable>
                           </View>
@@ -1573,12 +1603,12 @@ export default function App() {
                           {/* Redeem Code Section */}
                           <View style={{ width: "100%", maxWidth: 300, gap: 16 }}>
                             <Text style={{ fontSize: 18, fontWeight: "600", color: "#2D2D2D", textAlign: "center" }}>
-                              Rejoindre avec un code
+                              {t('inviteCodes.joinWithCode')}
                             </Text>
 
                             <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                               <TextInput 
-                                placeholder="Mon partenaire" 
+                                placeholder={t('inviteCodes.myPartner')} 
                                 value={inviteCode} 
                                 onChangeText={(t) => { setInviteCode(t); setRedeemError(""); setRedeemSuccess("") }} 
                                 style={{ paddingHorizontal: 14, height: 50 }} 
@@ -1598,7 +1628,7 @@ export default function App() {
                                 {isRedeeming ? (
                                   <ActivityIndicator color="#FFFFFF" />
                                 ) : (
-                                  <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Rejoindre</Text>
+                                  <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>{t('inviteCodes.join')}</Text>
                                 )}
                               </LinearGradient>
                             </Pressable>
@@ -1608,7 +1638,7 @@ export default function App() {
                           <View style={{ marginTop: 24, width: "100%", maxWidth: 300, alignItems: 'center' }}>
                             <Pressable onPress={() => setShowJoinSection(false)}>
                               <Text style={{ color: colors.primary, fontWeight: '600', textDecorationLine: 'underline' }}>
-                                Partager mon code
+                                {t('inviteCodes.shareMyCode')}
                               </Text>
                             </Pressable>
                           </View>
@@ -1630,7 +1660,7 @@ export default function App() {
                           }}
                         >
                           <Text style={{ color: "#374151", fontSize: 16, fontWeight: "600" }}>
-                            Continuer sans code
+                            {t('inviteCodes.continueWithoutCode')}
                           </Text>
                         </Pressable>
                       </View>
@@ -1641,34 +1671,34 @@ export default function App() {
 
       {screen === "newPassword" && (
         <>
-          <HeaderBar variant="title" title="Réinitialiser mon mot de passe" onBack={() => setScreen("auth")} />
+          <HeaderBar variant="title" title={t('newPassword.title')} onBack={() => setScreen("auth")} />
 
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
             <View style={{ width: "100%", maxWidth: 400, gap: 24 }}>
               {!recoveryTokens ? (
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ fontSize: 16, color: "#FF5A5F", textAlign: "center", lineHeight: 20 }}>
-                    Session de récupération invalide. Veuillez utiliser le lien dans votre email.
+                    {t('newPassword.invalidSession')}
                   </Text>
                   <Pressable
                     onPress={() => setScreen("auth")}
                     style={{ marginTop: 16, padding: 12, backgroundColor: BRAND_BLUE, borderRadius: 8 }}
                   >
-                    <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>Retour à la connexion</Text>
+                    <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>{t('newPassword.backToLogin')}</Text>
                   </Pressable>
                 </View>
               ) : (
                 <>
                   <View style={{ alignItems: "center" }}>
                     <Text style={{ fontSize: 16, color: "#6B7280", textAlign: "center", lineHeight: 20 }}>
-                      Veuillez retaper votre nouveau mot de passe
+                      {t('newPassword.enterNewPassword')}
                     </Text>
                   </View>
 
                   <View style={{ gap: 16, width: "100%" }}>
                     <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                       <TextInput
-                        placeholder="Mot de passe"
+                        placeholder={t('auth.password')}
                         value={newPassword}
                         onChangeText={(text) => { setNewPassword(text); setNewPasswordError("") }}
                         secureTextEntry
@@ -1679,7 +1709,7 @@ export default function App() {
 
                     <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                       <TextInput
-                        placeholder="Mot de passe"
+                        placeholder={t('auth.password')}
                         value={confirmNewPassword}
                         onChangeText={(text) => { setConfirmNewPassword(text); setNewPasswordError("") }}
                         secureTextEntry
@@ -1699,7 +1729,7 @@ export default function App() {
                         {isUpdatingPassword ? (
                           <ActivityIndicator color="#FFFFFF" />
                         ) : (
-                          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>Confirmer</Text>
+                          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>{t('newPassword.confirm')}</Text>
                         )}
                       </LinearGradient>
                     </Pressable>
@@ -1766,7 +1796,7 @@ export default function App() {
               alignItems: 'center',
               marginBottom: 20
             }}>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>Sélectionner le genre</Text>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>{t('profile.selectGenderTitle')}</Text>
               <Pressable onPress={() => setIsGenderOpen(false)}>
                 <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
               </Pressable>
@@ -1793,7 +1823,7 @@ export default function App() {
                   fontSize: 16,
                   fontWeight: gender === g ? '600' : '400'
                 }}>
-                  {g === "male" ? "Homme" : g === "female" ? "Femme" : "Autre"}
+                  {g === "male" ? t('profile.male') : g === "female" ? t('profile.female') : t('profile.other')}
                 </Text>
               </Pressable>
             ))}
@@ -1836,7 +1866,7 @@ export default function App() {
               alignItems: 'center',
               marginBottom: 20
             }}>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>Sélectionner le pays</Text>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>{t('profile.selectCountryTitle')}</Text>
               <Pressable onPress={() => setIsCountryOpen(false)}>
                 <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
               </Pressable>
@@ -1908,7 +1938,7 @@ export default function App() {
               alignItems: 'center',
               marginBottom: 20
             }}>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>Sélectionner la date</Text>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#2D2D2D' }}>{t('profile.selectDateTitle')}</Text>
               <Pressable onPress={() => setIsDateOpen(false)}>
                 <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
               </Pressable>
@@ -1916,7 +1946,7 @@ export default function App() {
             
             <View style={{ alignItems: 'center' }}>
               <Text style={{ fontSize: 16, color: '#6B7280', marginBottom: 20, textAlign: 'center' }}>
-                Sélectionnez votre année de naissance
+                {t('profile.selectBirthYear')}
               </Text>
               
                                    <ScrollView style={{ maxHeight: 300, width: '100%' }}>

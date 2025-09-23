@@ -10,6 +10,7 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (language: Language) => void;
   t: (key: string) => string;
+  isLoading: boolean;
 }
 
 // Create context
@@ -25,17 +26,27 @@ interface LanguageProviderProps {
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>('fr');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load language from storage on mount
   useEffect(() => {
     const loadLanguage = async () => {
       try {
+        console.log('🔄 Loading language from storage...');
         const savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
+        console.log('📱 Saved language from storage:', savedLanguage);
+        
         if (savedLanguage && ['fr', 'en', 'ar', 'ma'].includes(savedLanguage)) {
+          console.log('✅ Setting language to:', savedLanguage);
           setLanguageState(savedLanguage as Language);
+        } else {
+          console.log('⚠️ No valid saved language, using default: fr');
         }
       } catch (error) {
-        console.error('Error loading language:', error);
+        console.error('❌ Error loading language:', error);
+      } finally {
+        setIsLoading(false);
+        console.log('🏁 Language loading complete');
       }
     };
     loadLanguage();
@@ -53,6 +64,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
 
   // Translation function - memoized to ensure re-renders when language changes
   const t = useCallback((key: string): string => {
+    console.log(`🌍 Translation called for key: "${key}" with language: "${language}"`);
     const keys = key.split('.');
     let value: any = translations[language];
     
@@ -60,15 +72,18 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       if (value && typeof value === 'object' && k in value) {
         value = value[k];
       } else {
+        console.log(`❌ Translation not found for key: "${key}" in language: "${language}"`);
         return key; // Return key if translation not found
       }
     }
     
-    return typeof value === 'string' ? value : key;
+    const result = typeof value === 'string' ? value : key;
+    console.log(`✅ Translation result: "${result}"`);
+    return result;
   }, [language]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, isLoading }}>
       {children}
     </LanguageContext.Provider>
   );

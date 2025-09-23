@@ -36,7 +36,7 @@ export default function ReglagesPage() {
 
     {
       id: 'notifications',
-      title: 'Notifications',
+      title: t('settings.notifications'),
       icon: 'bell-outline',
       route: '/pages/notification-settings'
     },

@@ -148,7 +148,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
       <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
         <View style={styles.gameStatsHeader}>
           <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
-          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Statistiques de Jeux</Text>
+          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.gameStats.title')}</Text>
         </View>
         <ActivityIndicator size="small" color={BRAND_PINK} />
       </View>
@@ -168,10 +168,10 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
       <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
         <View style={styles.gameStatsHeader}>
           <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
-          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Statistiques de Jeux</Text>
+          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.gameStats.title')}</Text>
         </View>
         <Text style={[styles.noGameStatsText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-          Aucune partie jouée pour le moment
+          {t('ourCouple.gameStats.noGamesPlayed')}
         </Text>
       </View>
     );
@@ -188,7 +188,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
       {hasBotGames && (
         <View style={styles.botGamesSection}>
           <Text style={[styles.botGamesTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
-            {userNames?.user2 || 'Vos'} jeux contre l'IA 🤖
+            {userNames?.user2 || 'Vos'} {t('ourCouple.gameStats.yourGamesVsAI')} 🤖
           </Text>
           <View style={styles.gameStatsGrid}>
             <View style={[styles.gameStatItem, { 
@@ -196,7 +196,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.total_games_played}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Parties jouées</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.gamesPlayed')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -204,7 +204,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.human_wins}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Vos victoires</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.yourWins')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -212,7 +212,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.bot_wins}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Victoires IA</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.aiWins')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -220,7 +220,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.pong_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Pong</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.pong')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -228,7 +228,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.chess_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Échecs</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.chess')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -236,7 +236,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.human_win_rate}%</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Votre taux de victoire</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.yourWinRate')}</Text>
             </View>
           </View>
         </View>
@@ -247,7 +247,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
       {true && (
         <View style={styles.botGamesSection}>
           <Text style={[styles.botGamesTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
-            {userNames?.user1 || 'Partenaire'} jeux contre l'IA 🤖
+            {userNames?.user1 || 'Partenaire'} {t('ourCouple.gameStats.partnerGamesVsAI')} 🤖
           </Text>
           <View style={styles.gameStatsGrid}>
             <View style={[styles.gameStatItem, { 
@@ -255,7 +255,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.total_games_played}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Parties jouées</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.gamesPlayed')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -263,7 +263,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.human_wins}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Ses victoires</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.hisWins')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -271,7 +271,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.bot_wins}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Victoires IA</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.aiWins')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -279,7 +279,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.pong_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Pong</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.pong')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -287,7 +287,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.chess_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Échecs</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.chess')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -295,7 +295,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.human_win_rate}%</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Son taux de victoire</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.hisWinRate')}</Text>
             </View>
           </View>
         </View>
@@ -306,7 +306,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
       {hasCoupleGames && (
         <View style={styles.coupleGamesSection}>
           <Text style={[styles.coupleGamesTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
-            Jeux en couple 💕
+            {t('ourCouple.gameStats.coupleGames')} 💕
           </Text>
           <View style={styles.gameStatsGrid}>
             <View style={[styles.gameStatItem, { 
@@ -314,7 +314,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.total_games_played}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Parties jouées</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.gamesPlayed')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -323,7 +323,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player1_wins}</Text>
               <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-                Victoires {userNames?.user1 || 'Joueur 1'}
+                {t('ourCouple.gameStats.victories')} {userNames?.user1 || 'Joueur 1'}
               </Text>
             </View>
             
@@ -333,7 +333,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player2_wins}</Text>
               <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-                Victoires {userNames?.user2 || 'Joueur 2'}
+                {t('ourCouple.gameStats.victories')} {userNames?.user2 || 'Joueur 2'}
               </Text>
             </View>
             
@@ -342,7 +342,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.pong_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Pong</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.pong')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -350,7 +350,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.chess_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Échecs</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.chess')}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -358,7 +358,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.draws}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Égalités</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.draws')}</Text>
             </View>
           </View>
         </View>
@@ -653,7 +653,7 @@ export default function NotreCouplePage() {
         .eq('id', coupleId);
       if (error) {
         console.error('Error updating status:', error);
-        Alert.alert(t('ourCouple.error'), 'Impossible de mettre à jour le statut');
+        Alert.alert(t('ourCouple.error'), t('ourCouple.unexpectedError'));
       }
     } catch (e) {
       console.error('Status update error:', e);
@@ -685,9 +685,9 @@ export default function NotreCouplePage() {
       }
 
       // Get status text
-      const statusText = coupleStatus === 'en_finance' ? 'En fiançailles' :
-                        coupleStatus === 'en_couple' ? 'En couple' :
-                        coupleStatus === 'marie' ? 'Marié(e)s' : 'En couple';
+      const statusText = coupleStatus === 'en_finance' ? t('ourCouple.status.engaged') :
+                        coupleStatus === 'en_couple' ? t('ourCouple.status.inRelationship') :
+                        coupleStatus === 'marie' ? t('ourCouple.status.married') : t('ourCouple.status.inRelationship');
 
       // Get compatibility score
       const compatibilityScore = coupleInsights?.overallCompatibility || 0;
@@ -699,30 +699,30 @@ export default function NotreCouplePage() {
       const partnerWins = partnerBotGameStats?.human_wins || 0;
 
       // Create share message
-      const shareMessage = `💕 Notre Statut de Couple sur ZOOJ 💕
+      const shareMessage = `💕 ${t('ourCouple.share.title')} 💕
 
-👫 ${userNames?.user1 || 'Nous'} & ${userNames?.user2 || 'Notre partenaire'}
+👫 ${userNames?.user1 || t('ourCouple.share.coupleNames')} & ${userNames?.user2 || t('ourCouple.share.partner')}
 
-📅 Statut: ${statusText}
-${durationText ? `⏰ Ensemble depuis: ${durationText}` : ''}
+📅 ${t('ourCouple.share.status')} ${statusText}
+${durationText ? `⏰ ${t('ourCouple.share.togetherSince')} ${durationText}` : ''}
 
-🎯 Compatibilité: ${compatibilityScore}%
-📊 Basé sur ${quizCount} quiz complété${quizCount > 1 ? 's' : ''}
+🎯 ${t('ourCouple.share.compatibility')} ${compatibilityScore}%
+📊 ${t('ourCouple.share.basedOn')} ${quizCount} ${quizCount > 1 ? t('ourCouple.share.quizzesCompleted') : t('ourCouple.share.quizCompleted')}
 
-🎮 Statistiques de Jeux:
-• ${totalGames} parties jouées contre l'IA
-• ${userNames?.user1 || 'Moi'}: ${userWins} victoires
-• ${userNames?.user2 || 'Mon partenaire'}: ${partnerWins} victoires
+🎮 ${t('ourCouple.share.gameStats')}
+• ${totalGames} ${t('ourCouple.share.gamesPlayedVsAI')}
+• ${userNames?.user1 || t('ourCouple.share.me')}: ${userWins} ${t('ourCouple.share.victories')}
+• ${userNames?.user2 || t('ourCouple.share.myPartner')}: ${partnerWins} ${t('ourCouple.share.victories')}
 
-💬 Questions répondues ensemble: ${answeredQuestionsCount}
+💬 ${t('ourCouple.share.questionsAnsweredTogether')} ${answeredQuestionsCount}
 
-Rejoignez-nous sur ZOOJ pour découvrir votre compatibilité ! 💕
+${t('ourCouple.share.joinUs')} 💕
 
-Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'}`;
+${t('ourCouple.share.downloadApp')} ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'}`;
 
       const result = await Share.share({
         message: shareMessage,
-        title: 'Notre Statut de Couple - ZOOJ',
+        title: t('ourCouple.share.title'),
         url: Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'
       });
 
@@ -733,7 +733,7 @@ Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj'
       }
     } catch (error) {
       console.log('Error sharing couple status:', error);
-      Alert.alert('Erreur', 'Impossible de partager le statut du couple');
+      Alert.alert(t('ourCouple.error'), t('ourCouple.unexpectedError'));
     }
   };
 
@@ -1133,13 +1133,13 @@ Téléchargez l'app: ${Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj'
 
             {/* Relationship Status */}
             <View style={styles.statusContainer}>
-              <Text style={[styles.statusLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>Statut</Text>
+              <Text style={[styles.statusLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.status.label')}</Text>
               <View style={styles.statusPillsRow}>
                 {(
                   [
-                    { key: 'en_finance', label: 'En fiançailles' },
-                    { key: 'en_couple', label: 'En couple' },
-                    { key: 'marie', label: 'Marié(e)s' },
+                    { key: 'en_finance', label: t('ourCouple.status.engaged') },
+                    { key: 'en_couple', label: t('ourCouple.status.inRelationship') },
+                    { key: 'marie', label: t('ourCouple.status.married') },
                   ] as const
                 ).map(option => (
                   <Pressable

@@ -1,12 +1,126 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
+// Helper function to get the correct category name based on language
+export const getCategoryName = (category: ServiceCategory, language: string): string => {
+  // Default to French if no language specified
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return category.name_en || category.name;
+    case 'ar':
+      return category.name_ar || category.name;
+    case 'ma':
+      return category.name_ma || category.name;
+    case 'fr':
+    default:
+      return category.name;
+  }
+};
+
+// Helper function to get the correct category description based on language
+export const getCategoryDescription = (category: ServiceCategory, language: string): string => {
+  // Default to French if no language specified
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return category.description_en || category.description || '';
+    case 'ar':
+      return category.description_ar || category.description || '';
+    case 'ma':
+      return category.description_ma || category.description || '';
+    case 'fr':
+    default:
+      return category.description || '';
+  }
+};
+
+// Helper function to get the correct subcategory name based on language
+export const getSubcategoryName = (subcategory: ServiceSubcategory, language: string): string => {
+  // Default to French if no language specified
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return subcategory.name_en || subcategory.name;
+    case 'ar':
+      return subcategory.name_ar || subcategory.name;
+    case 'ma':
+      return subcategory.name_ma || subcategory.name;
+    case 'fr':
+    default:
+      return subcategory.name;
+  }
+};
+
+// Helper function to get the correct subcategory description based on language
+export const getSubcategoryDescription = (subcategory: ServiceSubcategory, language: string): string => {
+  // Default to French if no language specified
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return subcategory.description_en || subcategory.description || '';
+    case 'ar':
+      return subcategory.description_ar || subcategory.description || '';
+    case 'ma':
+      return subcategory.description_ma || subcategory.description || '';
+    case 'fr':
+    default:
+      return subcategory.description || '';
+  }
+};
+
+// Helper function to get the correct provider name based on language
+export const getProviderName = (provider: ServiceProvider, language: string): string => {
+  // Default to French if no language specified
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return provider.name_en || provider.name;
+    case 'ar':
+      return provider.name_ar || provider.name;
+    case 'ma':
+      return provider.name_ma || provider.name;
+    case 'fr':
+    default:
+      return provider.name;
+  }
+};
+
+// Helper function to get the correct provider description based on language
+export const getProviderDescription = (provider: ServiceProvider, language: string): string => {
+  // Default to French if no language specified
+  if (!language) language = 'fr';
+  
+  switch (language) {
+    case 'en':
+      return provider.description_en || provider.description || '';
+    case 'ar':
+      return provider.description_ar || provider.description || '';
+    case 'ma':
+      return provider.description_ma || provider.description || '';
+    case 'fr':
+    default:
+      return provider.description || '';
+  }
+};
+
 export interface ServiceCategory {
   id: string;
   name: string;
   description?: string;
   icon?: string;
   created_at: string;
+  name_en?: string;
+  name_ar?: string;
+  name_ma?: string;
+  description_en?: string;
+  description_ar?: string;
+  description_ma?: string;
 }
 
 export interface ServiceSubcategory {
@@ -16,6 +130,12 @@ export interface ServiceSubcategory {
   description?: string;
   icon?: string;
   created_at: string;
+  name_en?: string;
+  name_ar?: string;
+  name_ma?: string;
+  description_en?: string;
+  description_ar?: string;
+  description_ma?: string;
 }
 
 export interface ServiceProvider {
@@ -33,6 +153,12 @@ export interface ServiceProvider {
   image_url?: string;
   website?: string;
   created_at: string;
+  name_en?: string;
+  name_ar?: string;
+  name_ma?: string;
+  description_en?: string;
+  description_ar?: string;
+  description_ma?: string;
 }
 
 export function useServiceCategories() {
@@ -120,7 +246,7 @@ export function useServiceSubcategories(categoryId?: string) {
     }
   };
 
-  return { subcategories, loading, error, refetch: fetchSubcategories };
+  return { subcategories, loading, error, refetch: fetchAllSubcategories };
 }
 
 export function useServiceProviders(subcategoryId?: string, city?: string) {

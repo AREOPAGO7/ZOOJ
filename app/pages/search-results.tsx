@@ -10,8 +10,9 @@ import {
     View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
-import { useSearchSubcategories } from '../../hooks/useServiceData';
+import { getCategoryName, getSubcategoryDescription, getSubcategoryName, useSearchSubcategories } from '../../hooks/useServiceData';
 import { useAuth } from '../../lib/auth';
 import AppLayout from '../app-layout';
 
@@ -21,15 +22,25 @@ interface SearchResultCardProps {
     name: string;
     description?: string;
     icon?: string;
+    name_en?: string;
+    name_ar?: string;
+    name_ma?: string;
+    description_en?: string;
+    description_ar?: string;
+    description_ma?: string;
     service_categories?: {
       name: string;
+      name_en?: string;
+      name_ar?: string;
+      name_ma?: string;
     };
   };
   onPress: () => void;
   isDarkMode?: boolean;
+  currentLanguage?: string;
 }
 
-function SearchResultCard({ subcategory, onPress, isDarkMode = false }: SearchResultCardProps) {
+function SearchResultCard({ subcategory, onPress, isDarkMode = false, currentLanguage = 'fr' }: SearchResultCardProps) {
   return (
     <Pressable
       className={`mb-4 p-4 rounded-2xl shadow-sm border ${
@@ -55,18 +66,18 @@ function SearchResultCard({ subcategory, onPress, isDarkMode = false }: SearchRe
         {/* Subcategory Info */}
         <View className="flex-1">
           <Text className={`text-base font-semibold mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            {subcategory.name}
+            {getSubcategoryName(subcategory, currentLanguage)}
           </Text>
           
           {subcategory.service_categories && (
             <Text className={`text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              {subcategory.service_categories.name}
+              {getCategoryName(subcategory.service_categories, currentLanguage)}
             </Text>
           )}
           
-          {subcategory.description && (
+          {getSubcategoryDescription(subcategory, currentLanguage) && (
             <Text className={`text-sm leading-tight ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              {subcategory.description}
+              {getSubcategoryDescription(subcategory, currentLanguage)}
             </Text>
           )}
         </View>
@@ -87,6 +98,7 @@ export default function SearchResultsPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { isDarkMode } = useDarkTheme();
+  const { t, language: currentLanguage } = useLanguage();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
@@ -129,7 +141,7 @@ export default function SearchResultsPage() {
         <View className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
           <ActivityIndicator size="large" color="#F47CC6" />
           <Text className={`mt-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-            Recherche en cours...
+            {t('searchResults.searching')}
           </Text>
         </View>
       </AppLayout>
@@ -150,7 +162,7 @@ export default function SearchResultsPage() {
               />
             </Pressable>
             <Text className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Recherche
+              {t('searchResults.title')}
             </Text>
             <View className="w-6" />
           </View>
@@ -162,7 +174,7 @@ export default function SearchResultsPage() {
                 ? 'bg-dark-bg border-dark-border text-white' 
                 : 'bg-white border-gray-200 text-gray-900'
             }`}
-            placeholder="Rechercher un service..."
+            placeholder={t('searchResults.searchPlaceholder')}
             placeholderTextColor={isDarkMode ? '#9CA3AF' : '#9CA3AF'}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -179,7 +191,7 @@ export default function SearchResultsPage() {
             onPress={() => setShowCitySelector(!showCitySelector)}
           >
             <Text className={selectedCity ? (isDarkMode ? "text-white" : "text-gray-900") : (isDarkMode ? "text-gray-300" : "text-gray-500")}>
-              {selectedCity || 'Sélectionnez votre ville'}
+              {selectedCity || t('searchResults.selectCity')}
             </Text>
             <MaterialCommunityIcons 
               name="chevron-down" 
@@ -227,6 +239,7 @@ export default function SearchResultsPage() {
                 subcategory={item} 
                 onPress={() => handleSubcategoryPress(item)}
                 isDarkMode={isDarkMode}
+                currentLanguage={currentLanguage}
               />
             )}
           />
@@ -238,16 +251,16 @@ export default function SearchResultsPage() {
               color={isDarkMode ? '#4B5563' : '#D1D5DB'} 
             />
             <Text className={`text-lg font-medium mt-4 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Aucun résultat trouvé
+              {t('searchResults.noResults')}
             </Text>
             <Text className={`text-sm text-center mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              {searchQuery ? `Aucune catégorie ne correspond à votre recherche "${searchQuery}".` : 'Commencez par taper votre recherche ci-dessus.'}
+              {searchQuery ? t('searchResults.noResultsDescription', { query: searchQuery }) : t('searchResults.startSearching')}
             </Text>
             <Pressable
               className="mt-4 px-6 py-2 rounded-lg bg-pink-500"
               onPress={() => router.push('/pages/bons-plans')}
             >
-              <Text className="text-white font-medium">Nouvelle recherche</Text>
+              <Text className="text-white font-medium">{t('searchResults.newSearch')}</Text>
             </Pressable>
           </View>
         )}

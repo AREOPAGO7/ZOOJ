@@ -17,6 +17,7 @@ import { moodService, UserMood } from '../../lib/moodService';
 import { pulseService } from '../../lib/pulseService';
 import { DailyQuestion, questionService } from '../../lib/questionService';
 import { supabase } from '../../lib/supabase';
+import { getQuestionContent, getQuizTitle } from '../../lib/translationHelpers';
 import AppLayout from '../app-layout';
 
 export default function AccueilPage() {
@@ -29,7 +30,7 @@ export default function AccueilPage() {
   // Calculate total unread count from all notification types
   const totalUnreadCount = unreadCount + chatUnreadCount + chatNotificationsTableUnreadCount + dailyQuestionUnreadCount + pulseUnreadCount;
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language: currentLanguage } = useLanguage();
   
   const [quizResultsCount, setQuizResultsCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function AccueilPage() {
 
   // Load quiz themes
   const loadQuizThemes = async () => {
+    console.log('🔄 Loading quiz themes...');
     setIsLoadingThemes(true);
     try {
       const { data, error } = await supabase
@@ -70,10 +72,17 @@ export default function AccueilPage() {
         .select('*')
         .order('name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.log('❌ Error loading quiz themes:', error);
+        throw error;
+      }
+      
+      console.log('✅ Quiz themes loaded:', data?.length || 0);
+      console.log('📋 Themes:', data?.map(t => t.name) || []);
       setQuizThemes(data || []);
     } catch (error) {
-      console.log('Error loading quiz themes:', error);
+      console.log('❌ Error loading quiz themes:', error);
+      setQuizThemes([]);
     } finally {
       setIsLoadingThemes(false);
     }
@@ -404,7 +413,7 @@ export default function AccueilPage() {
       if (!user) return;
       const code = joinCode.trim();
       if (!code) {
-        setJoinError('Code invalide');
+        setJoinError(t('home.coupleConnection.errors.invalidCode'));
         return;
       }
       setJoinError(null);
@@ -418,12 +427,12 @@ export default function AccueilPage() {
           .single();
 
         if (partnerErr || !partnerProfile?.id) {
-          setJoinError('Code introuvable');
+          setJoinError(t('home.coupleConnection.errors.codeNotFound'));
           return;
         }
 
         if (partnerProfile.id === user.id) {
-          setJoinError('Vous ne pouvez pas utiliser votre propre code');
+          setJoinError(t('home.coupleConnection.errors.cannotUseOwnCode'));
           return;
         }
 
@@ -434,7 +443,7 @@ export default function AccueilPage() {
           .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
           .maybeSingle();
         if (existingForMe?.id) {
-          setJoinError('Vous êtes déjà en couple');
+          setJoinError(t('home.coupleConnection.errors.alreadyInCouple'));
           return;
         }
 
@@ -444,7 +453,7 @@ export default function AccueilPage() {
           .or(`user1_id.eq.${partnerProfile.id},user2_id.eq.${partnerProfile.id}`)
           .maybeSingle();
         if (existingForPartner?.id) {
-          setJoinError('Ce code est déjà utilisé');
+          setJoinError(t('home.coupleConnection.errors.codeAlreadyUsed'));
           return;
         }
 
@@ -453,14 +462,14 @@ export default function AccueilPage() {
           .from('couples')
           .insert({ user1_id: partnerProfile.id, user2_id: user.id });
         if (insertErr) {
-          setJoinError('Impossible de créer le couple');
+          setJoinError(t('home.coupleConnection.errors.cannotCreateCouple'));
           return;
         }
 
         // Refresh local state
         setIsInCouple(true);
       } catch (e) {
-        setJoinError('Une erreur est survenue');
+        setJoinError(t('home.coupleConnection.errors.errorOccurred'));
       } finally {
         setIsJoining(false);
       }
@@ -470,21 +479,21 @@ export default function AccueilPage() {
       <AppLayout>
         <ScrollView className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} px-5`} showsVerticalScrollIndicator={false}>
           <View className="items-center mb-8">
-            <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-2`}>Connectez votre couple</Text>
-            <Text className={`text-base ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} text-center`}>Partagez votre code pour lier vos comptes</Text>
+            <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-2`}>{t('home.coupleConnection.title')}</Text>
+            <Text className={`text-base ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} text-center`}>{t('home.coupleConnection.subtitle')}</Text>
           </View>
 
           <View className={`${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-3xl p-6 items-center mb-6`}>
             <View className="w-20 h-20 bg-gradient-to-r from-pink-100 to-blue-100 dark:from-pink-900 dark:to-blue-900 rounded-full justify-center items-center mb-4">
               <Text className="text-4xl">💞</Text>
             </View>
-            <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>Votre code d'invitation</Text>
+            <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>{t('home.coupleConnection.invitationCode')}</Text>
             <View className="flex-row items-center mb-4">
               <View className={`${isDarkMode ? 'bg-dark-border' : 'bg-gray-50'} rounded-2xl px-4 py-3 mr-3`}>
                 <Text className={`text-lg font-mono ${isDarkMode ? 'text-dark-text' : 'text-text'} tracking-wider`}>{inviteCode ?? '—'}</Text>
               </View>
               <TouchableOpacity className="bg-pink-400 dark:bg-pink-600 rounded-xl px-4 py-2" onPress={handleCopy} disabled={!inviteCode}>
-                <Text className="text-white font-semibold">Copier</Text>
+                <Text className="text-white font-semibold">{t('home.coupleConnection.copy')}</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity 
@@ -493,11 +502,11 @@ export default function AccueilPage() {
                 if (!inviteCode) return;
                 
                 try {
-                  const shareMessage = `🔗 Code d'invitation ZOOJ\n\nMon code: ${inviteCode}\n\nRejoignez-moi sur ZOOJ pour partager nos moments précieux ! 💕\n\nTéléchargez l'app et utilisez ce code pour nous connecter.`
+                  const shareMessage = t('home.coupleConnection.shareMessage').replace('{code}', inviteCode);
                   
                   const result = await Share.share({
                     message: shareMessage,
-                    title: 'Code d\'invitation ZOOJ',
+                    title: t('home.coupleConnection.shareTitle'),
                     url: Platform.OS === 'ios' ? 'https://apps.apple.com/app/zooj' : 'https://play.google.com/store/apps/details?id=com.zooj.app'
                   })
                   
@@ -515,40 +524,40 @@ export default function AccueilPage() {
               }} 
               disabled={!inviteCode}
             >
-              <Text className="text-white font-semibold text-center">Partager le code</Text>
+              <Text className="text-white font-semibold text-center">{t('home.coupleConnection.shareCode')}</Text>
             </TouchableOpacity>
           </View>
 
           <View className="items-center mb-6">
             <TouchableOpacity onPress={() => setShowJoinSection(prev => !prev)}>
-              <Text className={`${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} underline font-semibold`}>{showJoinSection ? 'Masquer' : 'Déjà un code ?'}</Text>
+              <Text className={`${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} underline font-semibold`}>{showJoinSection ? t('home.coupleConnection.hide') : t('home.coupleConnection.alreadyHaveCode')}</Text>
             </TouchableOpacity>
           </View>
 
           {showJoinSection && (
             <View className={`${isDarkMode ? 'bg-dark-surface' : 'bg-surface'} rounded-2xl p-6 mb-6`}>
-              <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>Entrer un code reçu</Text>
+              <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4`}>{t('home.coupleConnection.enterReceivedCode')}</Text>
               <View className="flex-row items-center mb-4">
                 <TextInput
                   value={joinCode}
                   onChangeText={setJoinCode}
-                  placeholder="Code partenaire"
+                  placeholder={t('home.partnerCode')}
                   placeholderTextColor="#7A7A7A"
                   autoCapitalize="characters"
                   className={`flex-1 ${isDarkMode ? 'bg-dark-border text-dark-text' : 'bg-gray-50 text-text'} rounded-xl px-4 py-3`}
                 />
                 <TouchableOpacity className="ml-3 bg-pink-400 dark:bg-pink-600 rounded-xl px-4 py-3" onPress={handlePaste}>
-                  <Text className="text-white dark:text-white font-semibold">Coller</Text>
+                  <Text className="text-white dark:text-white font-semibold">{t('home.coupleConnection.paste')}</Text>
                 </TouchableOpacity>
               </View>
               {joinError ? <Text className="text-red-500 dark:text-red-400 mb-2">{joinError}</Text> : null}
               <TouchableOpacity className="bg-blue-400 dark:bg-blue-600 rounded-xl px-6 py-3" onPress={handleJoin} disabled={isJoining || !joinCode.trim()}>
-                <Text className="text-white font-semibold text-center">{isJoining ? 'Connexion…' : 'Rejoindre le couple'}</Text>
+                <Text className="text-white font-semibold text-center">{isJoining ? t('home.coupleConnection.connecting') : t('home.coupleConnection.joinCouple')}</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          <Text className={`${isDarkMode ? 'text-dark-text' : 'text-text'} text-center mb-6 text-lg font-semibold`}>Attendez votre partenaire pour rejoindre.</Text>
+          <Text className={`${isDarkMode ? 'text-dark-text' : 'text-text'} text-center mb-6 text-lg font-semibold`}>{t('home.coupleConnection.waitForPartner')}</Text>
         </ScrollView>
       </AppLayout>
     );
@@ -669,10 +678,12 @@ export default function AccueilPage() {
             {isLoadingThemes ? (
               <View className="flex-row items-center">
                 <ActivityIndicator size="small" color={isDarkMode ? '#CCCCCC' : '#7A7A7A'} />
-                <Text className={`ml-2 text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>Chargement...</Text>
+                <Text className={`ml-2 text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>{t('home.loadingThemes')}</Text>
               </View>
             ) : quizThemes.length > 0 ? (
-              quizThemes.map((theme, index) => {
+              (() => {
+                console.log('🎨 Rendering quiz themes:', quizThemes.length, 'themes');
+                return quizThemes.map((theme, index) => {
                 // Generate different colors for each theme
                 const colors = ['#4A90E2', '#50C878', '#228B22', '#FF6B6B', '#9B59B6', '#F39C12', '#E74C3C', '#3498DB', '#2ECC71', '#F1C40F', '#9B59B6', '#E67E22'];
                 const emojis = ['📚', '💪', '🌿', '❤️', '🎯', '🌟', '🎨', '🏠', '💼', '🎵', '🍕', '✈️'];
@@ -694,13 +705,21 @@ export default function AccueilPage() {
                       numberOfLines={2}
                       style={{ width: 80 }}
                     >
-                      {theme.name}
+                      {(() => {
+                        console.log('🏷️ Theme data:', theme);
+                        console.log('🌍 Current language:', currentLanguage);
+                        return getQuizTitle(theme, currentLanguage);
+                      })()}
                     </Text>
                   </Pressable>
                 );
-              })
+                });
+              })()
             ) : (
-              <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>Aucun thème disponible</Text>
+              (() => {
+                console.log('❌ No quiz themes to render');
+                return <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>{t('home.noThemesAvailable')}</Text>;
+              })()
             )}
           </ScrollView>
         </View>
@@ -717,7 +736,7 @@ export default function AccueilPage() {
             ) : todayQuestion?.question ? (
               <>
                 <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-4 text-center leading-6`}>
-                  "{todayQuestion.question.content}"
+                  "{getQuestionContent(todayQuestion.question, currentLanguage)}"
                 </Text>
                 <Text className={`text-xs ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} text-center mb-4`}>
                   {new Date(todayQuestion.scheduled_for).toLocaleDateString('fr-FR')}

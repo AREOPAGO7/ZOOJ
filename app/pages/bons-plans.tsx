@@ -2,18 +2,18 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
-import { useServiceCategories, useServiceSubcategories } from '../../hooks/useServiceData';
+import { getCategoryName, getSubcategoryDescription, getSubcategoryName, useServiceCategories, useServiceSubcategories } from '../../hooks/useServiceData';
 import { useAuth } from '../../lib/auth';
 import AppLayout from '../app-layout';
 
@@ -23,22 +23,38 @@ interface CategoryCardProps {
     name: string;
     description?: string;
     icon?: string;
+    created_at: string;
+    name_en?: string;
+    name_ar?: string;
+    name_ma?: string;
+    description_en?: string;
+    description_ar?: string;
+    description_ma?: string;
   };
   subcategories: Array<{
     id: string;
+    category_id: string;
     name: string;
     description?: string;
     icon?: string;
+    created_at: string;
+    name_en?: string;
+    name_ar?: string;
+    name_ma?: string;
+    description_en?: string;
+    description_ar?: string;
+    description_ma?: string;
   }>;
   onSubcategoryPress: (subcategory: any) => void;
   isDarkMode?: boolean;
+  currentLanguage?: string;
 }
 
-function CategoryCard({ category, subcategories, onSubcategoryPress, isDarkMode = false }: CategoryCardProps) {
+function CategoryCard({ category, subcategories, onSubcategoryPress, isDarkMode = false, currentLanguage = 'fr' }: CategoryCardProps) {
   return (
     <View className="mb-6">
       <Text className={`text-lg font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-        {category.name}
+        {getCategoryName(category, currentLanguage)}
       </Text>
       <View className="flex-row flex-wrap justify-between">
         {subcategories.map((subcategory, index) => (
@@ -60,11 +76,11 @@ function CategoryCard({ category, subcategories, onSubcategoryPress, isDarkMode 
           >
             <Text className="text-2xl mb-2">{subcategory.icon || '📋'}</Text>
             <Text className={`text-sm font-semibold mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              {subcategory.name}
+              {getSubcategoryName(subcategory, currentLanguage)}
             </Text>
-            {subcategory.description && (
+            {getSubcategoryDescription(subcategory, currentLanguage) && (
               <Text className={`text-xs leading-tight ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                {subcategory.description}
+                {getSubcategoryDescription(subcategory, currentLanguage)}
               </Text>
             )}
           </Pressable>
@@ -79,7 +95,7 @@ export default function BonsPlansPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language: currentLanguage } = useLanguage();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
@@ -128,7 +144,7 @@ export default function BonsPlansPage() {
       // Refresh both categories and subcategories data
       await Promise.all([
         refetchCategories(),
-        refetchSubcategories('') // Pass empty string to fetch all subcategories
+        refetchSubcategories() // Fetch all subcategories
       ]);
       console.log('✅ Bons plans data refreshed successfully');
     } catch (error) {
@@ -144,7 +160,8 @@ export default function BonsPlansPage() {
   const categoriesWithSubcategories = categories
     .filter(category => {
       if (!searchQuery.trim()) return true;
-      return category.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const categoryName = getCategoryName(category, currentLanguage);
+      return categoryName.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .map(category => ({
       ...category,
@@ -300,6 +317,7 @@ export default function BonsPlansPage() {
               subcategories={category.subcategories}
               onSubcategoryPress={handleSubcategoryPress}
               isDarkMode={isDarkMode}
+              currentLanguage={currentLanguage}
             />
           ))}
         </ScrollView>

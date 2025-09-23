@@ -12,8 +12,9 @@ import {
     View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
-import { useServiceProviders } from '../../hooks/useServiceData';
+import { getProviderName, getSubcategoryName, useServiceProviders, useServiceSubcategories } from '../../hooks/useServiceData';
 import { useAuth } from '../../lib/auth';
 import { makePhoneCall } from '../../lib/phoneUtils';
 import AppLayout from '../app-layout';
@@ -29,14 +30,21 @@ interface ServiceProviderCardProps {
     price_range?: string;
     image_url?: string;
     website?: string;
+    name_en?: string;
+    name_ar?: string;
+    name_ma?: string;
+    description_en?: string;
+    description_ar?: string;
+    description_ma?: string;
   };
   onCall: (phone: string, serviceProviderId: string) => void;
   onPress: () => void;
   isCalling?: boolean;
+  currentLanguage?: string;
 }
 
 
-function ServiceProviderCard({ provider, onCall, onPress, isCalling = false }: ServiceProviderCardProps) {
+function ServiceProviderCard({ provider, onCall, onPress, isCalling = false, currentLanguage = 'fr' }: ServiceProviderCardProps) {
   const { isDarkMode } = useDarkTheme();
   
   return (
@@ -65,7 +73,7 @@ function ServiceProviderCard({ provider, onCall, onPress, isCalling = false }: S
       
       {/* Provider Name Only */}
       <Text className={`text-sm font-medium text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-        {provider.name}
+        {getProviderName(provider, currentLanguage)}
       </Text>
     </Pressable>
   );
@@ -77,6 +85,7 @@ export default function ServiceProvidersPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { isDarkMode } = useDarkTheme();
+  const { t, language: currentLanguage } = useLanguage();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [callingProviderId, setCallingProviderId] = useState<string | null>(null);
@@ -89,6 +98,10 @@ export default function ServiceProvidersPage() {
   }>();
   
   const { providers, loading: providersLoading } = useServiceProviders(subcategoryId, city);
+  const { subcategories } = useServiceSubcategories();
+  
+  // Find the current subcategory to get its translated name
+  const currentSubcategory = subcategories.find(sub => sub.id === subcategoryId);
   
   // Debug logging
   console.log('Service Providers Debug:', {
@@ -128,10 +141,11 @@ export default function ServiceProvidersPage() {
   );
   
   // Filter providers based on search query
-  const filteredProviders = providers.filter(provider => 
-    provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    provider.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProviders = providers.filter(provider => {
+    const providerName = getProviderName(provider, currentLanguage);
+    return providerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           provider.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   // Don't render if not authenticated or profile not completed
   if (loading || profileLoading || !user || !isProfileComplete) {
@@ -180,7 +194,7 @@ export default function ServiceProvidersPage() {
         <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
           <ActivityIndicator size="large" color="#F47CC6" />
           <Text className={`mt-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-            Chargement...
+            {t('serviceProviders.loading')}
           </Text>
         </View>
       </AppLayout>
@@ -201,7 +215,7 @@ export default function ServiceProvidersPage() {
               />
             </Pressable>
             <Text className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              {subcategoryName || 'Services'}
+              {currentSubcategory ? getSubcategoryName(currentSubcategory, currentLanguage) : (subcategoryName || t('serviceProviders.title'))}
             </Text>
             <View className="w-6" />
           </View>
@@ -213,7 +227,7 @@ export default function ServiceProvidersPage() {
                 ? 'bg-dark-bg border-dark-border text-white' 
                 : 'bg-white border-gray-200 text-gray-900'
             }`}
-            placeholder="Rechercher dans cette catégorie..."
+            placeholder={t('serviceProviders.search.placeholder')}
             placeholderTextColor={isDarkMode ? '#9CA3AF' : '#9CA3AF'}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -222,8 +236,8 @@ export default function ServiceProvidersPage() {
           
           <Text className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {city && city !== 'Sélectionnez votre ville' 
-              ? `Services disponibles à ${city}` 
-              : 'Services disponibles dans toutes les villes'
+              ? t('serviceProviders.availableInCity', { city }) 
+              : t('serviceProviders.availableAllCities')
             }
           </Text>
         </View>
@@ -243,6 +257,7 @@ export default function ServiceProvidersPage() {
                 onCall={handleCall}
                 onPress={() => handleServicePress(item)}
                 isCalling={callingProviderId === item.id}
+                currentLanguage={currentLanguage}
               />
             )}
           />
@@ -254,14 +269,14 @@ export default function ServiceProvidersPage() {
               color={isDarkMode ? '#4B5563' : '#D1D5DB'} 
             />
             <Text className={`text-lg font-medium mt-4 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              {searchQuery ? 'Aucun service trouvé' : 'Aucun service disponible'}
+              {searchQuery ? t('serviceProviders.noResults') : t('serviceProviders.noServices')}
             </Text>
             <Text className={`text-sm text-center mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
               {searchQuery 
-                ? `Aucun prestataire ne correspond à "${searchQuery}" dans cette catégorie.`
+                ? t('serviceProviders.noResultsDescription', { query: searchQuery })
                 : city && city !== 'Sélectionnez votre ville'
-                  ? `Aucun prestataire n'est disponible pour cette catégorie à ${city}.`
-                  : 'Aucun prestataire n\'est disponible pour cette catégorie.'
+                  ? t('serviceProviders.noServicesInCity', { city })
+                  : t('serviceProviders.noServicesInCategory')
               }
             </Text>
           </View>
