@@ -39,7 +39,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
   userId,
   coupleId,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { isDarkMode } = useDarkTheme();
 
   // Form state
@@ -278,7 +278,8 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
           formTitle.trim(),
           data.id,
           coupleId,
-          userId
+          userId,
+          language
         );
       } catch (notificationError) {
         console.error('Error creating calendar item notification:', notificationError);

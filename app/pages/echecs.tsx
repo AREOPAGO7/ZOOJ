@@ -322,7 +322,7 @@ export default function EchecsPage() {
     return {
       board: createInitialBoard(),
       currentPlayer: 'white',
-      gameStatus: 'Votre tour',
+      gameStatus: t('chess.yourTurn'),
       gamePhase: 'playing',
       gameStartTime: Date.now(),
       movesCount: 0,
@@ -511,9 +511,9 @@ export default function EchecsPage() {
       
       if (gameEnd.checkmate) {
         newGameState.winner = gameState.currentPlayer; // Previous player wins
-        newGameState.gameStatus = `${gameState.currentPlayer === 'white' ? 'Blancs' : 'Noirs'} gagnent par échec et mat!`;
+        newGameState.gameStatus = gameState.currentPlayer === 'white' ? t('chess.whiteWins') : t('chess.blackWins');
       } else {
-        newGameState.gameStatus = 'Match nul par pat!';
+        newGameState.gameStatus = t('chess.stalemate');
       }
       
       // Save stats when game ends
@@ -523,7 +523,7 @@ export default function EchecsPage() {
         }
       });
     } else {
-      newGameState.gameStatus = newGameState.currentPlayer === 'white' ? 'Votre tour' : 'Tour du Bot';
+      newGameState.gameStatus = newGameState.currentPlayer === 'white' ? t('chess.yourTurn') : t('chess.botTurn');
     }
 
     setGameState(newGameState);
@@ -558,7 +558,7 @@ export default function EchecsPage() {
     return (
       <AppLayout>
         <View className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
-          <Text className={`text-lg ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>Chargement...</Text>
+          <Text className={`text-lg ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>{t('chess.loading')}</Text>
         </View>
       </AppLayout>
     );
@@ -571,7 +571,7 @@ export default function EchecsPage() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
-          <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Échecs</Text>
+          <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('chess.title')}</Text>
           <TouchableOpacity onPress={resetGame} style={styles.resetButton}>
             <MaterialCommunityIcons name="refresh" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
@@ -588,7 +588,7 @@ export default function EchecsPage() {
             {botGameStats && (
               <View style={styles.statsContainer}>
                 <Text className={`text-sm font-medium text-center mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Statistiques
+                  {t('chess.statistics')}
                 </Text>
                 <View style={styles.statsRow}>
                   <View style={styles.statItem}>
@@ -596,7 +596,7 @@ export default function EchecsPage() {
                       {botGameStats.human_wins || 0}
                     </Text>
                     <Text className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                      Vous
+                      {t('chess.you')}
                     </Text>
                   </View>
                   <Text className={`text-lg font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`}>-</Text>
@@ -605,7 +605,7 @@ export default function EchecsPage() {
                       {botGameStats.bot_wins || 0}
                     </Text>
                     <Text className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                      Bot
+                      {t('chess.bot')}
                     </Text>
                   </View>
                 </View>
@@ -615,11 +615,11 @@ export default function EchecsPage() {
             <View style={styles.playerInfo}>
               <View style={styles.playerIndicator}>
                 <Text style={[styles.playerPiece, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>♔</Text>
-                <Text className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>Vous</Text>
+                <Text className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>{t('chess.you')}</Text>
               </View>
               <View style={styles.playerIndicator}>
                 <Text style={[styles.playerPiece, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>♚</Text>
-                <Text className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>Bot</Text>
+                <Text className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>{t('chess.bot')}</Text>
               </View>
             </View>
           </View>
@@ -677,7 +677,7 @@ export default function EchecsPage() {
             {gameState.gamePhase === 'gameOver' && (
               <TouchableOpacity style={styles.newGameButton} onPress={resetGame}>
                 <MaterialCommunityIcons name="refresh" size={24} color="#FFFFFF" />
-                <Text style={styles.newGameButtonText}>Nouvelle Partie</Text>
+                <Text style={styles.newGameButtonText}>{t('chess.newGame')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -687,8 +687,8 @@ export default function EchecsPage() {
           <View style={styles.instructions}>
             <Text className={`text-sm text-center italic ${isDarkMode ? 'text-white' : 'text-textSecondary'}`}>
               {gameState.gamePhase === 'playing' 
-                ? 'Touchez une pièce pour voir les mouvements possibles' 
-                : "Partie terminée"
+                ? t('chess.instructions')
+                : t('chess.gameOver')
               }
             </Text>
           </View>

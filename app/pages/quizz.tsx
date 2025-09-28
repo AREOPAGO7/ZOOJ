@@ -568,9 +568,9 @@ export default function QuizzPage() {
         setAnswers([]);
         
         if (partnerAnswersData && partnerAnswersData.length > 0) {
-          // Both partners have answered - show results directly
+          // Both partners have answered - load existing results or calculate new ones
           setIsTakingQuiz(false);
-          await calculateAndStoreResults();
+          await loadExistingQuizResults(quiz.id);
         } else {
           // Only user has answered - show unified view
           setIsTakingQuiz(true);
@@ -664,7 +664,7 @@ export default function QuizzPage() {
       if (partnerAnswers && partnerAnswers.length > 0) {
         // Both partners have answered, calculate results
         setPartnerAnswers(partnerAnswers);
-        await calculateAndStoreResults();
+        await loadExistingQuizResults(selectedQuiz.id);
       } else {
         // Only user has answered, show read-only view
         setPartnerAnswers([]);
@@ -677,6 +677,54 @@ export default function QuizzPage() {
       Alert.alert(t('common.error'), t('quiz.errorSubmittingQuiz'));
     } finally {
       setIsSubmittingQuiz(false);
+    }
+  };
+
+  const loadExistingQuizResults = async (quizId: string) => {
+    if (!coupleId) return;
+    
+    try {
+      // Try to load existing results from database
+      const { data: existingResults, error } = await supabase
+        .from('quiz_results')
+        .select('*')
+        .eq('quiz_id', quizId)
+        .eq('couple_id', coupleId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading existing quiz results:', error);
+        // Fallback to calculating new results
+        await calculateAndStoreResults();
+        return;
+      }
+      
+      if (existingResults) {
+        console.log('Loading existing quiz results:', existingResults);
+        
+        // Check if the results have the new format (with question objects) or old format (with translated text)
+        const hasNewFormat = existingResults.strengths && existingResults.strengths.length > 0 && 
+                            existingResults.strengths[0].question && 
+                            typeof existingResults.strengths[0].question === 'object';
+        
+        if (hasNewFormat) {
+          // Results are in new format, use them directly
+          console.log('Using existing results in new format');
+          setQuizResult(existingResults);
+        } else {
+          // Results are in old format, recalculate them
+          console.log('Existing results in old format, recalculating...');
+          await calculateAndStoreResults();
+        }
+      } else {
+        // No existing results, calculate new ones
+        console.log('No existing results found, calculating new ones...');
+        await calculateAndStoreResults();
+      }
+    } catch (error) {
+      console.error('Error in loadExistingQuizResults:', error);
+      // Fallback to calculating new results
+      await calculateAndStoreResults();
     }
   };
 
@@ -760,14 +808,16 @@ export default function QuizzPage() {
         if (question) {
           if (difference <= 1) {
             strengths.push({
-              question: getQuizQuestionContent(question, currentLanguage),
+              question_id: question.id,
+              question: question, // Store the full question object for translation
               user_answer: userAnswer.answer_value,
               partner_answer: partnerAnswer.answer_value,
               difference
             });
           } else {
             weaknesses.push({
-              question: getQuizQuestionContent(question, currentLanguage),
+              question_id: question.id,
+              question: question, // Store the full question object for translation
               user_answer: userAnswer.answer_value,
               partner_answer: partnerAnswer.answer_value,
               difference
@@ -847,7 +897,7 @@ export default function QuizzPage() {
       if (partnerAnswersData && partnerAnswersData.length > 0) {
         // Partner has answered, calculate results
         setPartnerAnswers(partnerAnswersData);
-        await calculateAndStoreResults();
+        await loadExistingQuizResults(selectedQuiz.id);
       } else {
         // Partner still hasn't answered, show message
         Alert.alert(
@@ -895,7 +945,7 @@ export default function QuizzPage() {
       // If partner has now answered, calculate results
       if (partnerAnswersData && partnerAnswersData.length > 0 && hasAnsweredQuiz) {
         setIsTakingQuiz(false);
-        await calculateAndStoreResults();
+        await loadExistingQuizResults(selectedQuiz.id);
       }
     } catch (error) {
       console.error('Error refreshing partner answers:', error);
@@ -1237,7 +1287,7 @@ export default function QuizzPage() {
                         <View style={styles.strengthBadge}>
                           <Text style={styles.strengthBadgeText}>{t('quiz.strengthBadge')}</Text>
                         </View>
-                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizQuestionContent(strength, currentLanguage)}</Text>
+                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizQuestionContent(strength.question, currentLanguage)}</Text>
                         <View style={styles.partnerResponses}>
                           <View style={styles.partnerResponse}>
                             <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>
@@ -1290,7 +1340,7 @@ export default function QuizzPage() {
                         <View style={styles.weaknessBadge}>
                           <Text style={styles.weaknessBadgeText}>{t('quiz.weaknessBadge')}</Text>
                         </View>
-                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizQuestionContent(weakness, currentLanguage)}</Text>
+                        <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizQuestionContent(weakness.question, currentLanguage)}</Text>
                         <View style={styles.partnerResponses}>
                           <View style={styles.partnerResponse}>
                             <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{userNames?.user1 || t('quiz.user1')}</Text>
@@ -1350,7 +1400,7 @@ export default function QuizzPage() {
                   
                   return (
                     <View key={question.id} style={[styles.questionItem, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA', borderColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
-                      <Text style={[styles.questionNumber, { color: isDarkMode ? '#2DB6FF' : BRAND_BLUE }]}>Question {index + 1}</Text>
+                      <Text style={[styles.questionNumber, { color: isDarkMode ? '#2DB6FF' : BRAND_BLUE }]}>{t('quiz.question')} {index + 1}</Text>
                       <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : '#2D2D2D' }]}>{getQuizQuestionContent(question, currentLanguage)}</Text>
                       
                       {/* Show Previous Answer (Read-only) */}
@@ -1413,7 +1463,7 @@ export default function QuizzPage() {
                     
                     return (
                       <View key={question.id} style={[styles.questionItem, { backgroundColor: isDarkMode ? '#1A1A1A' : colors.surface, borderColor: isDarkMode ? '#333333' : colors.border }]}>
-                        <Text style={[styles.questionNumber, { color: isDarkMode ? '#2DB6FF' : colors.textSecondary }]}>Question {index + 1}</Text>
+                        <Text style={[styles.questionNumber, { color: isDarkMode ? '#2DB6FF' : colors.textSecondary }]}>{t('quiz.question')} {index + 1}</Text>
                         <Text style={[styles.questionText, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizQuestionContent(question, currentLanguage)}</Text>
                         
                         {/* Answer Options with Progressive Heart Visibility */}
@@ -1577,7 +1627,7 @@ export default function QuizzPage() {
                       <View style={styles.strengthBadge}>
                         <Text style={styles.strengthBadgeText}>{t('quiz.strengthBadge')}</Text>
                       </View>
-                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizQuestionContent(strength, currentLanguage)}</Text>
+                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizQuestionContent(strength.question, currentLanguage)}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
                           <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
@@ -1621,7 +1671,7 @@ export default function QuizzPage() {
                       <View style={styles.weaknessBadge}>
                         <Text style={styles.weaknessBadgeText}>{t('quiz.weaknessBadge')}</Text>
                       </View>
-                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizQuestionContent(weakness, currentLanguage)}</Text>
+                      <Text style={[styles.resultQuestion, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{getQuizQuestionContent(weakness.question, currentLanguage)}</Text>
                       <View style={styles.partnerResponses}>
                         <View style={styles.partnerResponse}>
                           <Text style={[styles.partnerName, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>{userNames?.user1 || t('quiz.user1')}</Text>
@@ -1779,7 +1829,7 @@ export default function QuizzPage() {
                 borderColor: isDarkMode ? '#555555' : '#E0E0E0',
                 color: isDarkMode ? '#FFFFFF' : '#2D2D2D'
               }]}
-              placeholder="Rechercher un quiz..."
+              placeholder={t('chess.searchPlaceholder')}
               placeholderTextColor={isDarkMode ? '#CCCCCC' : '#7A7A7A'}
               value={searchQuery}
               onChangeText={handleSearch}
@@ -1944,7 +1994,7 @@ export default function QuizzPage() {
                 color={isDarkMode ? '#CCCCCC' : colors.textSecondary}
               />
               <Text style={[styles.noQuizzesText, { color: isDarkMode ? '#CCCCCC' : colors.textSecondary }]}>
-                {searchQuery.trim() !== '' ? `Aucun quiz trouvé pour "${searchQuery}"` : t('quiz.noQuizzes')}
+                {searchQuery.trim() !== '' ? `${t('chess.noResultsFound')} "${searchQuery}"` : t('quiz.noQuizzes')}
               </Text>
             </View>
           )}

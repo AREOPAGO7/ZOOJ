@@ -9,7 +9,7 @@ export type Language = 'fr' | 'en' | 'ar' | 'ma';
 interface LanguageContextType {
   language: Language;
   setLanguage: (language: Language) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string>) => string;
   isLoading: boolean;
 }
 
@@ -63,8 +63,8 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   }, []);
 
   // Translation function - memoized to ensure re-renders when language changes
-  const t = useCallback((key: string): string => {
-    console.log(`🌍 Translation called for key: "${key}" with language: "${language}"`);
+  const t = useCallback((key: string, params?: Record<string, string>): string => {
+    console.log(`🌍 Translation called for key: "${key}" with language: "${language}"`, params);
     const keys = key.split('.');
     let value: any = translations[language];
     
@@ -77,7 +77,15 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       }
     }
     
-    const result = typeof value === 'string' ? value : key;
+    let result = typeof value === 'string' ? value : key;
+    
+    // Handle placeholder substitution
+    if (params && typeof result === 'string') {
+      Object.entries(params).forEach(([placeholder, replacement]) => {
+        result = result.replace(new RegExp(`\\{${placeholder}\\}`, 'g'), replacement);
+      });
+    }
+    
     console.log(`✅ Translation result: "${result}"`);
     return result;
   }, [language]);

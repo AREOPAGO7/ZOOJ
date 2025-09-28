@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "ZOOJ",
-    "owner": "zooj",
-    "slug": "ZOOJ",
+    "owner": "zooj_app",
+    "slug": "zoojapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
@@ -44,7 +44,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "56dae0b6-1ca7-4b8c-80f2-3712cef05abe"
+        "projectId": "2e9efeed-3005-4add-917b-25994f3a5fee"
       }
     }
   }

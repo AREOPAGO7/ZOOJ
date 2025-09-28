@@ -9,11 +9,11 @@ import { useRouter } from 'expo-router'
 import { useEffect, useState } from "react"
 import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, SafeAreaView, ScrollView, Share, Text, TextInput, View } from "react-native"
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from "react-native-gesture-handler"
-import { useLanguage } from "../../contexts/LanguageContext"
-import { useTheme } from "../../contexts/ThemeContext"
-import { useAuth } from "../../lib/auth"
-import indexTranslations from "../../lib/indexTranslations.json"
-import { supabase } from "../../lib/supabase"
+import { useLanguage } from "../contexts/LanguageContext"
+import { useTheme } from "../contexts/ThemeContext"
+import { useAuth } from "../lib/auth"
+import indexTranslations from "../lib/indexTranslations.json"
+import { supabase } from "../lib/supabase"
 
 const BRAND_BLUE = "#2DB6FF"
 const BRAND_PINK = "#F47CC6"
@@ -100,6 +100,14 @@ export default function App() {
     "France", "Belgique", "Suisse", "Canada", "Maroc", "Algérie", "Tunisie", 
     "Côte d'Ivoire", "Sénégal", "Cameroun"
   ]
+
+  // Get translated country names
+  const getTranslatedCountries = () => {
+    return countries.map(country => ({
+      key: country,
+      name: t(`profile.countries.${country}`)
+    }))
+  }
 
   const genders = ["male", "female", "other"]
   
@@ -979,7 +987,12 @@ export default function App() {
       
       if (error) {
         console.log("Password update error:", error)
-        setNewPasswordError(error.message || t('newPassword.passwordUpdateError'))
+        // Check for specific Supabase error messages and translate them
+        if (error.message && error.message.includes("should be different from the old password")) {
+          setNewPasswordError(t('passwordReset.errors.passwordSameAsOld'))
+        } else {
+          setNewPasswordError(error.message || t('newPassword.passwordUpdateError'))
+        }
         return
       }
       
@@ -1053,24 +1066,24 @@ export default function App() {
                     <View style={{ gap: 12, marginBottom: 8, marginTop: 16 }}>
                 <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
-            placeholder={t('auth.email')}
+            placeholder={getTranslation('auth.email', language)}
             value={email}
             onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    style={{ paddingHorizontal: 14, height: 50, color: colors.text, fontSize: 16 }}
+                    style={{ paddingHorizontal: 14, height: 50, color: colors.text, fontSize: 16, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }}
                     placeholderTextColor={colors.textSecondary}
           />
                 </View>
                 <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
-                    placeholder={t('auth.password')}
+                    placeholder={getTranslation('auth.password', language)}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
-                    style={{ paddingHorizontal: 14, height: 50, color: colors.text, fontSize: 16 }}
+                    secureTextEntry
+                    style={{ paddingHorizontal: 14, height: 50, color: colors.text, fontSize: 16, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }}
                     placeholderTextColor={colors.textSecondary}
-                  />
+          />
                 </View>
               </View>
 
@@ -1109,32 +1122,32 @@ export default function App() {
                     <View style={{ gap: 12, marginBottom: 8, marginTop: 16 }}>
                       <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                         <TextInput
-                          placeholder={t('auth.email')}
+                          placeholder={getTranslation('auth.email', language)}
                           value={email}
                           onChangeText={setEmail}
                           keyboardType="email-address"
                           autoCapitalize="none"
-                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16 }}
+                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }}
                           placeholderTextColor="#9A9A9A"
                         />
                       </View>
                       <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                         <TextInput
-                          placeholder={t('auth.password')}
+                          placeholder={getTranslation('auth.password', language)}
                           value={password}
                           onChangeText={setPassword}
                           secureTextEntry
-                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16 }}
+                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }}
                           placeholderTextColor="#9A9A9A"
                         />
                       </View>
                       <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                         <TextInput
-                          placeholder={t('signup.confirmPassword')}
+                          placeholder={getTranslation('signup.confirmPassword', language)}
                           value={confirmPassword}
                           onChangeText={setConfirmPassword}
                           secureTextEntry
-                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16 }}
+                          style={{ paddingHorizontal: 14, height: 50, fontSize: 16, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }}
                           placeholderTextColor="#9A9A9A"
                         />
                       </View>
@@ -1287,10 +1300,10 @@ export default function App() {
                   <View style={{ gap: 12 }}>
                     <View style={{ backgroundColor: colors.surface, borderColor: nameError ? "#FF5A5F" : colors.border, borderWidth: 1, borderRadius: 12 }}>
                       <TextInput
-                            placeholder={t('profile.fullName')}
+                            placeholder={getTranslation('profile.fullName', language)}
                             value={name}
                             onChangeText={(text) => { setName(text); setNameError("") }}
-                        style={{ paddingHorizontal: 14, height: 50, color: colors.text }}
+                        style={{ paddingHorizontal: 14, height: 50, color: colors.text, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }}
                         placeholderTextColor={colors.textSecondary}
                       />
                     </View>
@@ -1308,7 +1321,7 @@ export default function App() {
                         justifyContent: "center"
                       }}
                     >
-                      <Text style={{ color: birthDate ? colors.text : colors.textSecondary }}>
+                      <Text style={{ color: birthDate ? colors.text : colors.textSecondary, textAlign: "right" }}>
                         {birthDate ? new Date(birthDate).getFullYear().toString() : t('profile.birthDate')}
                       </Text>
                     </Pressable>
@@ -1325,7 +1338,7 @@ export default function App() {
                             justifyContent: "center",
                           }}
                         >
-                          <Text style={{ color: gender ? colors.text : colors.textSecondary }}>
+                          <Text style={{ color: gender ? colors.text : colors.textSecondary, textAlign: "right" }}>
                             {gender === "male" ? t('profile.male') : gender === "female" ? t('profile.female') : gender === "other" ? t('profile.other') : t('profile.gender')}
                           </Text>
                         </Pressable>
@@ -1344,7 +1357,9 @@ export default function App() {
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ color: selectedCountry ? colors.text : colors.textSecondary }}>{selectedCountry ?? t('profile.country')}</Text>
+                        <Text style={{ color: selectedCountry ? colors.text : colors.textSecondary, textAlign: "right" }}>
+                          {selectedCountry ? t(`profile.countries.${selectedCountry}`) : t('profile.country')}
+                        </Text>
                       </Pressable>
                     {countryError ? <Text style={{ color: "#FF5A5F", fontSize: 12, marginTop: 4, marginLeft: 4 }}>{countryError}</Text> : null}
                   </View>
@@ -1478,7 +1493,7 @@ export default function App() {
                           {/* App Logo */}
                           <View style={{ alignItems: "center", marginBottom: 40 }}>
                             <Image 
-                              source={require('../../assets/images/big-logo.png')} 
+                              source={require('../assets/images/big-logo.png')} 
                               style={{ width: 300, height: 300, resizeMode: 'contain',marginBottom: -70, marginTop: -70 }}
                             />
                           </View>
@@ -1595,7 +1610,7 @@ export default function App() {
                           {/* App Logo */}
                           <View style={{ alignItems: "center", marginBottom: 40 }}>
                             <Image 
-                              source={require('../../assets/images/big-logo.png')} 
+                              source={require('../assets/images/big-logo.png')} 
                               style={{ width: 300, height: 300, resizeMode: 'contain', marginTop: -100,marginBottom: -50 }}
                             />
                           </View>
@@ -1608,10 +1623,10 @@ export default function App() {
 
                             <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                               <TextInput 
-                                placeholder={t('inviteCodes.myPartner')} 
+                                placeholder={getTranslation('inviteCodes.myPartner', language)} 
                                 value={inviteCode} 
                                 onChangeText={(t) => { setInviteCode(t); setRedeemError(""); setRedeemSuccess("") }} 
-                                style={{ paddingHorizontal: 14, height: 50 }} 
+                                style={{ paddingHorizontal: 14, height: 50, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }} 
                                 placeholderTextColor="#9A9A9A" 
                               />
                             </View>
@@ -1698,22 +1713,22 @@ export default function App() {
                   <View style={{ gap: 16, width: "100%" }}>
                     <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                       <TextInput
-                        placeholder={t('auth.password')}
+                        placeholder={getTranslation('auth.password', language)}
                         value={newPassword}
                         onChangeText={(text) => { setNewPassword(text); setNewPasswordError("") }}
                         secureTextEntry
-                        style={{ paddingHorizontal: 14, height: 50 }}
+                        style={{ paddingHorizontal: 14, height: 50, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }}
                         placeholderTextColor="#9A9A9A"
                       />
                     </View>
 
                     <View style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5", borderWidth: 1, borderRadius: 12 }}>
                       <TextInput
-                        placeholder={t('auth.password')}
+                        placeholder={getTranslation('auth.password', language)}
                         value={confirmNewPassword}
                         onChangeText={(text) => { setConfirmNewPassword(text); setNewPasswordError("") }}
                         secureTextEntry
-                        style={{ paddingHorizontal: 14, height: 50 }}
+                        style={{ paddingHorizontal: 14, height: 50, textAlign: (language === 'ar' || language === 'ma') ? "right" : "left" }}
                         placeholderTextColor="#9A9A9A"
                       />
                     </View>
@@ -1873,11 +1888,11 @@ export default function App() {
             </View>
             
             <ScrollView style={{ maxHeight: 300 }}>
-              {countries.map((c) => (
+              {getTranslatedCountries().map((country) => (
                 <Pressable
-                  key={c}
+                  key={country.key}
                   onPress={() => {
-                    setSelectedCountry(c)
+                    setSelectedCountry(country.key)
                     setIsCountryOpen(false)
                     setCountryError("")
                   }}
@@ -1886,15 +1901,15 @@ export default function App() {
                     paddingHorizontal: 20,
                     borderBottomWidth: 1,
                     borderBottomColor: '#F0F0F0',
-                    backgroundColor: selectedCountry === c ? '#F8F9FA' : 'transparent'
+                    backgroundColor: selectedCountry === country.key ? '#F8F9FA' : 'transparent'
                   }}
                 >
                   <Text style={{
-                    color: selectedCountry === c ? '#2DB6FF' : '#2D2D2D',
+                    color: selectedCountry === country.key ? '#2DB6FF' : '#2D2D2D',
                     fontSize: 16,
-                    fontWeight: selectedCountry === c ? '600' : '400'
+                    fontWeight: selectedCountry === country.key ? '600' : '400'
                   }}>
-                    {c}
+                    {country.name}
                   </Text>
                 </Pressable>
               ))}

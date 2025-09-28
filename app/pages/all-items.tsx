@@ -14,6 +14,7 @@ import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import translations from '../../lib/translations.json';
 import AppLayout from '../app-layout';
 
 interface CalendarEvent {
@@ -65,7 +66,7 @@ interface ListItem {
 export default function AllItemsPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { isDarkMode } = useDarkTheme();
   
   const [items, setItems] = useState<ListItem[]>([]);
@@ -225,8 +226,8 @@ export default function AllItemsPage() {
     } else if (date.toDateString() === yesterday.toDateString()) {
       return t('calendar.yesterday');
     } else {
-      const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-      return `${date.getDate()} ${months[date.getMonth()]}`;
+      const monthsShort = translations[language]?.notifications?.time?.monthsShort || [];
+      return `${date.getDate()} ${monthsShort[date.getMonth()] || ''}`;
     }
   };
 
@@ -338,32 +339,48 @@ export default function AllItemsPage() {
     </Pressable>
   );
 
-  const renderFilterButton = (filter: 'all' | 'events' | 'souvenirs' | 'todos', labelKey: string, icon: string) => (
-    <Pressable
-      style={[
-        styles.filterButton, 
-        { 
-          backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA',
-          borderColor: isDarkMode ? '#333333' : '#E0E0E0'
-        },
-        activeFilter === filter && styles.filterButtonActive
-      ]}
-      onPress={() => setActiveFilter(filter)}
-    >
-      <MaterialCommunityIcons 
-        name={icon as any} 
-        size={20} 
-        color={activeFilter === filter ? 'white' : (isDarkMode ? '#CCCCCC' : '#666')} 
-      />
-      <Text style={[
-        styles.filterButtonText, 
-        { color: isDarkMode ? '#CCCCCC' : '#666' },
-        activeFilter === filter && styles.filterButtonTextActive
-      ]}>
-        {t(labelKey)}
-      </Text>
-    </Pressable>
-  );
+  const renderFilterButton = (filter: 'all' | 'events' | 'souvenirs' | 'todos', labelKey: string, icon: string) => {
+    const isActive = activeFilter === filter;
+    
+    return (
+      <Pressable
+        style={[
+          styles.filterButton,
+          {
+            backgroundColor: isActive 
+              ? '#007AFF' 
+              : (isDarkMode ? '#2A2A2A' : '#F5F5F5'),
+            borderColor: isActive 
+              ? '#007AFF' 
+              : (isDarkMode ? '#404040' : '#E0E0E0'),
+          }
+        ]}
+        onPress={() => setActiveFilter(filter)}
+      >
+        <MaterialCommunityIcons 
+          name={icon as any} 
+          size={16} 
+          color={isActive 
+            ? '#FFFFFF' 
+            : (isDarkMode ? '#CCCCCC' : '#666666')
+          } 
+        />
+        <Text 
+          style={[
+            styles.filterButtonText,
+            {
+              color: isActive 
+                ? '#FFFFFF' 
+                : (isDarkMode ? '#CCCCCC' : '#666666')
+            }
+          ]}
+          numberOfLines={1}
+        >
+          {t(labelKey)}
+        </Text>
+      </Pressable>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -390,17 +407,19 @@ export default function AllItemsPage() {
         </View>
 
         {/* Filter Buttons */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScrollView}
-          contentContainerStyle={styles.filterContainer}
-        >
-          {renderFilterButton('all', 'calendar.all', 'view-list')}
-          {renderFilterButton('events', 'calendar.events', 'calendar-event')}
-          {renderFilterButton('souvenirs', 'calendar.souvenirs', 'camera')}
-          {renderFilterButton('todos', 'calendar.todos', 'checkbox-marked-outline')}
-        </ScrollView>
+        <View style={styles.filterSection}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScrollView}
+            contentContainerStyle={styles.filterContainer}
+          >
+            {renderFilterButton('all', 'calendar.all', 'view-list')}
+            {renderFilterButton('events', 'calendar.events', 'calendar-event')}
+            {renderFilterButton('souvenirs', 'calendar.souvenirs', 'camera')}
+            {renderFilterButton('todos', 'calendar.todos', 'checkbox-marked-outline')}
+          </ScrollView>
+        </View>
 
         {/* Items List */}
         {filteredItems.length > 0 ? (
@@ -456,37 +475,45 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
   },
+  filterSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'transparent',
+  },
   filterScrollView: {
     maxHeight: 60,
   },
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     gap: 12,
     alignItems: 'center',
+    paddingVertical: 4,
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 8,
-    minWidth: 100,
     justifyContent: 'center',
-  },
-  filterButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    gap: 6,
+    minWidth: 100,
+    height: 44,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   filterButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-  },
-  filterButtonTextActive: {
-    color: 'white',
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
   },
   listContainer: {
     paddingHorizontal: 20,
@@ -513,6 +540,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+   
   },
   itemContent: {
     flex: 1,

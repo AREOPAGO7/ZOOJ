@@ -105,7 +105,7 @@ export default function QuestionsPage() {
           )
         `)
         .is('couple_id', null)
-        .order('scheduled_for', { ascending: false }); // Most recent first
+        .order('created_at', { ascending: false }); // Most recent first
       
       // Get ALL couple-specific questions (not just today's) for chat access and history
       const { data: coupleQuestionsData } = await supabase
@@ -122,7 +122,7 @@ export default function QuestionsPage() {
           )
         `)
         .eq('couple_id', coupleData.id)
-        .order('scheduled_for', { ascending: false }); // Most recent first
+        .order('created_at', { ascending: false }); // Most recent first
       
       console.log('All global questions:', globalQuestionsData);
       console.log('All couple questions:', coupleQuestionsData);
@@ -170,9 +170,8 @@ export default function QuestionsPage() {
         return {
           id: dailyQuestion.question.id,
           content: getQuestionContent(dailyQuestion.question, currentLanguage),
-          created_at: dailyQuestion.question.created_at,
+          created_at: dailyQuestion.created_at,
           daily_question_id: dailyQuestion.id,
-          scheduled_for: dailyQuestion.scheduled_for,
           userAnswered,
           partnerAnswered,
           bothAnswered,
@@ -206,9 +205,8 @@ export default function QuestionsPage() {
         return {
           id: dailyQuestion.question.id,
           content: getQuestionContent(dailyQuestion.question, currentLanguage),
-          created_at: dailyQuestion.question.created_at,
+          created_at: dailyQuestion.created_at,
           daily_question_id: dailyQuestion.id,
-          scheduled_for: dailyQuestion.scheduled_for,
           userAnswered,
           partnerAnswered,
           bothAnswered,
@@ -333,15 +331,13 @@ export default function QuestionsPage() {
     } else if (date.toDateString() === yesterday.toDateString()) {
       return t('questions.yesterday');
     } else if (diffDays < 7) {
-      return `${diffDays} ${t('questions.daysAgo')}`;
-    } else if (diffDays < 14) {
-      return t('questions.weekAgo');
+      return `${diffDays} ${diffDays === 1 ? t('questions.dayAgo') : t('questions.daysAgo')}`;
     } else if (diffDays < 30) {
       const weeks = Math.floor(diffDays / 7);
-      return `${weeks} ${t('questions.weeksAgo')}`;
+      return `${weeks} ${weeks === 1 ? t('questions.weekAgo') : t('questions.weeksAgo')}`;
     } else if (diffDays < 365) {
       const months = Math.floor(diffDays / 30);
-      return `${months} ${t('questions.monthAgo')}`;
+      return `${months} ${months === 1 ? t('questions.monthAgo') : t('questions.monthsAgo')}`;
     } else {
       const years = Math.floor(diffDays / 365);
       return years > 1 ? `${years} ${t('questions.yearsAgo')}` : `${years} ${t('questions.yearAgo')}`;
@@ -413,8 +409,7 @@ export default function QuestionsPage() {
           .from('daily_questions')
           .insert({
             couple_id: coupleData.id,
-            question_id: question.id,
-            scheduled_for: today
+            question_id: question.id
           })
           .select()
           .single();
@@ -694,7 +689,7 @@ export default function QuestionsPage() {
                 borderColor: isDarkMode ? '#333333' : '#E5E7EB', 
                 color: isDarkMode ? '#FFFFFF' : '#2D2D2D' 
               }]}
-              placeholder={t('search')}
+              placeholder={t('questions.search')}
               placeholderTextColor={isDarkMode ? '#CCCCCC' : '#9CA3AF'}
               value={searchQuery}
               onChangeText={handleSearch}

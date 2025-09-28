@@ -144,7 +144,7 @@ export default function AccueilPage() {
             question:questions(*)
           `)
           .eq('couple_id', couple.id)
-          .order('scheduled_for', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1);
         
         if (recentError) {
@@ -286,7 +286,7 @@ export default function AccueilPage() {
     
     setIsLoadingMoods(true);
     try {
-      const { data, error } = await moodService.getCoupleMoods(user.id);
+      const { data, error } = await moodService.getCoupleMoods(user.id, t);
       if (error) {
         console.log('Error fetching couple moods:', error);
         return;
@@ -626,11 +626,11 @@ export default function AccueilPage() {
             <View className="flex-row items-center">
               <View className="flex-row items-center flex-1">
                 <Text className="text-3xl mr-4">
-                  {currentUserMood ? moodService.getMoodInfo(currentUserMood).emoji : '😐'}
+                  {currentUserMood ? moodService.getMoodInfo(currentUserMood, t).emoji : '😐'}
                 </Text>
                 <View className="flex-1">
                   <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'} mb-1`}>
-                    {currentUserMood ? moodService.getMoodInfo(currentUserMood).label + '!' : t('home.setYourMood')}
+                    {currentUserMood ? moodService.getMoodInfo(currentUserMood, t).label + '!' : t('home.setYourMood')}
                   </Text>
                   <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
                     {currentUserMood === 'joyeux' ? t('home.moodDescriptions.joyeux') : 
@@ -739,7 +739,7 @@ export default function AccueilPage() {
                   "{getQuestionContent(todayQuestion.question, currentLanguage)}"
                 </Text>
                 <Text className={`text-xs ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'} text-center mb-4`}>
-                  {new Date(todayQuestion.scheduled_for).toLocaleDateString('fr-FR')}
+                  {new Date(todayQuestion.created_at).toLocaleDateString('fr-FR')}
                 </Text>
                 <Pressable 
                   className="bg-primary rounded-xl py-3"

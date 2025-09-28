@@ -31,6 +31,7 @@ function AppContent() {
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="pages" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />

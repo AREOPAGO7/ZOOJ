@@ -80,6 +80,16 @@
         "neutre": "Vous êtes calme",
         "triste": "Vous avez besoin de réconfort",
         "enerve": "Vous êtes tendu"
+      },
+      "moodSelector": {
+        "title": "Comment vous sentez-vous ?",
+        "moods": {
+          "joyeux": "Joyeux",
+          "content": "Content",
+          "neutre": "Neutre",
+          "triste": "Triste",
+          "enerve": "Énervé"
+        }
       }
     },
     "calendar": {
@@ -120,7 +130,7 @@
       "gallery": "Gallery",
       "addImage": "Ajouter une image pour ce souvenir",
       "addNote": "Ajouter une note (facultatif)",
-      "reminderDescription": "Vous recevrez des notifications la veille de cet événement",
+      "reminderDescription": "Rappel (vous recevez une notification la veille de l'événement)",
       "noReminderDescription": "Aucune notification ne sera envoyée pour cet événement",
       "selectDate": "Sélectionner une date",
       "selectTime": "Sélectionner une heure",
@@ -262,7 +272,30 @@
       "hide": "Masquer",
       "paste": "Coller",
       "copy": "Copier",
-      "errorOccurred": "Une erreur est survenue"
+      "errorOccurred": "Une erreur est survenue",
+      "noDescription": "Aucune description",
+      "noPlace": "Aucun lieu spécifié"
+    },
+    "chess": {
+      "title": "Échecs",
+      "loading": "Chargement...",
+      "yourTurn": "Votre tour",
+      "botTurn": "Tour du Bot",
+      "youWin": "Vous avez gagné !",
+      "botWins": "Le Bot a gagné !",
+      "whiteWins": "Blancs gagnent par échec et mat !",
+      "blackWins": "Noirs gagnent par échec et mat !",
+      "stalemate": "Match nul par pat !",
+      "newGame": "Nouvelle Partie",
+      "instructions": "Touchez une pièce pour voir les mouvements possibles",
+      "gameOver": "Partie terminée",
+      "statistics": "Statistiques",
+      "you": "Vous",
+      "bot": "Bot",
+      "back": "Retour",
+      "searchPlaceholder": "Rechercher un quiz...",
+      "noResultsFound": "Aucun quiz trouvé pour",
+      "question": "Question"
     },
     "questions": {
       "title": "Questions & Réponses",
@@ -280,10 +313,12 @@
       "send": "Envoyer",
       "today": "Aujourd'hui",
       "yesterday": "Hier",
+      "dayAgo": "jour",
       "daysAgo": "jours",
       "weekAgo": "Il y a 1 semaine",
       "weeksAgo": "semaines",
       "monthAgo": "mois",
+      "monthsAgo": "mois",
       "yearAgo": "an",
       "yearsAgo": "ans",
       "coupleNotFound": "Erreur: Couple non trouvé",
@@ -294,7 +329,49 @@
       "errorSubmittingAnswer": "Erreur lors de la soumission de la réponse",
       "questionNotFound": "Question non trouvée pour ce couple",
       "waitForPartner": "Attendez que votre partenaire réponde aussi à cette question",
-      "errorCheckingAnswers": "Erreur lors de la vérification des réponses"
+      "errorCheckingAnswers": "Erreur lors de la vérification des réponses",
+      "privacyNotice": "Vos réponses sont privées et visibles uniquement par vous et votre partenaire",
+      "messagePlaceholder": "Tapez votre message...",
+      "with anass kalkhi": "avec Anass Kalkhi",
+      "with": "avec",
+      "search": "Rechercher des questions..."
+    },
+    "passwordReset": {
+      "title": "Réinitialisation du mot de passe",
+      "forgotPassword": "Mot de passe oublié ?",
+      "emailInstruction": "Entrez votre adresse email pour recevoir un code de réinitialisation",
+      "emailPlaceholder": "Votre adresse email",
+      "sendCode": "Envoyer le code",
+      "backToLogin": "Retour à la connexion",
+      "verificationCode": "Code de vérification",
+      "codeInstruction": "Entrez le code à 6 chiffres envoyé à votre email",
+      "codePlaceholder": "Code de vérification",
+      "verifyCode": "Vérifier le code",
+      "back": "Retour",
+      "newPassword": "Nouveau mot de passe",
+      "newPasswordInstruction": "Choisissez un nouveau mot de passe sécurisé",
+      "newPasswordPlaceholder": "Nouveau mot de passe",
+      "confirmPasswordPlaceholder": "Confirmer le mot de passe",
+      "confirm": "Confirmer",
+      "emailSent": "Email envoyé",
+      "emailSentMessage": "Un code de réinitialisation a été envoyé à votre email",
+      "success": "Succès",
+      "passwordUpdated": "Votre mot de passe a été mis à jour avec succès",
+      "errors": {
+        "emailRequired": "L'adresse email est requise",
+        "sendFailed": "Échec de l'envoi du code",
+        "unexpectedError": "Une erreur inattendue s'est produite",
+        "codeRequired": "Le code de vérification est requis",
+        "codeInvalid": "Code de vérification invalide",
+        "passwordRequired": "Le mot de passe est requis",
+        "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
+        "passwordsMismatch": "Les mots de passe ne correspondent pas",
+        "codeExpired": "Le code de vérification a expiré",
+        "sessionInvalid": "Session invalide",
+        "updateFailed": "Échec de la mise à jour du mot de passe",
+        "invalidLink": "Lien de réinitialisation invalide",
+        "passwordSameAsOld": "Le nouveau mot de passe doit être différent de l'ancien"
+      }
     },
     "questionChat": {
       "title": "Question du jour",
@@ -348,6 +425,7 @@
       "weaknessBadge": "À améliorer",
       "quizResults": "Résultats du quiz",
       "quizResultsDescription": "Cette page montre dans quelle mesure le sujet \"{title}\" te convient dans ta relation actuellement.",
+      "question": "Question",
       "invitePartner": "Inviter votre partenaire",
       "inviteDescription": "Votre partenaire n'a pas encore répondu à ce quiz. Envoyez-lui une invitation pour qu'il puisse participer !",
       "sendingInvite": "Envoi de l'invitation...",
@@ -517,13 +595,26 @@
       "cannotSelectImage": "Impossible de sélectionner l'image",
       "permissionDenied": "Permission refusée",
       "cameraPermissionRequired": "Permission d'accès à la caméra requise",
+      "galleryPermissionRequired": "Permission d'accès à la galerie requise",
       "cannotTakePhoto": "Impossible de prendre la photo",
       "cannotUpdateProfilePicture": "Impossible de mettre à jour la photo de profil",
       "profilePictureUpdated": "Photo de profil mise à jour",
       "cannotUploadImage": "Impossible de télécharger l'image de profil",
       "cannotDeletePhoto": "Impossible de supprimer la photo",
       "photoDeleted": "Photo supprimée",
-      "deletionError": "Erreur lors de la suppression"
+      "deletionError": "Erreur lors de la suppression",
+      "countries": {
+        "France": "France",
+        "Belgique": "Belgique",
+        "Suisse": "Suisse",
+        "Canada": "Canada",
+        "Maroc": "Maroc",
+        "Algérie": "Algérie",
+        "Tunisie": "Tunisie",
+        "Côte d'Ivoire": "Côte d'Ivoire",
+        "Sénégal": "Sénégal",
+        "Cameroun": "Cameroun"
+      }
     },
     "themes": {
       "title": "Thème",
@@ -597,14 +688,43 @@
         "newChatMessage": "Nouveau message dans le chat",
         "pulseReceived": "Vous avez reçu un pulse",
         "quizInviteReceived": "vous invite à participer au quiz",
+        "quizInviteMessage": "{senderName} vous invite à participer au quiz \"{quizName}\"",
+        "quizInviteSimple": "Votre partenaire vous a invité à un quiz. Cliquez pour voir",
         "eventUpcoming": "dans",
         "eventAt": "à",
-        "from": "De:"
+        "from": "De:",
+        "someone": "Quelqu'un",
+        "newEvent": "Nouvel événement",
+        "newSouvenir": "Nouveau souvenir",
+        "newTodo": "Nouvelle tâche",
+        "partnerCreatedEvent": "Votre partenaire a créé un nouvel événement: \"{itemTitle}\"",
+        "partnerAddedSouvenir": "Votre partenaire a ajouté un nouveau souvenir: \"{itemTitle}\"",
+        "partnerCreatedTodo": "Votre partenaire a créé une nouvelle tâche: \"{itemTitle}\"",
+        "eventReminderTomorrow": "Rappel d'événement demain",
+        "partnerHasEventTomorrow": "{partnerName} a un événement demain{timeInfo}: {eventTitle}",
+        "yourPartner": "Votre partenaire",
+        "pulseMessages": {
+          "flower": "vous envoie une fleur",
+          "love": "vous envoie de l'amour",
+          "happy": "est heureux(se)",
+          "naughty": "est coquin(e)",
+          "wind": "vous envoie un vent",
+          "heart": "vous envoie son cœur",
+          "passion": "vous envoie sa passion",
+          "kiss": "vous envoie un bisou",
+          "hug": "vous fait un câlin",
+          "hearts": "vous envoie des cœurs",
+          "default": "vous envoie un pulse"
+        },
+        "pulseFooter": "Appuyez pour marquer comme lu"
       },
       "time": {
         "now": "À l'instant",
         "minutesAgo": "Il y a {count} min",
         "hoursAgo": "Il y a {count}h",
+        "days": ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],
+        "months": ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
+        "monthsShort": ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"],
         "daysAgo": "Il y a {count}j"
       }
     },
@@ -670,6 +790,20 @@
         "chooseFromGallery": "Choisir depuis la galerie",
         "removeImage": "Supprimer l'image",
         "chooseImage": "Choisir une image"
+      },
+      "messages": {
+        "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer \"{title}\" ?\n\nCette action est irréversible et supprimera définitivement cet {type} de votre calendrier.",
+        "eventDeleted": "L'événement \"{title}\" a été supprimé avec succès.",
+        "souvenirDeleted": "Le souvenir \"{title}\" a été supprimé avec succès.",
+        "eventUpdated": "L'événement \"{title}\" a été mis à jour avec succès.",
+        "souvenirUpdated": "Le souvenir \"{title}\" a été mis à jour avec succès.",
+        "itemConverted": "L'élément \"{title}\" a été converti de {fromType} en {toType}.",
+        "ok": "OK",
+        "deleted": "Supprimé",
+        "success": "Succès",
+        "invalidItemType": "Type d'élément invalide",
+        "coupleIdMissing": "Impossible de supprimer - ID du couple manquant",
+        "deleteError": "Impossible de supprimer l'élément"
       }
     },
     "bonsPlans": {
@@ -683,7 +817,15 @@
       },
       "city": {
         "select": "Sélectionnez votre ville",
-        "selecting": "Sélection de la ville"
+        "selecting": "Sélection de la ville",
+        "cities": {
+          "Casablanca": "Casablanca",
+          "Rabat": "Rabat",
+          "Marrakech": "Marrakech",
+          "Fès": "Fès",
+          "Agadir": "Agadir",
+          "Tanger": "Tanger"
+        }
       },
       "categories": {
         "title": "Catégories",
@@ -898,6 +1040,16 @@
         "neutre": "You are calm",
         "triste": "You need comfort",
         "enerve": "You are tense"
+      },
+      "moodSelector": {
+        "title": "How do you feel?",
+        "moods": {
+          "joyeux": "Joyful",
+          "content": "Content",
+          "neutre": "Neutral",
+          "triste": "Sad",
+          "enerve": "Annoyed"
+        }
       }
     },
     "calendar": {
@@ -938,7 +1090,7 @@
       "gallery": "Gallery",
       "addImage": "Add an image for this memory",
       "addNote": "Add a note (optional)",
-      "reminderDescription": "You will receive notifications the day before this event",
+      "reminderDescription": "Reminder (you receive a notification the day before the event)",
       "noReminderDescription": "No notifications will be sent for this event",
       "selectDate": "Select a date",
       "selectTime": "Select a time",
@@ -1080,7 +1232,30 @@
       "hide": "Hide",
       "paste": "Paste",
       "copy": "Copy",
-      "errorOccurred": "An error occurred"
+      "errorOccurred": "An error occurred",
+      "noDescription": "No description",
+      "noPlace": "No location specified"
+    },
+    "chess": {
+      "title": "Chess",
+      "loading": "Loading...",
+      "yourTurn": "Your turn",
+      "botTurn": "Bot's turn",
+      "youWin": "You won!",
+      "botWins": "Bot won!",
+      "whiteWins": "White wins by checkmate!",
+      "blackWins": "Black wins by checkmate!",
+      "stalemate": "Draw by stalemate!",
+      "newGame": "New Game",
+      "instructions": "Touch a piece to see possible moves",
+      "gameOver": "Game Over",
+      "statistics": "Statistics",
+      "you": "You",
+      "bot": "Bot",
+      "back": "Back",
+      "searchPlaceholder": "Search for a quiz...",
+      "noResultsFound": "No quiz found for",
+      "question": "Question"
     },
     "questions": {
       "title": "Questions & Answers",
@@ -1098,10 +1273,12 @@
       "send": "Send",
       "today": "Today",
       "yesterday": "Yesterday",
+      "dayAgo": "day ago",
       "daysAgo": "days ago",
       "weekAgo": "1 week ago",
       "weeksAgo": "weeks ago",
-      "monthAgo": "months ago",
+      "monthAgo": "month ago",
+      "monthsAgo": "months ago",
       "yearAgo": "year ago",
       "yearsAgo": "years ago",
       "coupleNotFound": "Error: Couple not found",
@@ -1112,7 +1289,49 @@
       "errorSubmittingAnswer": "Error submitting answer",
       "questionNotFound": "Question not found for this couple",
       "waitForPartner": "Wait for your partner to also answer this question",
-      "errorCheckingAnswers": "Error checking answers"
+      "errorCheckingAnswers": "Error checking answers",
+      "privacyNotice": "Your answers are private and only visible to you and your partner",
+      "messagePlaceholder": "Type your message...",
+      "with anass kalkhi": "with Anass Kalkhi",
+      "with": "with",
+      "search": "Search questions..."
+    },
+    "passwordReset": {
+      "title": "Password Reset",
+      "forgotPassword": "Forgot Password?",
+      "emailInstruction": "Enter your email address to receive a reset code",
+      "emailPlaceholder": "Your email address",
+      "sendCode": "Send Code",
+      "backToLogin": "Back to Login",
+      "verificationCode": "Verification Code",
+      "codeInstruction": "Enter the 6-digit code sent to your email",
+      "codePlaceholder": "Verification code",
+      "verifyCode": "Verify Code",
+      "back": "Back",
+      "newPassword": "New Password",
+      "newPasswordInstruction": "Choose a secure new password",
+      "newPasswordPlaceholder": "New password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "confirm": "Confirm",
+      "emailSent": "Email Sent",
+      "emailSentMessage": "A reset code has been sent to your email",
+      "success": "Success",
+      "passwordUpdated": "Your password has been updated successfully",
+      "errors": {
+        "emailRequired": "Email address is required",
+        "sendFailed": "Failed to send code",
+        "unexpectedError": "An unexpected error occurred",
+        "codeRequired": "Verification code is required",
+        "codeInvalid": "Invalid verification code",
+        "passwordRequired": "Password is required",
+        "passwordTooShort": "Password must be at least 6 characters",
+        "passwordsMismatch": "Passwords do not match",
+        "codeExpired": "Verification code has expired",
+        "sessionInvalid": "Invalid session",
+        "updateFailed": "Failed to update password",
+        "invalidLink": "Invalid reset link",
+        "passwordSameAsOld": "New password should be different from the old password"
+      }
     },
     "questionChat": {
       "title": "Question of the day",
@@ -1166,6 +1385,7 @@
       "weaknessBadge": "Needs improvement",
       "quizResults": "Quiz results",
       "quizResultsDescription": "This page shows how well the topic \"{title}\" suits you in your current relationship.",
+      "question": "Question",
       "invitePartner": "Invite your partner",
       "inviteDescription": "Your partner hasn't answered this quiz yet. Send them an invitation so they can participate!",
       "sendingInvite": "Sending invitation...",
@@ -1335,13 +1555,26 @@
       "cannotSelectImage": "Unable to select image",
       "permissionDenied": "Permission denied",
       "cameraPermissionRequired": "Camera access permission required",
+      "galleryPermissionRequired": "Gallery access permission required",
       "cannotTakePhoto": "Unable to take photo",
       "cannotUpdateProfilePicture": "Unable to update profile picture",
       "profilePictureUpdated": "Profile picture updated",
       "cannotUploadImage": "Unable to upload profile image",
       "cannotDeletePhoto": "Unable to delete photo",
       "photoDeleted": "Photo deleted",
-      "deletionError": "Error during deletion"
+      "deletionError": "Error during deletion",
+      "countries": {
+        "France": "France",
+        "Belgique": "Belgium",
+        "Suisse": "Switzerland",
+        "Canada": "Canada",
+        "Maroc": "Morocco",
+        "Algérie": "Algeria",
+        "Tunisie": "Tunisia",
+        "Côte d'Ivoire": "Ivory Coast",
+        "Sénégal": "Senegal",
+        "Cameroun": "Cameroon"
+      }
     },
     "themes": {
       "title": "Theme",
@@ -1415,14 +1648,43 @@
         "newChatMessage": "New message in chat",
         "pulseReceived": "You have received a pulse",
         "quizInviteReceived": "invites you to participate in the quiz",
+        "quizInviteMessage": "{senderName} invites you to participate in the quiz \"{quizName}\"",
+        "quizInviteSimple": "Your partner invited you to a quiz. Click to see",
         "eventUpcoming": "in",
         "eventAt": "at",
-        "from": "From:"
+        "from": "From:",
+        "someone": "Someone",
+        "newEvent": "New event",
+        "newSouvenir": "New souvenir",
+        "newTodo": "New task",
+        "partnerCreatedEvent": "Your partner created a new event: \"{itemTitle}\"",
+        "partnerAddedSouvenir": "Your partner added a new souvenir: \"{itemTitle}\"",
+        "partnerCreatedTodo": "Your partner created a new task: \"{itemTitle}\"",
+        "eventReminderTomorrow": "Event reminder tomorrow",
+        "partnerHasEventTomorrow": "{partnerName} has an event tomorrow{timeInfo}: {eventTitle}",
+        "yourPartner": "Your partner",
+        "pulseMessages": {
+          "flower": "sends you a flower",
+          "love": "sends you love",
+          "happy": "is happy",
+          "naughty": "is naughty",
+          "wind": "sends you wind",
+          "heart": "sends you their heart",
+          "passion": "sends you passion",
+          "kiss": "sends you a kiss",
+          "hug": "gives you a hug",
+          "hearts": "sends you hearts",
+          "default": "sends you a pulse"
+        },
+        "pulseFooter": "Tap to mark as read"
       },
       "time": {
         "now": "Just now",
         "minutesAgo": "{count} min ago",
         "hoursAgo": "{count}h ago",
+        "days": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+        "monthsShort": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
         "daysAgo": "{count}d ago"
       }
     },
@@ -1488,6 +1750,20 @@
         "chooseFromGallery": "Choose from gallery",
         "removeImage": "Remove image",
         "chooseImage": "Choose an image"
+      },
+      "messages": {
+        "deleteConfirmation": "Are you sure you want to delete \"{title}\"?\n\nThis action is irreversible and will permanently delete this {type} from your calendar.",
+        "eventDeleted": "The event \"{title}\" has been deleted successfully.",
+        "souvenirDeleted": "The memory \"{title}\" has been deleted successfully.",
+        "eventUpdated": "The event \"{title}\" has been updated successfully.",
+        "souvenirUpdated": "The memory \"{title}\" has been updated successfully.",
+        "itemConverted": "The item \"{title}\" has been converted from {fromType} to {toType}.",
+        "ok": "OK",
+        "deleted": "Deleted",
+        "success": "Success",
+        "invalidItemType": "Invalid item type",
+        "coupleIdMissing": "Unable to delete - Couple ID missing",
+        "deleteError": "Unable to delete the item"
       }
     },
     "bonsPlans": {
@@ -1501,7 +1777,15 @@
       },
       "city": {
         "select": "Select your city",
-        "selecting": "City selection"
+        "selecting": "City selection",
+        "cities": {
+          "Casablanca": "Casablanca",
+          "Rabat": "Rabat",
+          "Marrakech": "Marrakech",
+          "Fès": "Fez",
+          "Agadir": "Agadir",
+          "Tanger": "Tangier"
+        }
       },
       "categories": {
         "title": "Categories",
@@ -1716,6 +2000,16 @@
         "neutre": "أنت مسترخي",
         "triste": "تحتاج للراحة",
         "enerve": "أنت متوتر"
+      },
+      "moodSelector": {
+        "title": "كيف تشعر؟",
+        "moods": {
+          "joyeux": "فرحان",
+          "content": "راضي",
+          "neutre": "عادي",
+          "triste": "حزين",
+          "enerve": "زعلان"
+        }
       }
     },
     "calendar": {
@@ -1743,7 +2037,7 @@
       "description": "الوصف",
       "priority": "الأولوية",
       "status": "الحالة",
-      "photos": "الصور",
+      "photos": "الصورة",
       "enableReminders": "تفعيل التذكيرات",
       "save": "حفظ",
       "urgent": "عاجل",
@@ -1756,7 +2050,7 @@
       "gallery": "المعرض",
       "addImage": "إضافة صورة لهذه الذكرى",
       "addNote": "إضافة ملاحظة (اختياري)",
-      "reminderDescription": "ستتلقى إشعارات قبل يوم من هذا الحدث",
+      "reminderDescription": "تذكير (ستتلقى إشعاراً قبل يوم من الحدث)",
       "noReminderDescription": "لن يتم إرسال إشعارات لهذا الحدث",
       "selectDate": "اختر تاريخاً",
       "selectTime": "اختر وقتاً",
@@ -1898,7 +2192,30 @@
       "hide": "إخفاء",
       "paste": "لصق",
       "copy": "نسخ",
-      "errorOccurred": "حدث خطأ"
+      "errorOccurred": "حدث خطأ",
+      "noDescription": "لا يوجد وصف",
+      "noPlace": "لم يتم تحديد مكان"
+    },
+    "chess": {
+      "title": "الشطرنج",
+      "loading": "جاري التحميل...",
+      "yourTurn": "دورك",
+      "botTurn": "دور البوت",
+      "youWin": "لقد فزت!",
+      "botWins": "البوت فاز!",
+      "whiteWins": "الأبيض يفوز بكش ملك!",
+      "blackWins": "الأسود يفوز بكش ملك!",
+      "stalemate": "تعادل بالجمود!",
+      "newGame": "لعبة جديدة",
+      "instructions": "المس قطعة لرؤية الحركات الممكنة",
+      "gameOver": "انتهت اللعبة",
+      "statistics": "الإحصائيات",
+      "you": "أنت",
+      "bot": "البوت",
+      "back": "رجوع",
+      "searchPlaceholder": "البحث عن اختبار...",
+      "noResultsFound": "لم يتم العثور على اختبار لـ",
+      "question": "سؤال"
     },
     "questions": {
       "title": "الأسئلة والإجابات",
@@ -1916,10 +2233,12 @@
       "send": "إرسال",
       "today": "اليوم",
       "yesterday": "أمس",
+      "dayAgo": "يوم",
       "daysAgo": "أيام",
       "weekAgo": "منذ أسبوع",
       "weeksAgo": "أسابيع",
-      "monthAgo": "أشهر",
+      "monthAgo": "شهر",
+      "monthsAgo": "أشهر",
       "yearAgo": "سنة",
       "yearsAgo": "سنوات",
       "coupleNotFound": "خطأ: الزوج غير موجود",
@@ -1930,7 +2249,49 @@
       "errorSubmittingAnswer": "خطأ في إرسال الإجابة",
       "questionNotFound": "السؤال غير موجود لهذا الزوج",
       "waitForPartner": "انتظر حتى يجيب شريكك على هذا السؤال أيضاً",
-      "errorCheckingAnswers": "خطأ في التحقق من الإجابات"
+      "errorCheckingAnswers": "خطأ في التحقق من الإجابات",
+      "privacyNotice": "إجاباتكم خاصة ومرئية فقط لكم ولشريككم",
+      "messagePlaceholder": "اكتب رسالتك...",
+      "with anass kalkhi": "مع أنس الكالخي",
+      "with": "مع",
+      "search": "البحث عن الأسئلة..."
+    },
+    "passwordReset": {
+      "title": "إعادة تعيين كلمة المرور",
+      "forgotPassword": "نسيت كلمة المرور؟",
+      "emailInstruction": "أدخل عنوان بريدك الإلكتروني لتلقي رمز إعادة التعيين",
+      "emailPlaceholder": "عنوان بريدك الإلكتروني",
+      "sendCode": "إرسال الرمز",
+      "backToLogin": "العودة إلى تسجيل الدخول",
+      "verificationCode": "رمز التحقق",
+      "codeInstruction": "أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني",
+      "codePlaceholder": "رمز التحقق",
+      "verifyCode": "تحقق من الرمز",
+      "back": "رجوع",
+      "newPassword": "كلمة مرور جديدة",
+      "newPasswordInstruction": "اختر كلمة مرور جديدة آمنة",
+      "newPasswordPlaceholder": "كلمة المرور الجديدة",
+      "confirmPasswordPlaceholder": "تأكيد كلمة المرور",
+      "confirm": "تأكيد",
+      "emailSent": "تم إرسال البريد الإلكتروني",
+      "emailSentMessage": "تم إرسال رمز إعادة التعيين إلى بريدك الإلكتروني",
+      "success": "نجح",
+      "passwordUpdated": "تم تحديث كلمة المرور بنجاح",
+      "errors": {
+        "emailRequired": "عنوان البريد الإلكتروني مطلوب",
+        "sendFailed": "فشل في إرسال الرمز",
+        "unexpectedError": "حدث خطأ غير متوقع",
+        "codeRequired": "رمز التحقق مطلوب",
+        "codeInvalid": "رمز تحقق غير صالح",
+        "passwordRequired": "كلمة المرور مطلوبة",
+        "passwordTooShort": "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+        "passwordsMismatch": "كلمات المرور غير متطابقة",
+        "codeExpired": "انتهت صلاحية رمز التحقق",
+        "sessionInvalid": "جلسة غير صالحة",
+        "updateFailed": "فشل في تحديث كلمة المرور",
+        "invalidLink": "رابط إعادة التعيين غير صالح",
+        "passwordSameAsOld": "كلمة المرور الجديدة يجب أن تكون مختلفة عن القديمة"
+      }
     },
     "questionChat": {
       "title": "سؤال اليوم",
@@ -1984,6 +2345,7 @@
       "weaknessBadge": "يحتاج تحسين",
       "quizResults": "نتائج الاختبار",
       "quizResultsDescription": "هذه الصفحة تظهر مدى ملاءمة موضوع \"{title}\" لك في علاقتك الحالية.",
+      "question": "سؤال",
       "invitePartner": "ادع شريكك",
       "inviteDescription": "شريكك لم يجب على هذا الاختبار بعد. أرسل له دعوة ليتمكن من المشاركة!",
       "sendingInvite": "جاري إرسال الدعوة...",
@@ -2153,13 +2515,26 @@
       "cannotSelectImage": "لا يمكن اختيار الصورة",
       "permissionDenied": "تم رفض الإذن",
       "cameraPermissionRequired": "مطلوب إذن الوصول للكاميرا",
+      "galleryPermissionRequired": "مطلوب إذن الوصول للمعرض",
       "cannotTakePhoto": "لا يمكن التقاط الصورة",
       "cannotUpdateProfilePicture": "لا يمكن تحديث صورة الملف الشخصي",
       "profilePictureUpdated": "تم تحديث صورة الملف الشخصي",
       "cannotUploadImage": "لا يمكن تحميل صورة الملف الشخصي",
       "cannotDeletePhoto": "لا يمكن حذف الصورة",
       "photoDeleted": "تم حذف الصورة",
-      "deletionError": "خطأ أثناء الحذف"
+      "deletionError": "خطأ أثناء الحذف",
+      "countries": {
+        "France": "فرنسا",
+        "Belgique": "بلجيكا",
+        "Suisse": "سويسرا",
+        "Canada": "كندا",
+        "Maroc": "المغرب",
+        "Algérie": "الجزائر",
+        "Tunisie": "تونس",
+        "Côte d'Ivoire": "ساحل العاج",
+        "Sénégal": "السنغال",
+        "Cameroun": "الكاميرون"
+      }
     },
     "themes": {
       "title": "المظهر",
@@ -2233,14 +2608,43 @@
         "newChatMessage": "رسالة جديدة في الدردشة",
         "pulseReceived": "لقد تلقيت نبضة",
         "quizInviteReceived": "يدعوك للمشاركة في الاختبار",
+        "quizInviteMessage": "{senderName} يدعوك للمشاركة في الاختبار \"{quizName}\"",
+        "quizInviteSimple": "دعاك شريكك إلى اختبار. انقر للعرض",
         "eventUpcoming": "في",
         "eventAt": "في",
-        "from": "من:"
+        "from": "من:",
+        "someone": "شخص ما",
+        "newEvent": "حدث جديد",
+        "newSouvenir": "ذكرى جديدة",
+        "newTodo": "مهمة جديدة",
+        "partnerCreatedEvent": "أنشأ شريكك حدثاً جديداً: \"{itemTitle}\"",
+        "partnerAddedSouvenir": "أضاف شريكك ذكرى جديدة: \"{itemTitle}\"",
+        "partnerCreatedTodo": "أنشأ شريكك مهمة جديدة: \"{itemTitle}\"",
+        "eventReminderTomorrow": "تذكير بحدث غداً",
+        "partnerHasEventTomorrow": "{partnerName} لديه حدث غداً{timeInfo}: {eventTitle}",
+        "yourPartner": "شريكك",
+        "pulseMessages": {
+          "flower": "يرسل لك زهرة",
+          "love": "يرسل لك الحب",
+          "happy": "سعيد",
+          "naughty": "مشاغب",
+          "wind": "يرسل لك ريح",
+          "heart": "يرسل لك قلبه",
+          "passion": "يرسل لك شغفه",
+          "kiss": "يرسل لك قبلة",
+          "hug": "يعطيك عناق",
+          "hearts": "يرسل لك قلوب",
+          "default": "يرسل لك نبضة"
+        },
+        "pulseFooter": "اضغط للقراءة"
       },
       "time": {
         "now": "الآن",
         "minutesAgo": "منذ {count} دقيقة",
         "hoursAgo": "منذ {count} ساعة",
+        "days": ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
+        "months": ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"],
+        "monthsShort": ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"],
         "daysAgo": "منذ {count} يوم"
       }
     },
@@ -2306,6 +2710,20 @@
         "chooseFromGallery": "اختيار من المعرض",
         "removeImage": "إزالة الصورة",
         "chooseImage": "اختر صورة"
+      },
+      "messages": {
+        "deleteConfirmation": "هل أنت متأكد من حذف \"{title}\"؟\n\nهذا الإجراء لا يمكن التراجع عنه وسيحذف هذا {type} نهائياً من تقويمك.",
+        "eventDeleted": "تم حذف الحدث \"{title}\" بنجاح.",
+        "souvenirDeleted": "تم حذف الذكرى \"{title}\" بنجاح.",
+        "eventUpdated": "تم تحديث الحدث \"{title}\" بنجاح.",
+        "souvenirUpdated": "تم تحديث الذكرى \"{title}\" بنجاح.",
+        "itemConverted": "تم تحويل العنصر \"{title}\" من {fromType} إلى {toType}.",
+        "ok": "موافق",
+        "deleted": "تم الحذف",
+        "success": "نجح",
+        "invalidItemType": "نوع عنصر غير صالح",
+        "coupleIdMissing": "لا يمكن الحذف - معرف الزوجين مفقود",
+        "deleteError": "لا يمكن حذف العنصر"
       }
     },
     "bonsPlans": {
@@ -2319,7 +2737,15 @@
       },
       "city": {
         "select": "اختر مدينتك",
-        "selecting": "اختيار المدينة"
+        "selecting": "اختيار المدينة",
+        "cities": {
+          "Casablanca": "الدار البيضاء",
+          "Rabat": "الرباط",
+          "Marrakech": "مراكش",
+          "Fès": "فاس",
+          "Agadir": "أكادير",
+          "Tanger": "طنجة"
+        }
       },
       "categories": {
         "title": "الفئات",
@@ -2534,6 +2960,16 @@
       "neutre": "مسترخي",
       "triste": "خاصك ترتاح",
       "enerve": "مقلّق"
+      },
+      "moodSelector": {
+        "title": "كيف داير؟",
+        "moods": {
+          "joyeux": "فرحان",
+          "content": "راضي",
+          "neutre": "عادي",
+          "triste": "حزين",
+          "enerve": "زعلان"
+        }
       }
     },
     "calendar": {
@@ -2574,7 +3010,7 @@
       "gallery": "لكاليري",
       "addImage": "زيد صورة لهاد الذكرى",
       "addNote": "زيد نوتة (اختياري)",
-      "reminderDescription": "غادي توصلك نوتيفيكاسيون نهار قبل الإيفان",
+      "reminderDescription": "روميندر (غادي توصلك نوتيفيكاسيون نهار قبل الإيفان)",
       "noReminderDescription": "ما غاديش توصلك نوتيفيكاسيون",
       "selectDate": "اختار نهار",
       "selectTime": "اختار ساعة",
@@ -2688,7 +3124,30 @@
     "hide": "خبي",
     "paste": "الصق",
     "copy": "انسخ",
-    "errorOccurred": "وقع مشكل"
+      "errorOccurred": "وقع مشكل",
+      "noDescription": "ما كايناش وصف",
+      "noPlace": "ما كايناش بلاصة محددة"
+    },
+    "chess": {
+      "title": "الشطرنج",
+      "loading": "كيتشارجي...",
+      "yourTurn": "دورك",
+      "botTurn": "دور البوت",
+      "youWin": "ربحتي!",
+      "botWins": "البوت ربح!",
+      "whiteWins": "الأبيض ربح بكش ملك!",
+      "blackWins": "الأسود ربح بكش ملك!",
+      "stalemate": "تعادل بالجمود!",
+      "newGame": "لعبة جديدة",
+      "instructions": "لمس قطعة باش تشوف الحركات الممكنة",
+      "gameOver": "سالات اللعبة",
+      "statistics": "الإحصائيات",
+      "you": "نتا",
+      "bot": "البوت",
+      "back": "رجوع",
+      "searchPlaceholder": "دور على اختبار...",
+      "noResultsFound": "ما لقيناش اختبار لـ",
+      "question": "سؤال"
     },
     "questions": {
       "title": "الأسئلة و الجوبات",
@@ -2699,18 +3158,20 @@
       "theirTurn": "الدور ديالو",
       "noItems": "ماكايناش عناصر",
       "questionOfDay": "سؤال النهار",
-      "partnerAnswered": "💬 شريكك جاوب",
+      "partnerAnswered": "💬  تسنا ديالك شريكك يجاوب",
       "canDiscuss": "✨ دابا تقدرو تهضرو!",
       "discuss": "ناقش",
       "typeAnswer": "كتب الجواب ديالك...",
       "send": "صيفط",
       "today": "اليوم",
       "yesterday": "بارح",
+      "dayAgo": "يوم",
       "daysAgo": "أيام",
       "weekAgo": "سيمانة",
       "weeksAgo": "سيمانات",
-      "monthAgo": "شهر",
-      "yearAgo": "عام",
+  "monthAgo": "شهر",
+  "monthsAgo": "شهر",
+  "yearAgo": "عام",
       "yearsAgo": "سنين",
       "coupleNotFound": "خطأ: الزوج ما كاينش",
       "invalidQuestionId": "خطأ: الكود ديال السؤال ما صالحش",
@@ -2720,7 +3181,49 @@
       "errorSubmittingAnswer": "خطأ ف صيفط الجواب",
       "questionNotFound": "السؤال ما كاينش ل هاد الزوج",
       "waitForPartner": "سنا حتى يجاوب شريكك على هاد السؤال تاني",
-      "errorCheckingAnswers": "خطأ ف التشييك على الجوبات"
+      "errorCheckingAnswers": "خطأ ف التشييك على الجوبات",
+      "privacyNotice": "الجوبات ديالكم خاصة و كاتبان غير ليكم و لشريككم",
+      "messagePlaceholder": "كتب الرسالة ديالك...",
+      "with anass kalkhi": "مع أنس الكالخي",
+      "with": "مع",
+      "search": "دور على الأسئلة..."
+    },
+    "passwordReset": {
+      "title": "إعادة تعيين كلمة المرور",
+      "forgotPassword": "نسيت كلمة المرور؟",
+      "emailInstruction": "دخل عنوان البريد الإلكتروني ديالك باش تستقبل رمز إعادة التعيين",
+      "emailPlaceholder": "عنوان البريد الإلكتروني ديالك",
+      "sendCode": "صيفط الرمز",
+      "backToLogin": "رجوع ل تسجيل الدخول",
+      "verificationCode": "رمز التحقق",
+      "codeInstruction": "دخل الرمز لي فيه 6 أرقام لي تم صيفطو ل البريد الإلكتروني ديالك",
+      "codePlaceholder": "رمز التحقق",
+      "verifyCode": "تحقق من الرمز",
+      "back": "رجوع",
+      "newPassword": "كلمة مرور جديدة",
+      "newPasswordInstruction": "اختار كلمة مرور جديدة آمنة",
+      "newPasswordPlaceholder": "كلمة المرور الجديدة",
+      "confirmPasswordPlaceholder": "أكد كلمة المرور",
+      "confirm": "أكد",
+      "emailSent": "تم صيفط البريد الإلكتروني",
+      "emailSentMessage": "تم صيفط رمز إعادة التعيين ل البريد الإلكتروني ديالك",
+      "success": "نجح",
+      "passwordUpdated": "تم تحديث كلمة المرور بنجاح",
+      "errors": {
+        "emailRequired": "عنوان البريد الإلكتروني مطلوب",
+        "sendFailed": "فشل ف صيفط الرمز",
+        "unexpectedError": "وقع خطأ غير متوقع",
+        "codeRequired": "رمز التحقق مطلوب",
+        "codeInvalid": "رمز تحقق غير صالح",
+        "passwordRequired": "كلمة المرور مطلوبة",
+        "passwordTooShort": "كلمة المرور لازم تكون 6 أحرف على الأقل",
+        "passwordsMismatch": "كلمات المرور ما كاتطابقش",
+        "codeExpired": "انتهت صلاحية رمز التحقق",
+        "sessionInvalid": "جلسة غير صالحة",
+        "updateFailed": "فشل ف تحديث كلمة المرور",
+        "invalidLink": "رابط إعادة التعيين غير صالح",
+        "passwordSameAsOld": "كلمة المرور الجديدة لازم تكون مختلفة على القديمة"
+      }
     },
     "questionChat": {
       "title": "سؤال النهار",
@@ -2774,6 +3277,7 @@
       "weaknessBadge": "خاص تحسين",
       "quizResults": "نتايج الاختبار",
       "quizResultsDescription": "هاد الصفحة كاتبن واش الموضوع \"{title}\" لايق مع العلاقة ديالك.",
+      "question": "سؤال",
       "invitePartner": "عيط لشريكك",
       "inviteDescription": "شريكك ما جاوبش على هاد الاختبار. صيفط ليه دعوة باش يشارك!",
       "sendingInvite": "كيتصيفط الدعوة...",
@@ -2825,7 +3329,7 @@
       "yourInviteCode": "كود الدعوة ديالك"
     },
     "settings": {
-      "title": "Settings",
+      "title": "الإعدادات",
       "goodDeals": "العروض الزوينة",
       "ourCouple": "زوجنا",
       "notifications": "نوتيفيكاسيونات",
@@ -2943,13 +3447,26 @@
   "cannotSelectImage": "ما تقدرش تختار الصورة",
   "permissionDenied": "الاذن مرفوض",
   "cameraPermissionRequired": "خاص إذن ديال الكاميرا",
+  "galleryPermissionRequired": "خاص إذن ديال المعرض",
   "cannotTakePhoto": "ما تقدرش تصوّر",
   "cannotUpdateProfilePicture": "ما تقدرش تبدل صورة البروفايل",
   "profilePictureUpdated": "تبدلات صورة البروفايل",
   "cannotUploadImage": "ما تقدرش تحمّل صورة البروفايل",
   "cannotDeletePhoto": "ما تقدرش تمسح الصورة",
   "photoDeleted": "تمسحات الصورة",
-  "deletionError": "وقع مشكل فالحدف"
+  "deletionError": "وقع مشكل فالحدف",
+  "countries": {
+    "France": "فرنسا",
+    "Belgique": "بلجيكا",
+    "Suisse": "سويسرا",
+    "Canada": "كندا",
+    "Maroc": "المغرب",
+    "Algérie": "الجزائر",
+    "Tunisie": "تونس",
+    "Côte d'Ivoire": "ساحل العاج",
+    "Sénégal": "السنغال",
+    "Cameroun": "الكاميرون"
+  }
     },
     "themes": {
       "title": "المظهر",
@@ -3023,14 +3540,43 @@
         "newChatMessage": "ميساج جديد فالشات",
         "pulseReceived": "توصلتي بنبضة",
         "quizInviteReceived": "كيعيطك تشارك فالكويز",
+        "quizInviteMessage": "{senderName} كيعيطك تشارك فالكويز \"{quizName}\"",
+        "quizInviteSimple": "شريكك عيطك لكويز. كليكي باش تشوف",
         "eventUpcoming": "ف",
         "eventAt": "ف",
-        "from": "من:"
+        "from": "من:",
+        "someone": "واحد",
+        "newEvent": "إيفان جديد",
+        "newSouvenir": "ذكرى جديدة",
+        "newTodo": "مهمة جديدة",
+        "partnerCreatedEvent": "شريكك خلق إيفان جديد: \"{itemTitle}\"",
+        "partnerAddedSouvenir": "شريكك زاد ذكرى جديدة: \"{itemTitle}\"",
+        "partnerCreatedTodo": "شريكك خلق مهمة جديدة: \"{itemTitle}\"",
+        "eventReminderTomorrow": "تذكير بإيفان غدا",
+        "partnerHasEventTomorrow": "{partnerName} عندو إيفان غدا{timeInfo}: {eventTitle}",
+        "yourPartner": "شريكك",
+        "pulseMessages": {
+          "flower": "كيبعت ليك زهرة",
+          "love": "كيبعت ليك الحب",
+          "happy": "فرحان",
+          "naughty": "مشاغب",
+          "wind": "كيبعت ليك ريح",
+          "heart": "كيبعت ليك قلبه",
+          "passion": "كيبعت ليك شغفه",
+          "kiss": "كيبعت ليك قبلة",
+          "hug": "كيعطيك عناق",
+          "hearts": "كيبعت ليك قلوب",
+          "default": "كيبعت ليك نبضة"
+        },
+        "pulseFooter": "كليكي باش تقرا"
       },
       "time": {
         "now": "دابا",
         "minutesAgo": "منذ {count} دقيقة",
         "hoursAgo": "منذ {count} ساعة",
+        "days": ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
+        "months": ["يناير", "فبراير", "مارس", "أبريل", "ماي", "يونيو", "يوليوز", "غشت", "شتنبر", "أكتوبر", "نونبر", "دجنبر"],
+        "monthsShort": ["يناير", "فبراير", "مارس", "أبريل", "ماي", "يونيو", "يوليوز", "غشت", "شتنبر", "أكتوبر", "نونبر", "دجنبر"],
         "daysAgo": "منذ {count} نهار"
       }
     },
@@ -3096,6 +3642,20 @@
         "chooseFromGallery": "اختار من المعرض",
         "removeImage": "مسح الصورة",
         "chooseImage": "اختار صورة"
+      },
+      "messages": {
+        "deleteConfirmation": "بغيتي تحيّد \"{title}\"؟\n\nهاد العمل ما يقدرش يتتراجع عليه و غادي يحيد هاد {type} نهائياً من التقويم ديالك.",
+        "eventDeleted": "تحيّد الإيفان \"{title}\" بنجاح.",
+        "souvenirDeleted": "تحيّدت الذكرى \"{title}\" بنجاح.",
+        "eventUpdated": "تبدّل الإيفان \"{title}\" بنجاح.",
+        "souvenirUpdated": "تبدّلت الذكرى \"{title}\" بنجاح.",
+        "itemConverted": "تحوّل العنصر \"{title}\" من {fromType} لـ {toType}.",
+        "ok": "مزيان",
+        "deleted": "تحيّد",
+        "success": "نجح",
+        "invalidItemType": "نوع العنصر ما صالحش",
+        "coupleIdMissing": "ما تقدرش تحيد - معرف الزوجين مفقود",
+        "deleteError": "ما تقدرش تحيد العنصر"
       }
     },
     "bonsPlans": {
@@ -3109,7 +3669,15 @@
       },
       "city": {
         "select": "اختار مدينتك",
-        "selecting": "اختيار المدينة"
+        "selecting": "اختيار المدينة",
+        "cities": {
+          "Casablanca": "كازا",
+          "Rabat": "الرباط",
+          "Marrakech": "مراكش",
+          "Fès": "فاس",
+          "Agadir": "أكادير",
+          "Tanger": "طنجة"
+        }
       },
       "categories": {
         "title": "الفئات",

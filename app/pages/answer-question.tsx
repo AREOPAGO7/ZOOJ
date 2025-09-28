@@ -73,7 +73,6 @@ export default function AnswerQuestionPage() {
         .select('*')
         .eq('couple_id', coupleData.id)
         .eq('question_id', question.id)
-        .eq('scheduled_for', today)
         .single();
 
       if (!dailyQuestion) {
@@ -83,7 +82,6 @@ export default function AnswerQuestionPage() {
           .insert({
             couple_id: coupleData.id,
             question_id: question.id,
-            scheduled_for: today
           })
           .select()
           .single();

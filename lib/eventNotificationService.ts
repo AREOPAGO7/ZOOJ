@@ -1,7 +1,38 @@
-import { toLocalDateString } from './dateUtils'
-import { notificationService } from './notificationService'
-import { profileService } from './profileService'
-import { supabase } from './supabase'
+import { toLocalDateString } from './dateUtils';
+import { notificationService } from './notificationService';
+import { profileService } from './profileService';
+import { supabase } from './supabase';
+
+// Helper function to get translated event reminder messages
+const getEventReminderMessage = (language: string = 'fr'): { title: string; partnerName: string; messageTemplate: string } => {
+  switch (language) {
+    case 'en':
+      return {
+        title: 'Event reminder tomorrow',
+        partnerName: 'Your partner',
+        messageTemplate: '{partnerName} has an event tomorrow{timeInfo}: {eventTitle}'
+      };
+    case 'ar':
+      return {
+        title: 'تذكير بحدث غداً',
+        partnerName: 'شريكك',
+        messageTemplate: '{partnerName} لديه حدث غداً{timeInfo}: {eventTitle}'
+      };
+    case 'ma':
+      return {
+        title: 'تذكير بإيفان غدا',
+        partnerName: 'شريكك',
+        messageTemplate: '{partnerName} عندو إيفان غدا{timeInfo}: {eventTitle}'
+      };
+    case 'fr':
+    default:
+      return {
+        title: 'Rappel d\'événement demain',
+        partnerName: 'Votre partenaire',
+        messageTemplate: '{partnerName} a un événement demain{timeInfo}: {eventTitle}'
+      };
+  }
+};
 
 export interface Event {
   id: string
@@ -20,7 +51,7 @@ export const eventNotificationService = {
   _notificationCache: new Map<string, { timestamp: number; sent: boolean }>(),
   
   // Check for events tomorrow and send notifications
-  async checkTomorrowEventsAndNotify(): Promise<{ 
+  async checkTomorrowEventsAndNotify(language: string = 'fr'): Promise<{ 
     eventsFound: number; 
     notificationsSent: number; 
     errors: string[] 
@@ -98,14 +129,16 @@ export const eventNotificationService = {
           const user1Result = await this.sendTomorrowEventNotification(
             couple.user1_id,
             event,
-            couple.user2_id
+            couple.user2_id,
+            language
           )
           
           // Send notification to user2
           const user2Result = await this.sendTomorrowEventNotification(
             couple.user2_id,
             event,
-            couple.user1_id
+            couple.user1_id,
+            language
           )
           
           if (user1Result && user2Result) {
@@ -146,12 +179,14 @@ export const eventNotificationService = {
   async sendTomorrowEventNotification(
     userId: string, 
     event: Event, 
-    partnerId: string
+    partnerId: string,
+    language: string = 'fr'
   ): Promise<boolean> {
     try {
       // Get partner's name for the notification
       const { data: partnerProfile } = await profileService.getProfile(partnerId)
-      const partnerName = partnerProfile?.name || 'Votre partenaire'
+      const { title: reminderTitle, partnerName: defaultPartnerName, messageTemplate } = getEventReminderMessage(language)
+      const partnerName = partnerProfile?.name || defaultPartnerName
       
       // Format the event time if available
       let timeInfo = ''
@@ -160,8 +195,11 @@ export const eventNotificationService = {
       }
       
       // Create notification message
-      const title = 'Rappel d\'événement demain'
-      const message = `${partnerName} a un événement demain${timeInfo}: ${event.title}`
+      const title = reminderTitle
+      const message = messageTemplate
+        .replace('{partnerName}', partnerName)
+        .replace('{timeInfo}', timeInfo)
+        .replace('{eventTitle}', event.title)
       
       // Send the notification
       const result = await notificationService.createNotification({

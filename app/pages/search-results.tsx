@@ -14,6 +14,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { getCategoryName, getSubcategoryDescription, getSubcategoryName, useSearchSubcategories } from '../../hooks/useServiceData';
 import { useAuth } from '../../lib/auth';
+import { getTranslatedCities } from '../../lib/translationHelpers';
 import AppLayout from '../app-layout';
 
 interface SearchResultCardProps {
@@ -117,7 +118,7 @@ export default function SearchResultsPage() {
   
   const { subcategories, loading: searchLoading } = useSearchSubcategories(searchQuery, selectedCity);
   
-  const cities = ['Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Agadir', 'Tanger'];
+  const cities = getTranslatedCities(t);
 
   // Don't render if not authenticated or profile not completed
   if (loading || profileLoading || !user || !isProfileComplete) {
@@ -191,7 +192,7 @@ export default function SearchResultsPage() {
             onPress={() => setShowCitySelector(!showCitySelector)}
           >
             <Text className={selectedCity ? (isDarkMode ? "text-white" : "text-gray-900") : (isDarkMode ? "text-gray-300" : "text-gray-500")}>
-              {selectedCity || t('searchResults.selectCity')}
+              {selectedCity ? cities.find(c => c.key === selectedCity)?.name || selectedCity : t('searchResults.selectCity')}
             </Text>
             <MaterialCommunityIcons 
               name="chevron-down" 
@@ -210,17 +211,17 @@ export default function SearchResultsPage() {
           }`}>
             {cities.map((city) => (
               <Pressable
-                key={city}
+                key={city.key}
                 className={`p-3 border-b ${
                   isDarkMode ? 'border-dark-border' : 'border-gray-100'
                 }`}
                 onPress={() => {
-                  setSelectedCity(city);
+                  setSelectedCity(city.key);
                   setShowCitySelector(false);
                 }}
               >
                 <Text className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                  {city}
+                  {city.name}
                 </Text>
               </Pressable>
             ))}

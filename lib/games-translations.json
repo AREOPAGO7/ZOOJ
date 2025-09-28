@@ -1,0 +1,146 @@
+{
+  "fr": {
+    "games": {
+      "pong": {
+        "title": "Pong",
+        "loading": "Chargement...",
+        "youWin": "Vous avez gagné!",
+        "botWins": "Le Bot a gagné!",
+        "start": "Commencer",
+        "pause": "Pause",
+        "newGame": "Nouvelle Partie",
+        "instructions": "Touchez l'écran pour déplacer la raquette",
+        "ballSpeed": "Vitesse de la balle",
+        "controlZone": "Zone de contrôle",
+        "touchToMove": "Touchez ici pour déplacer",
+        "inProgress": "En cours...",
+        "pressToStart": "Appuyez pour commencer",
+        "you": "Vous",
+        "bot": "Bot"
+      },
+      "chess": {
+        "title": "Échecs",
+        "loading": "Chargement...",
+        "yourTurn": "Votre tour",
+        "botTurn": "Tour du Bot",
+        "youWin": "Vous avez gagné par échec et mat!",
+        "botWins": "Le Bot a gagne par échec et mat!",
+        "draw": "Match nul par pat!",
+        "newGame": "Nouvelle Partie",
+        "instructions": "Touchez une pièce pour voir les mouvements possibles",
+        "gameOver": "Partie terminée",
+        "statistics": "Statistiques",
+        "you": "Vous",
+        "bot": "Bot"
+      }
+    }
+  },
+  "en": {
+    "games": {
+      "pong": {
+        "title": "Pong",
+        "loading": "Loading...",
+        "youWin": "You won!",
+        "botWins": "Bot won!",
+        "start": "Start",
+        "pause": "Pause",
+        "newGame": "New Game",
+        "instructions": "Touch the screen to move the paddle",
+        "ballSpeed": "Ball Speed",
+        "controlZone": "Control Zone",
+        "touchToMove": "Touch here to move",
+        "inProgress": "In Progress...",
+        "pressToStart": "Press to start",
+        "you": "You",
+        "bot": "Bot"
+      },
+      "chess": {
+        "title": "Chess",
+        "loading": "Loading...",
+        "yourTurn": "Your turn",
+        "botTurn": "Bot's turn",
+        "youWin": "You won by checkmate!",
+        "botWins": "Bot won by checkmate!",
+        "draw": "Draw by stalemate!",
+        "newGame": "New Game",
+        "instructions": "Touch a piece to see possible moves",
+        "gameOver": "Game Over",
+        "statistics": "Statistics",
+        "you": "You",
+        "bot": "Bot"
+      }
+    }
+  },
+  "ar": {
+    "games": {
+      "pong": {
+        "title": "بونغ",
+        "loading": "جاري التحميل...",
+        "youWin": "لقد فزت!",
+        "botWins": "فاز البوت!",
+        "start": "ابدأ",
+        "pause": "إيقاف مؤقت",
+        "newGame": "لعبة جديدة",
+        "instructions": "المس الشاشة لتحريك المضرب",
+        "ballSpeed": "سرعة الكرة",
+        "controlZone": "منطقة التحكم",
+        "touchToMove": "المس هنا للتحرك",
+        "inProgress": "جاري اللعب...",
+        "pressToStart": "اضغط للبدء",
+        "you": "أنت",
+        "bot": "البوت"
+      },
+      "chess": {
+        "title": "الشطرنج",
+        "loading": "جاري التحميل...",
+        "yourTurn": "دورك",
+        "botTurn": "دور البوت",
+        "youWin": "لقد فزت بكش ملك!",
+        "botWins": "فاز البوت بكش ملك!",
+        "draw": "تعادل بالطريق المسدود!",
+        "newGame": "لعبة جديدة",
+        "instructions": "المس قطعة لرؤية الحركات الممكنة",
+        "gameOver": "انتهت اللعبة",
+        "statistics": "الإحصائيات",
+        "you": "أنت",
+        "bot": "البوت"
+      }
+    }
+  },
+  "ma": {
+    "games": {
+      "pong": {
+        "title": "بونغ",
+        "loading": "كيتشارجي...",
+        "youWin": "راه ربحتي!",
+        "botWins": "البوت ربح!",
+        "start": "بدا",
+        "pause": "وقف",
+        "newGame": "لعبة جديدة",
+        "instructions": "دوس على الشاشة باش تحرك المضرب",
+        "ballSpeed": "سرعة الكرة",
+        "controlZone": "منطقة التحكم",
+        "touchToMove": "دوس هنا باش تتحرك",
+        "inProgress": "كيتلعب...",
+        "pressToStart": "دوس باش تبدا",
+        "you": "نتا",
+        "bot": "البوت"
+      },
+      "chess": {
+        "title": "الشطرنج",
+        "loading": "كيتشارجي...",
+        "yourTurn": "دورك",
+        "botTurn": "دور البوت",
+        "youWin": "راه ربحتي بكش ملك!",
+        "botWins": "البوت ربح بكش ملك!",
+        "draw": "تعادل بالطريق المسدود!",
+        "newGame": "لعبة جديدة",
+        "instructions": "دوس على قطعة باش تشوف الحركات الممكنة",
+        "gameOver": "اللعبة خلصت",
+        "statistics": "الإحصائيات",
+        "you": "نتا",
+        "bot": "البوت"
+      }
+    }
+  }
+}

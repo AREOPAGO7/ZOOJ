@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useDarkTheme } from '../contexts/DarkThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface MoodOption {
@@ -16,12 +17,12 @@ interface MoodSelectorProps {
   currentMood?: string;
 }
 
-const moodOptions: MoodOption[] = [
-  { type: 'joyeux', emoji: '😊', label: 'Joyeux' },
-  { type: 'content', emoji: '🙂', label: 'Content' },
-  { type: 'neutre', emoji: '😐', label: 'Neutre' },
-  { type: 'triste', emoji: '😢', label: 'Triste' },
-  { type: 'enerve', emoji: '😠', label: 'Énervé' }
+const getMoodOptions = (t: (key: string) => string): MoodOption[] => [
+  { type: 'joyeux', emoji: '😊', label: t('home.moodSelector.moods.joyeux') },
+  { type: 'content', emoji: '🙂', label: t('home.moodSelector.moods.content') },
+  { type: 'neutre', emoji: '😐', label: t('home.moodSelector.moods.neutre') },
+  { type: 'triste', emoji: '😢', label: t('home.moodSelector.moods.triste') },
+  { type: 'enerve', emoji: '😠', label: t('home.moodSelector.moods.enerve') }
 ];
 
 export const MoodSelector: React.FC<MoodSelectorProps> = ({
@@ -32,7 +33,10 @@ export const MoodSelector: React.FC<MoodSelectorProps> = ({
 }) => {
   const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
+  const { t } = useLanguage();
   const [selectedMood, setSelectedMood] = useState<string | undefined>(currentMood);
+  
+  const moodOptions = getMoodOptions(t);
 
   const handleMoodSelect = (moodType: 'joyeux' | 'content' | 'neutre' | 'triste' | 'enerve') => {
     setSelectedMood(moodType);
@@ -52,7 +56,7 @@ export const MoodSelector: React.FC<MoodSelectorProps> = ({
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>
-              Comment vous sentez-vous ?
+              {t('home.moodSelector.title')}
             </Text>
             <Pressable onPress={onClose} style={styles.closeButton}>
               <Text style={[styles.closeButtonText, { color: isDarkMode ? '#FFFFFF' : colors.textSecondary }]}>✕</Text>

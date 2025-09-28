@@ -20,7 +20,7 @@ const languages: LanguageOption[] = [
   { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷' },
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
   { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦' },
-  { code: 'ma', name: 'Ma', nativeName: 'Ma', flag: '🇲🇦' },
+  { code: 'ma', name: 'Darija', nativeName: 'Maroc', flag: '🇲🇦' },
 ];
 
 export default function LanguePage() {

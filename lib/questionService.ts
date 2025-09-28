@@ -14,7 +14,6 @@ export interface DailyQuestion {
   id: string;
   couple_id: string;
   question_id: string;
-  scheduled_for: string;
   created_at: string;
   question?: Question;
 }
@@ -76,7 +75,8 @@ export const questionService = {
         question:questions(id, content, content_en, content_ar, content_ma, created_at, scheduled_time)
       `)
       .eq('couple_id', coupleId)
-      .eq('scheduled_for', today)
+      .gte('created_at', `${today}T00:00:00`)
+      .lt('created_at', `${today}T23:59:59`)
       .limit(1);
 
     if (coupleQuestion && coupleQuestion.length > 0) {
@@ -91,7 +91,8 @@ export const questionService = {
         question:questions(id, content, content_en, content_ar, content_ma, created_at, scheduled_time)
       `)
       .is('couple_id', null)
-      .eq('scheduled_for', today)
+      .gte('created_at', `${today}T00:00:00`)
+      .lt('created_at', `${today}T23:59:59`)
       .limit(1);
 
     if (globalQuestion && globalQuestion.length > 0) {
@@ -106,7 +107,7 @@ export const questionService = {
         question:questions(id, content, content_en, content_ar, content_ma, created_at, scheduled_time)
       `)
       .is('couple_id', null)
-      .order('scheduled_for', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(1);
 
     if (recentGlobalQuestion && recentGlobalQuestion.length > 0) {
@@ -126,7 +127,7 @@ export const questionService = {
       `)
       .eq('couple_id', coupleId)
       .eq('question_id', questionId)
-      .order('scheduled_for', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
@@ -143,7 +144,7 @@ export const questionService = {
         answers:answers(*)
       `)
       .eq('couple_id', coupleId)
-      .order('scheduled_for', { ascending: false });
+      .order('created_at', { ascending: false });
 
     return { data: data || [], error };
   },

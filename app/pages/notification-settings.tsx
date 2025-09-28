@@ -7,8 +7,25 @@ import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
+import notificationSettingsTranslations from '../../lib/notification-settings-translations.json';
 import { useNotificationSettingsStore } from '../../lib/notificationSettingsStore';
 import AppLayout from '../app-layout';
+
+// Translation helper function for notification settings page
+const getNotificationSettingsTranslation = (key: string, language: string): string => {
+  const keys = key.split('.');
+  let value: any = notificationSettingsTranslations[language as keyof typeof notificationSettingsTranslations];
+  
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      return key; // Return key if translation not found
+    }
+  }
+  
+  return typeof value === 'string' ? value : key;
+};
 
 interface NotificationSettings {
   id: number;
@@ -25,7 +42,7 @@ export default function NotificationSettingsPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [vibrationEnabled, setVibrationEnabled] = React.useState(true);
 
   // Use global state instead of local state
@@ -203,7 +220,7 @@ export default function NotificationSettingsPage() {
             />
           </TouchableOpacity>
           <Text className={`text-xl font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-            Notifications
+            {getNotificationSettingsTranslation('notificationSettings.title', language)}
           </Text>
         </View>
 
@@ -213,10 +230,10 @@ export default function NotificationSettingsPage() {
             <View className="flex-row items-center justify-between p-4">
               <View className="flex-1">
                 <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                  Activer les notifications
+                  {getNotificationSettingsTranslation('notificationSettings.activateNotifications', language)}
                 </Text>
                 <Text className={`text-sm mt-1 ${isDarkMode ? 'text-dark-text-secondary' : 'text-gray-600'}`}>
-                  Recevoir toutes les notifications
+                  {getNotificationSettingsTranslation('notificationSettings.receiveAllNotifications', language)}
                 </Text>
               </View>
               <Switch
@@ -231,7 +248,7 @@ export default function NotificationSettingsPage() {
           {/* Notification Types Section */}
           <View className="mx-5 mb-6">
             <Text className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Types de Notifications
+              {getNotificationSettingsTranslation('notificationSettings.notificationTypes', language)}
             </Text>
             
             {/* Quiz Invitations */}
@@ -242,7 +259,7 @@ export default function NotificationSettingsPage() {
                     <MaterialCommunityIcons name="bell" size={20} color="#F47CC6" />
                   </View>
                   <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                    Invitation au quiz
+                    {getNotificationSettingsTranslation('notificationSettings.quizInvitation', language)}
                   </Text>
                 </View>
                 <Switch
@@ -262,7 +279,7 @@ export default function NotificationSettingsPage() {
                     <MaterialCommunityIcons name="file-document" size={20} color="#F47CC6" />
                   </View>
                   <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                    Question du jour
+                    {getNotificationSettingsTranslation('notificationSettings.dailyQuestion', language)}
                   </Text>
                 </View>
                 <Switch
@@ -282,7 +299,7 @@ export default function NotificationSettingsPage() {
                     <MaterialCommunityIcons name="information" size={20} color="#F47CC6" />
                   </View>
                   <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                    Pulse
+                    {getNotificationSettingsTranslation('notificationSettings.pulse', language)}
                   </Text>
                 </View>
                 <Switch
@@ -302,7 +319,7 @@ export default function NotificationSettingsPage() {
                     <MaterialCommunityIcons name="calendar" size={20} color="#F47CC6" />
                   </View>
                   <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                    Alarme Calendrier
+                    {getNotificationSettingsTranslation('notificationSettings.calendarAlarm', language)}
                   </Text>
                 </View>
                 <Switch
@@ -322,7 +339,7 @@ export default function NotificationSettingsPage() {
                     <MaterialCommunityIcons name="message" size={20} color="#F47CC6" />
                   </View>
                   <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                    Messages
+                    {getNotificationSettingsTranslation('notificationSettings.messages', language)}
                   </Text>
                 </View>
                 <Switch
@@ -338,7 +355,7 @@ export default function NotificationSettingsPage() {
           {/* Notification Sound Section */}
           <View className="mx-5 mb-6">
             <Text className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Son des notifications
+              {getNotificationSettingsTranslation('notificationSettings.notificationSound', language)}
             </Text>
             
             {/* Sound */}
@@ -353,7 +370,7 @@ export default function NotificationSettingsPage() {
                     />
                   </View>
                   <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                    Son
+                    {getNotificationSettingsTranslation('notificationSettings.sound', language)}
                   </Text>
                 </View>
                 <Switch
@@ -373,7 +390,7 @@ export default function NotificationSettingsPage() {
                     <MaterialCommunityIcons name="vibrate" size={20} color="#F47CC6" />
                   </View>
                   <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
-                    Vibration
+                    {getNotificationSettingsTranslation('notificationSettings.vibration', language)}
                   </Text>
                 </View>
                 <Switch

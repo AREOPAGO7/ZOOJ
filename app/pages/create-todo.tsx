@@ -14,6 +14,8 @@ import {
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
+import todoTranslations from '../../lib/todo-translations.json';
+import { formatDateForTodo } from '../../lib/todoDateUtils';
 import { CreateTodoData, todoService } from '../../lib/todoService';
 import AppLayout from '../app-layout';
 
@@ -22,7 +24,32 @@ export default function CreateTodoPage() {
   const { coupleId } = useLocalSearchParams();
   const { user } = useAuth();
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  
+  // Todo-specific translation function
+  const todoT = (key: string, params?: Record<string, string>): string => {
+    const keys = key.split('.');
+    let value: any = todoTranslations[language];
+    
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k];
+      } else {
+        return key;
+      }
+    }
+    
+    let result = typeof value === 'string' ? value : key;
+    
+    // Handle placeholder substitution
+    if (params && typeof result === 'string') {
+      Object.entries(params).forEach(([placeholder, replacement]) => {
+        result = result.replace(new RegExp(`\\{${placeholder}\\}`, 'g'), replacement);
+      });
+    }
+    
+    return result;
+  };
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -34,12 +61,12 @@ export default function CreateTodoPage() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Erreur', 'Le titre est requis');
+      Alert.alert(todoT('createTodo.error'), todoT('createTodo.titleRequired'));
       return;
     }
 
     if (!coupleId) {
-      Alert.alert('Erreur', 'ID du couple manquant');
+      Alert.alert(todoT('createTodo.error'), t('calendarDetails.messages.coupleIdMissing'));
       return;
     }
 
@@ -59,33 +86,28 @@ export default function CreateTodoPage() {
       
       if (error) {
         console.error('Error creating todo:', error);
-        Alert.alert('Erreur', 'Impossible de créer la tâche');
+        Alert.alert(todoT('createTodo.error'), todoT('createTodo.errorSaving'));
         return;
       }
 
       if (data) {
-        Alert.alert('Succès', 'Tâche créée avec succès', [
+        Alert.alert(todoT('createTodo.success'), todoT('createTodo.taskCreated'), [
           {
-            text: 'OK',
+            text: todoT('todoDetails.messages.ok'),
             onPress: () => router.back(),
           },
         ]);
       }
     } catch (error) {
       console.error('Error creating todo:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(todoT('createTodo.error'), todoT('createTodo.errorOccurred'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    return formatDateForTodo(date, language);
   };
 
   return (
@@ -104,7 +126,7 @@ export default function CreateTodoPage() {
                 color={isDarkMode ? '#fff' : '#000'} 
               />
               <Text className={`ml-2 text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Nouvelle Tâche
+                {todoT('createTodo.title')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -115,12 +137,12 @@ export default function CreateTodoPage() {
           {/* Title */}
           <View>
             <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Titre *
+              {todoT('createTodo.fields.title')} *
             </Text>
             <TextInput
               value={title}
               onChangeText={setTitle}
-              placeholder="Entrez le titre de la tâche"
+              placeholder={todoT('createTodo.placeholders.title')}
               className={`px-4 py-3 rounded-lg border ${
                 isDarkMode 
                   ? 'bg-dark-card border-dark-border text-white' 
@@ -133,12 +155,12 @@ export default function CreateTodoPage() {
           {/* Description */}
           <View>
             <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Description
+              {todoT('createTodo.fields.description')}
             </Text>
             <TextInput
               value={description}
               onChangeText={setDescription}
-              placeholder="Entrez la description de la tâche"
+              placeholder={todoT('createTodo.placeholders.description')}
               multiline
               numberOfLines={4}
               className={`px-4 py-3 rounded-lg border ${
@@ -153,7 +175,7 @@ export default function CreateTodoPage() {
           {/* Due Date */}
           <View>
             <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Date d'échéance
+              {todoT('createTodo.fields.dueDate')}
             </Text>
             <TouchableOpacity
               onPress={() => setShowDatePicker(true)}
@@ -186,7 +208,7 @@ export default function CreateTodoPage() {
           {/* Priority */}
           <View>
             <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Priorité
+              {todoT('createTodo.fields.priority')}
             </Text>
             <View className="flex-row space-x-2">
               {(['urgent', 'normal', 'peut_attendre'] as const).map((priorityOption) => (
@@ -208,8 +230,7 @@ export default function CreateTodoPage() {
                       ? 'text-white'
                       : 'text-gray-900'
                   }`}>
-                    {priorityOption === 'urgent' ? 'Urgent' : 
-                     priorityOption === 'normal' ? 'Normal' : 'Peut attendre'}
+                    {todoT(`createTodo.priorities.${priorityOption}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -219,7 +240,7 @@ export default function CreateTodoPage() {
           {/* Status */}
           <View>
             <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Statut
+              {todoT('createTodo.fields.status')}
             </Text>
             <View className="flex-row space-x-2">
               {(['a_faire', 'en_cours', 'termine'] as const).map((statusOption) => (
@@ -241,8 +262,7 @@ export default function CreateTodoPage() {
                       ? 'text-white'
                       : 'text-gray-900'
                   }`}>
-                    {statusOption === 'a_faire' ? 'À faire' : 
-                     statusOption === 'en_cours' ? 'En cours' : 'Terminé'}
+                    {todoT(`createTodo.statuses.${statusOption}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -261,7 +281,7 @@ export default function CreateTodoPage() {
               <ActivityIndicator size="small" color="white" />
             ) : (
               <Text className="text-white text-center font-medium">
-                Créer la tâche
+                {todoT('createTodo.save')}
               </Text>
             )}
           </TouchableOpacity>
@@ -277,7 +297,7 @@ export default function CreateTodoPage() {
             <Text className={`text-center font-medium ${
               isDarkMode ? 'text-white' : 'text-gray-900'
             }`}>
-              Annuler
+              {todoT('todoDetails.cancel')}
             </Text>
           </TouchableOpacity>
         </View>

@@ -56,7 +56,19 @@
       "selectGenderTitle": "Sélectionner le genre",
       "selectCountryTitle": "Sélectionner le pays",
       "selectDateTitle": "Sélectionner la date",
-      "selectBirthYear": "Sélectionnez votre année de naissance"
+      "selectBirthYear": "Sélectionnez votre année de naissance",
+      "countries": {
+        "France": "France",
+        "Belgique": "Belgique",
+        "Suisse": "Suisse",
+        "Canada": "Canada",
+        "Maroc": "Maroc",
+        "Algérie": "Algérie",
+        "Tunisie": "Tunisie",
+        "Côte d'Ivoire": "Côte d'Ivoire",
+        "Sénégal": "Sénégal",
+        "Cameroun": "Cameroun"
+      }
     },
     "interests": {
       "title": "Vos centres d'intérêts",
@@ -171,7 +183,19 @@
       "selectGenderTitle": "Select Gender",
       "selectCountryTitle": "Select Country",
       "selectDateTitle": "Select Date",
-      "selectBirthYear": "Select your birth year"
+      "selectBirthYear": "Select your birth year",
+      "countries": {
+        "France": "France",
+        "Belgique": "Belgium",
+        "Suisse": "Switzerland",
+        "Canada": "Canada",
+        "Maroc": "Morocco",
+        "Algérie": "Algeria",
+        "Tunisie": "Tunisia",
+        "Côte d'Ivoire": "Ivory Coast",
+        "Sénégal": "Senegal",
+        "Cameroun": "Cameroon"
+      }
     },
     "interests": {
       "title": "Your Interests",
@@ -286,7 +310,19 @@
       "selectGenderTitle": "اختر الجنس",
       "selectCountryTitle": "اختر البلد",
       "selectDateTitle": "اختر التاريخ",
-      "selectBirthYear": "اختر سنة ميلادك"
+      "selectBirthYear": "اختر سنة ميلادك",
+      "countries": {
+        "France": "فرنسا",
+        "Belgique": "بلجيكا",
+        "Suisse": "سويسرا",
+        "Canada": "كندا",
+        "Maroc": "المغرب",
+        "Algérie": "الجزائر",
+        "Tunisie": "تونس",
+        "Côte d'Ivoire": "ساحل العاج",
+        "Sénégal": "السنغال",
+        "Cameroun": "الكاميرون"
+      }
     },
     "interests": {
       "title": "اهتماماتك",
@@ -401,7 +437,19 @@
       "selectGenderTitle": "اختر الجنس",
       "selectCountryTitle": "اختر البلد",
       "selectDateTitle": "اختر التاريخ",
-      "selectBirthYear": "اختر سنة ميلادك"
+      "selectBirthYear": "اختر سنة ميلادك",
+      "countries": {
+        "France": "فرنسا",
+        "Belgique": "بلجيكا",
+        "Suisse": "سويسرا",
+        "Canada": "كندا",
+        "Maroc": "المغرب",
+        "Algérie": "الجزائر",
+        "Tunisie": "تونس",
+        "Côte d'Ivoire": "ساحل العاج",
+        "Sénégal": "السنغال",
+        "Cameroun": "الكاميرون"
+      }
     },
     "interests": {
       "title": "اهتماماتك",

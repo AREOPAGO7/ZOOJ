@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../lib/auth'
 import { Event, eventNotificationService } from '../lib/eventNotificationService'
 
 export const useEventNotifications = () => {
   const { user } = useAuth()
+  const { language } = useLanguage()
   const [isChecking, setIsChecking] = useState(false)
   const [lastCheckResult, setLastCheckResult] = useState<{
     eventsFound: number
@@ -24,7 +26,7 @@ export const useEventNotifications = () => {
     try {
       console.log('🚀 Starting automatic event check...')
       
-      const result = await eventNotificationService.checkTomorrowEventsAndNotify()
+      const result = await eventNotificationService.checkTomorrowEventsAndNotify(language)
       
       setLastCheckResult({
         ...result,
@@ -55,7 +57,7 @@ export const useEventNotifications = () => {
     } finally {
       setIsChecking(false)
     }
-  }, [user?.id])
+  }, [user?.id, language])
 
   // Get upcoming events for the current user
   const getUpcomingEvents = useCallback(async () => {

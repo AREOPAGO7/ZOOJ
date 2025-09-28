@@ -7,7 +7,6 @@ import {
     RefreshControl,
     ScrollView,
     Text,
-    TouchableOpacity,
     View
 } from 'react-native';
 import { CreateItemModal } from '../../components/CreateItemModal';
@@ -19,6 +18,7 @@ import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import { toLocalDateString, toLocalTimeString } from '../../lib/dateUtils';
 import { supabase } from '../../lib/supabase';
+import translations from '../../lib/translations.json';
 import AppLayout from '../app-layout';
 import { BRAND_BLUE, BRAND_GRAY, BRAND_PINK, calendarStyles } from './calendrier.styles';
 
@@ -62,7 +62,7 @@ export default function CalendrierPage() {
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { isDarkMode } = useDarkTheme();
   const { colors } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   // Event notification system - automatically checks for tomorrow's events
   const {
@@ -247,7 +247,7 @@ export default function CalendrierPage() {
 
       Alert.alert(t('calendar.success'), t('calendar.taskUpdated'));
     } catch (error) {
-      Alert.alert(t('calendar.error'), 'Impossible de mettre à jour la tâche');
+      Alert.alert(t('calendar.error'), t('todoDetails.messages.updateError'));
     }
   };
 
@@ -429,7 +429,7 @@ export default function CalendrierPage() {
     console.log('deleteItemDirectly called with:', { item, coupleId });
     if (!coupleId) {
       console.log('No coupleId, cannot delete');
-      Alert.alert(t('calendar.error'), 'Impossible de supprimer - ID du couple manquant');
+      Alert.alert(t('calendar.error'), t('calendarDetails.messages.coupleIdMissing'));
       return;
     }
 
@@ -480,7 +480,7 @@ export default function CalendrierPage() {
               setSelectedItem(null);
     } catch (error) {
       console.error('Error deleting item:', error);
-      Alert.alert(t('calendar.error'), 'Impossible de supprimer l\'élément');
+      Alert.alert(t('calendar.error'), t('calendarDetails.messages.deleteError'));
     }
   };
 
@@ -490,6 +490,15 @@ export default function CalendrierPage() {
       case 'normal': return '#FF9800';
       case 'peut_attendre': return '#4CAF50';
       default: return BRAND_GRAY;
+    }
+  };
+
+  const getPriorityText = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return t('calendar.urgent');
+      case 'normal': return t('calendar.normal');
+      case 'peut_attendre': return t('calendar.canWait');
+      default: return priority;
     }
   };
 
@@ -508,10 +517,22 @@ export default function CalendrierPage() {
     return `${hours}:${minutes}`;
   };
 
+  // Helper function to format date based on current language
+  const formatDateWithLanguage = (date: Date) => {
+    const days = translations[language]?.notifications?.time?.days || [];
+    const months = translations[language]?.notifications?.time?.months || [];
+    const dayName = days[date.getDay()] || '';
+    const monthName = months[date.getMonth()] || '';
+    const day = date.getDate();
+    const year = date.getFullYear();
+    
+    return `${dayName} ${day} ${monthName} ${year}`;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-    return `${date.getDate()} ${months[date.getMonth()]}`;
+    const monthsShort = translations[language]?.notifications?.time?.monthsShort || [];
+    return `${date.getDate()} ${monthsShort[date.getMonth()] || ''}`;
   };
 
   // Show loading while checking auth or profile completion
@@ -550,12 +571,7 @@ export default function CalendrierPage() {
           <View>
             <Text className={`text-2xl font-bold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.title')}</Text>
             <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-text-secondary'}`}>
-              {new Date().toLocaleDateString('fr-FR', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
+              {formatDateWithLanguage(new Date())}
             </Text>
           </View>
           <View style={calendarStyles.headerButtons}>
@@ -708,21 +724,8 @@ export default function CalendrierPage() {
         {/* Active Todos */}
         {todos.filter(todo => todo.status !== 'termine').length > 0 && (
           <View style={calendarStyles.section}>
-            <View className="flex-row items-center justify-between mb-3">
+            <View className="mb-3">
               <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{t('calendar.activeTasks')}</Text>
-              <TouchableOpacity
-                onPress={() => router.push('/pages/todo-list')}
-                className="flex-row items-center"
-              >
-                <Text className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                  Voir tout
-                </Text>
-                <MaterialCommunityIcons 
-                  name="chevron-right" 
-                  size={16} 
-                  color={isDarkMode ? '#60A5FA' : '#2563EB'} 
-                />
-              </TouchableOpacity>
             </View>
             {todos
               .filter(todo => todo.status !== 'termine')
@@ -755,7 +758,7 @@ export default function CalendrierPage() {
                   </View>
                   <View style={calendarStyles.todoPriority}>
                     <View style={[calendarStyles.priorityBadge, { backgroundColor: getPriorityColor(todo.priority) }]}>
-                      <Text style={calendarStyles.priorityText}>{todo.priority}</Text>
+                      <Text style={calendarStyles.priorityText}>{getPriorityText(todo.priority)}</Text>
                     </View>
                   </View>
                 </Pressable>

@@ -10,13 +10,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import AppLayout from '../app-layout';
@@ -446,12 +446,10 @@ export default function NotificationsPage() {
             const senderName = quizData.sender_name || 
                              quizData.sender_first_name || 
                              quizData.sender_username || 
-                             'Quelqu\'un';
+                             t('notifications.messages.someone');
             
-            // Create a clean message without UUIDs
-            const cleanMessage = notification.message ? 
-              notification.message.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, quizName) :
-              `${senderName} vous invite à participer au quiz "${quizName}"`;
+            // Create a simple hardcoded message
+            const cleanMessage = t('notifications.messages.quizInviteSimple');
 
             combinedNotifications.push({
               id: notification.id,

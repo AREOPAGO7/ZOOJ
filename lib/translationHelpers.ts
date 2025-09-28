@@ -66,3 +66,17 @@ export const getThemeName = (theme: any, language: string): string => {
       return theme.name;
   }
 };
+
+// Helper function to get translated city name
+export const getTranslatedCityName = (cityKey: string, t: (key: string) => string): string => {
+  return t(`bonsPlans.city.cities.${cityKey}`) || cityKey;
+};
+
+// Helper function to get all cities with their translated names
+export const getTranslatedCities = (t: (key: string) => string): Array<{key: string, name: string}> => {
+  const cityKeys = ['Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Agadir', 'Tanger'];
+  return cityKeys.map(key => ({
+    key,
+    name: getTranslatedCityName(key, t)
+  }));
+};

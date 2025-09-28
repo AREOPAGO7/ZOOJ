@@ -1,5 +1,34 @@
 import { notificationService } from './notificationService';
 import { supabase } from './supabase';
+import translations from './translations.json';
+
+// Helper function to get translated notification messages
+const getNotificationMessage = (itemType: 'event' | 'souvenir' | 'todo', itemTitle: string, language: string = 'fr'): { title: string; message: string } => {
+  const langTranslations = translations[language as keyof typeof translations] || translations.fr;
+  
+  switch (itemType) {
+    case 'event':
+      return {
+        title: langTranslations.notifications.messages.newEvent,
+        message: langTranslations.notifications.messages.partnerCreatedEvent.replace('{itemTitle}', itemTitle)
+      };
+    case 'souvenir':
+      return {
+        title: langTranslations.notifications.messages.newSouvenir,
+        message: langTranslations.notifications.messages.partnerAddedSouvenir.replace('{itemTitle}', itemTitle)
+      };
+    case 'todo':
+      return {
+        title: langTranslations.notifications.messages.newTodo,
+        message: langTranslations.notifications.messages.partnerCreatedTodo.replace('{itemTitle}', itemTitle)
+      };
+    default:
+      return {
+        title: 'Nouvel élément',
+        message: `Votre partenaire a ajouté un nouvel élément: "${itemTitle}"`
+      };
+  }
+};
 
 export interface CalendarItemNotification {
   id: string;
@@ -25,7 +54,8 @@ export const calendarNotificationService = {
     itemTitle: string,
     itemId: string,
     coupleId: string,
-    creatorId: string
+    creatorId: string,
+    language: string = 'fr'
   ): Promise<{ data: CalendarItemNotification | null; error: any }> {
     try {
       // Get the couple data to find the partner
@@ -47,24 +77,15 @@ export const calendarNotificationService = {
       }
 
       // Create appropriate notification based on item type
-      let title: string;
-      let message: string;
+      const { title, message } = getNotificationMessage(itemType, itemTitle, language);
       let type: 'event' | 'daily_question' | 'quiz_invite' | 'general' | 'couple_update';
 
       switch (itemType) {
         case 'event':
-          title = 'Nouvel événement';
-          message = `Votre partenaire a créé un nouvel événement: "${itemTitle}"`;
           type = 'event';
           break;
         case 'souvenir':
-          title = 'Nouveau souvenir';
-          message = `Votre partenaire a ajouté un nouveau souvenir: "${itemTitle}"`;
-          type = 'couple_update';
-          break;
         case 'todo':
-          title = 'Nouvelle tâche';
-          message = `Votre partenaire a créé une nouvelle tâche: "${itemTitle}"`;
           type = 'couple_update';
           break;
         default:

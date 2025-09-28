@@ -218,9 +218,13 @@ export default function ItemDetailsPage() {
         setItem(newData);
         setIsEditing(false);
         Alert.alert(
-          '✅ Succès', 
-          `L'élément "${newData.title}" a été converti de ${itemType === 'event' ? 'événement' : 'souvenir'} en ${editItemType === 'event' ? 'événement' : 'souvenir'}.`,
-          [{ text: 'OK' }]
+          t('calendarDetails.messages.success'), 
+          t('calendarDetails.messages.itemConverted', {
+            title: newData.title,
+            fromType: itemType === 'event' ? t('calendarDetails.types.event') : t('calendarDetails.types.souvenir'),
+            toType: editItemType === 'event' ? t('calendarDetails.types.event') : t('calendarDetails.types.souvenir')
+          }),
+          [{ text: t('calendarDetails.messages.ok') }]
         );
       } else {
         // Update in same table
@@ -254,9 +258,11 @@ export default function ItemDetailsPage() {
       setItem(data);
       setIsEditing(false);
           Alert.alert(
-            '✅ Succès', 
-            `${itemType === 'event' ? 'L\'événement' : 'Le souvenir'} "${data.title}" a été mis à jour avec succès.`,
-            [{ text: 'OK' }]
+            t('calendarDetails.messages.success'), 
+            itemType === 'event' 
+              ? t('calendarDetails.messages.eventUpdated', { title: data.title })
+              : t('calendarDetails.messages.souvenirUpdated', { title: data.title }),
+            [{ text: t('calendarDetails.messages.ok') }]
           );
         }
       }
@@ -271,7 +277,10 @@ export default function ItemDetailsPage() {
   const handleDelete = () => {
     Alert.alert(
       t('calendarDetails.deleteItem'),
-      `Êtes-vous sûr de vouloir supprimer "${item.title}" ?\n\nCette action est irréversible et supprimera définitivement cet ${itemType === 'event' ? 'événement' : 'souvenir'} de votre calendrier.`,
+      t('calendarDetails.messages.deleteConfirmation', {
+        title: item.title,
+        type: itemType === 'event' ? t('calendarDetails.types.event') : t('calendarDetails.types.souvenir')
+      }),
       [
         {
           text: t('calendarDetails.cancel'),
@@ -301,7 +310,7 @@ export default function ItemDetailsPage() {
           tableName = 'calendar_souvenirs';
           break;
       default:
-          throw new Error('Type d\'élément invalide');
+          throw new Error(t('calendarDetails.messages.invalidItemType'));
       }
 
       const { error } = await supabase
@@ -316,11 +325,13 @@ export default function ItemDetailsPage() {
     }
     
       Alert.alert(
-        '✅ Supprimé', 
-        `${itemType === 'event' ? 'L\'événement' : 'Le souvenir'} "${item.title}" a été supprimé avec succès.`,
+        t('calendarDetails.messages.deleted'), 
+        itemType === 'event' 
+          ? t('calendarDetails.messages.eventDeleted', { title: item.title })
+          : t('calendarDetails.messages.souvenirDeleted', { title: item.title }),
         [
           {
-            text: 'OK',
+            text: t('calendarDetails.messages.ok'),
             onPress: () => router.back(),
           },
         ]
@@ -430,7 +441,7 @@ export default function ItemDetailsPage() {
       if (source === 'camera') {
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
         if (permissionResult.granted === false) {
-          Alert.alert('Permission requise', 'Permission d\'accès à la caméra requise pour prendre une photo.');
+          Alert.alert(t('profile.permissionDenied'), t('profile.cameraPermissionRequired'));
           return;
         }
         result = await ImagePicker.launchCameraAsync({
@@ -442,7 +453,7 @@ export default function ItemDetailsPage() {
       } else {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
-          Alert.alert('Permission requise', 'Permission d\'accès à la galerie requise pour sélectionner une photo.');
+          Alert.alert(t('profile.permissionDenied'), t('profile.galleryPermissionRequired'));
       return;
     }
         result = await ImagePicker.launchImageLibraryAsync({
@@ -458,7 +469,7 @@ export default function ItemDetailsPage() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Erreur', 'Erreur lors de la sélection de l\'image.');
+      Alert.alert(t('common.error'), t('profile.cannotSelectImage'));
     }
   };
 
@@ -511,13 +522,13 @@ export default function ItemDetailsPage() {
         
         // Store the Cloudinary URL
         setEditImage(cleanUrl);
-        Alert.alert('Succès', 'Image uploadée avec succès!');
+        Alert.alert(t('common.success'), t('profile.profilePictureUpdated'));
       } else {
         throw new Error('No secure URL returned from Cloudinary');
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      Alert.alert('Erreur', 'Erreur lors de l\'upload de l\'image.');
+      Alert.alert(t('common.error'), t('profile.cannotUploadImage'));
     } finally {
       setIsUploadingImage(false);
     }
@@ -998,7 +1009,7 @@ export default function ItemDetailsPage() {
                   fontSize: 16,
                   color: isDarkMode ? '#FFFFFF' : '#000000'
                 }}>
-                  {item.place || 'Aucun lieu spécifié'}
+                  {item.place || t('common.noPlace')}
                 </Text>
                 <MaterialCommunityIcons 
                   name="map-marker" 
@@ -1062,7 +1073,10 @@ export default function ItemDetailsPage() {
                 color: '#999999',
                 marginTop: 4
               }}>
-                Rappel (vous recevez une notification avant 3 heures)
+                {editAlarmable 
+                  ? t('calendar.reminderDescription')
+                  : t('calendar.noReminderDescription')
+                }
               </Text>
                </View>
           )}
@@ -1139,7 +1153,7 @@ export default function ItemDetailsPage() {
                         color: '#DC143C',
                         textAlign: 'center'
                       }}>
-                        Ajouter une image pour ce souvenir
+                        {t('calendar.addImage')}
                       </Text>
                       <View style={{ flexDirection: 'row', marginTop: 12, gap: 12 }}>
                         <TouchableOpacity 
@@ -1156,7 +1170,7 @@ export default function ItemDetailsPage() {
                           }}
                         >
                           <Text style={{ color: '#DC143C', fontSize: 12, fontWeight: '600' }}>
-                            📷 Camera
+                            📷 {t('calendar.camera')}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
@@ -1173,7 +1187,7 @@ export default function ItemDetailsPage() {
                           }}
                         >
                           <Text style={{ color: '#4682B4', fontSize: 12, fontWeight: '600' }}>
-                            🖼️ Gallery
+                            🖼️ {t('calendar.gallery')}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -1221,7 +1235,7 @@ export default function ItemDetailsPage() {
                 lineHeight: 24,
                 color: isDarkMode ? '#CCCCCC' : '#666666'
               }}>
-                {item.description || 'Aucune description'}
+                {item.description || t('common.noDescription')}
               </Text>
             )}
          </View>
@@ -1262,7 +1276,7 @@ export default function ItemDetailsPage() {
                 <View style={{
                   width: '100%',
                   aspectRatio: 16/9,
-                  maxHeight: 80,
+                  minHeight: 120,
                   borderRadius: 8,
                   borderWidth: 2,
                   borderStyle: 'dashed',

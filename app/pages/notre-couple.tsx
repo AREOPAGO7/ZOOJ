@@ -9,8 +9,25 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import { BotGameStats, CoupleGameStats, gameStatsService } from '../../lib/gameStatsService';
+import notreCoupleTranslations from '../../lib/notre-couple-translations.json';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
+
+// Translation helper function for notre-couple page
+const getNotreCoupleTranslation = (key: string, language: string): string => {
+  const keys = key.split('.');
+  let value: any = notreCoupleTranslations[language as keyof typeof notreCoupleTranslations];
+  
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      return key; // Return key if translation not found
+    }
+  }
+  
+  return typeof value === 'string' ? value : key;
+};
 
 /*
  * EXACT ANSWER MATCHING COMPATIBILITY SYSTEM:
@@ -89,6 +106,7 @@ interface GameStatisticsSectionProps {
   t: (key: string) => string;
   userId: string | null;
   partnerId: string | null;
+  language: string;
 }
 
 const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({ 
@@ -98,7 +116,8 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
   isDarkMode, 
   t,
   userId,
-  partnerId
+  partnerId,
+  language
 }) => {
   const [gameStats, setGameStats] = useState<CoupleGameStats | null>(null);
   const [botGameStats, setBotGameStats] = useState<BotGameStats | null>(null);
@@ -148,7 +167,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
       <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
         <View style={styles.gameStatsHeader}>
           <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
-          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.gameStats.title')}</Text>
+          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.title', language)}</Text>
         </View>
         <ActivityIndicator size="small" color={BRAND_PINK} />
       </View>
@@ -168,10 +187,10 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
       <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
         <View style={styles.gameStatsHeader}>
           <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
-          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{t('ourCouple.gameStats.title')}</Text>
+          <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.title', language)}</Text>
         </View>
         <Text style={[styles.noGameStatsText, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-          {t('ourCouple.gameStats.noGamesPlayed')}
+          {getNotreCoupleTranslation('ourCouple.gameStats.noGamesPlayed', language)}
         </Text>
       </View>
     );
@@ -181,14 +200,14 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
     <View style={[styles.gameStatsSection, { backgroundColor: isDarkMode ? '#000000' : colors.surface }]}>
       <View style={styles.gameStatsHeader}>
         <MaterialCommunityIcons name="gamepad-variant" size={24} color={BRAND_PINK} />
-        <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Statistiques de Jeux</Text>
+        <Text style={[styles.gameStatsTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.title', language)}</Text>
       </View>
       
       {/* Individual Bot Games Section - User */}
       {hasBotGames && (
         <View style={styles.botGamesSection}>
           <Text style={[styles.botGamesTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
-            {userNames?.user2 || 'Vos'} {t('ourCouple.gameStats.yourGamesVsAI')} 🤖
+            {userNames?.user2 || 'Vos'} {getNotreCoupleTranslation('ourCouple.gameStats.yourGamesVsAI', language)} 🤖
           </Text>
           <View style={styles.gameStatsGrid}>
             <View style={[styles.gameStatItem, { 
@@ -196,7 +215,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.total_games_played}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.gamesPlayed')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.gamesPlayed', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -204,7 +223,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.human_wins}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.yourWins')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.yourWins', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -212,7 +231,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.bot_wins}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.aiWins')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.aiWins', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -220,7 +239,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.pong_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.pong')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.pong', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -228,7 +247,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.chess_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.chess')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.chess', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -236,7 +255,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{botGameStats.human_win_rate}%</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.yourWinRate')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.yourWinRate', language)}</Text>
             </View>
           </View>
         </View>
@@ -255,7 +274,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.total_games_played}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.gamesPlayed')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.gamesPlayed', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -263,7 +282,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.human_wins}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.hisWins')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.hisWins', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -271,7 +290,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.bot_wins}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.aiWins')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.aiWins', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -279,7 +298,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.pong_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.pong')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.pong', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -287,7 +306,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.chess_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.chess')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.chess', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -295,7 +314,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{partnerBotGameStats.human_win_rate}%</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.hisWinRate')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.hisWinRate', language)}</Text>
             </View>
           </View>
         </View>
@@ -306,7 +325,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
       {hasCoupleGames && (
         <View style={styles.coupleGamesSection}>
           <Text style={[styles.coupleGamesTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
-            {t('ourCouple.gameStats.coupleGames')} 💕
+            {getNotreCoupleTranslation('ourCouple.gameStats.coupleGames', language)} 💕
           </Text>
           <View style={styles.gameStatsGrid}>
             <View style={[styles.gameStatItem, { 
@@ -314,7 +333,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.total_games_played}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.gamesPlayed')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.gamesPlayed', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -323,7 +342,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player1_wins}</Text>
               <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-                {t('ourCouple.gameStats.victories')} {userNames?.user1 || 'Joueur 1'}
+                {getNotreCoupleTranslation('ourCouple.gameStats.victories', language)} {userNames?.user1 || 'Joueur 1'}
               </Text>
             </View>
             
@@ -333,7 +352,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.player2_wins}</Text>
               <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>
-                {t('ourCouple.gameStats.victories')} {userNames?.user2 || 'Joueur 2'}
+                {getNotreCoupleTranslation('ourCouple.gameStats.victories', language)} {userNames?.user2 || 'Joueur 2'}
               </Text>
             </View>
             
@@ -342,7 +361,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.pong_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.pong')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.pong', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -350,7 +369,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.chess_games}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.chess')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.chess', language)}</Text>
             </View>
             
             <View style={[styles.gameStatItem, { 
@@ -358,7 +377,7 @@ const GameStatisticsSection: React.FC<GameStatisticsSectionProps> = ({
               borderColor: isDarkMode ? '#333333' : '#E5E7EB'
             }]}>
               <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>{gameStats.draws}</Text>
-              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{t('ourCouple.gameStats.draws')}</Text>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? '#CCCCCC' : '#333333' }]}>{getNotreCoupleTranslation('ourCouple.gameStats.draws', language)}</Text>
             </View>
           </View>
         </View>
@@ -408,7 +427,7 @@ export default function NotreCouplePage() {
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
   const { colors } = useTheme();
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const handleBack = () => {
     router.back();
@@ -1315,6 +1334,7 @@ ${t('ourCouple.share.downloadApp')} ${Platform.OS === 'ios' ? 'https://apps.appl
             t={t}
             userId={user?.id || null}
             partnerId={partnerId}
+            language={language}
           />
 
           {/* No Data State */}

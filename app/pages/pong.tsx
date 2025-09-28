@@ -9,8 +9,25 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { useAuth } from '../../lib/auth';
 import { GameStats, gameStatsService } from '../../lib/gameStatsService';
+import gamesTranslations from '../../lib/games-translations.json';
 import { supabase } from '../../lib/supabase';
 import AppLayout from '../app-layout';
+
+// Translation helper function for games
+const getGamesTranslation = (key: string, language: string): string => {
+  const keys = key.split('.');
+  let value: any = gamesTranslations[language as keyof typeof gamesTranslations];
+  
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      return key; // Return key if translation not found
+    }
+  }
+  
+  return typeof value === 'string' ? value : key;
+};
 
 // Pong game types
 interface Position {
@@ -99,7 +116,7 @@ const clearGameState = async () => {
 export default function PongPage() {
   const { user, loading } = useAuth();
   const { isProfileComplete, isLoading: profileLoading } = useProfileCompletion();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { isDarkMode } = useDarkTheme();
   const router = useRouter();
 
@@ -108,11 +125,11 @@ export default function PongPage() {
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [gameStats, setGameStats] = useState<any>(null);
   const [ballSpeed, setBallSpeed] = useState(3);
-  const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
+  const gameLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const panGestureRef = useRef<PanGestureHandler>(null);
 
   // Initialize new game
-  const initializeGame = useCallback((): GameState => {
+  const initializeGame = useCallback((lang: string = 'fr'): GameState => {
     return {
       playerPaddle: {
         position: { x: GAME_WIDTH / 2 - PADDLE_WIDTH / 2, y: GAME_HEIGHT - PADDLE_HEIGHT - 10 },
@@ -133,7 +150,7 @@ export default function PongPage() {
       },
       playerScore: 0,
       botScore: 0,
-      gameStatus: 'Appuyez pour commencer',
+      gameStatus: getGamesTranslation('games.pong.pressToStart', lang),
       isPlaying: false,
       gamePhase: 'paused',
       gameStartTime: Date.now(),
@@ -143,7 +160,7 @@ export default function PongPage() {
       longestRally: 0,
       currentRally: 0,
     };
-  }, [ballSpeed]);
+  }, [ballSpeed, language]);
 
   // Get couple ID
   const getCoupleId = useCallback(async () => {
@@ -186,7 +203,7 @@ export default function PongPage() {
       if (savedState) {
         setGameState(savedState);
       } else {
-        setGameState(initializeGame());
+        setGameState(initializeGame(language));
       }
       setIsLoading(false);
     };
@@ -206,7 +223,7 @@ export default function PongPage() {
 
     try {
       // For bot games, player1 is the user, player2 is null (bot)
-      const winnerId = gameState.winner === 'Vous' ? user.id : undefined;
+      const winnerId = gameState.winner === getGamesTranslation('games.pong.you', language) ? user.id : undefined;
 
       const stats: GameStats = {
         couple_id: null, // No couple for bot games
@@ -327,7 +344,7 @@ export default function PongPage() {
             velocity: { x: newState.ballSpeed, y: newState.ballSpeed },
             radius: BALL_RADIUS,
           };
-          newState.gameStatus = `Vous: ${newState.playerScore} - Bot: ${newState.botScore}`;
+          newState.gameStatus = `${getGamesTranslation('games.pong.you', language)}: ${newState.playerScore} - ${getGamesTranslation('games.pong.bot', language)}: ${newState.botScore}`;
           newState.currentRally = 0; // Reset rally on score
         } else if (ball.position.y > GAME_HEIGHT) {
           newState.botScore++;
@@ -336,15 +353,15 @@ export default function PongPage() {
             velocity: { x: -newState.ballSpeed, y: -newState.ballSpeed },
             radius: BALL_RADIUS,
           };
-          newState.gameStatus = `Vous: ${newState.playerScore} - Bot: ${newState.botScore}`;
+          newState.gameStatus = `${getGamesTranslation('games.pong.you', language)}: ${newState.playerScore} - ${getGamesTranslation('games.pong.bot', language)}: ${newState.botScore}`;
           newState.currentRally = 0; // Reset rally on score
         }
 
         // Check for win condition
         if (newState.playerScore >= WIN_SCORE) {
           newState.gamePhase = 'gameOver';
-          newState.winner = 'Vous';
-          newState.gameStatus = t('pong.youWin');
+          newState.winner = getGamesTranslation('games.pong.you', language);
+          newState.gameStatus = getGamesTranslation('games.pong.youWin', language);
           newState.isPlaying = false;
           
           // Save stats when game ends
@@ -355,8 +372,8 @@ export default function PongPage() {
           });
         } else if (newState.botScore >= WIN_SCORE) {
           newState.gamePhase = 'gameOver';
-          newState.winner = 'Bot';
-          newState.gameStatus = t('pong.botWins');
+          newState.winner = getGamesTranslation('games.pong.bot', language);
+          newState.gameStatus = getGamesTranslation('games.pong.botWins', language);
           newState.isPlaying = false;
           
           // Save stats when game ends
@@ -382,18 +399,18 @@ export default function PongPage() {
 
   const startGame = useCallback(() => {
     if (!gameState) return;
-    setGameState(prev => prev ? { ...prev, isPlaying: true, gamePhase: 'playing', gameStatus: 'En cours...' } : null);
+    setGameState(prev => prev ? { ...prev, isPlaying: true, gamePhase: 'playing', gameStatus: getGamesTranslation('games.pong.inProgress', language) } : null);
   }, [gameState]);
 
   const pauseGame = useCallback(() => {
     if (!gameState) return;
-    setGameState(prev => prev ? { ...prev, isPlaying: false, gamePhase: 'paused', gameStatus: t('pong.pause') } : null);
+    setGameState(prev => prev ? { ...prev, isPlaying: false, gamePhase: 'paused', gameStatus: getGamesTranslation('games.pong.pause', language) } : null);
   }, [gameState]);
 
   const resetGame = useCallback(() => {
-    setGameState(initializeGame());
+    setGameState(initializeGame(language));
     clearGameState();
-  }, [initializeGame]);
+  }, [initializeGame, language]);
 
   const handlePanGesture = useCallback((event: any) => {
     if (!gameState || !gameState.isPlaying) return;
@@ -479,7 +496,7 @@ export default function PongPage() {
     return (
       <AppLayout>
         <View className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-bg' : 'bg-background'}`}>
-          <Text className={`text-lg ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>Chargement...</Text>
+          <Text className={`text-lg ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{getGamesTranslation('games.pong.loading', language)}</Text>
         </View>
       </AppLayout>
     );
@@ -492,7 +509,7 @@ export default function PongPage() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
-          <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Pong</Text>
+          <Text className={`text-lg font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{getGamesTranslation('games.pong.title', language)}</Text>
           <TouchableOpacity onPress={resetGame} style={styles.resetButton}>
             <MaterialCommunityIcons name="refresh" size={24} color={isDarkMode ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
@@ -504,14 +521,11 @@ export default function PongPage() {
             <Text className={`text-lg font-semibold text-center mb-2 ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>
               {gameState.gameStatus}
             </Text>
-            <Text className={`text-base font-medium ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
-              Vous: {gameState.playerScore} - Bot: {gameState.botScore}
-            </Text>
             
             {/* Ball Speed Control */}
             <View style={styles.speedControl}>
               <Text className={`text-sm ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
-                Vitesse de la balle: {ballSpeed}
+  {getGamesTranslation('games.pong.ballSpeed', language)}: {ballSpeed}
               </Text>
               <View style={styles.speedButtons}>
                 <TouchableOpacity
@@ -615,21 +629,21 @@ export default function PongPage() {
             {!gameState.isPlaying && gameState.gamePhase !== 'gameOver' && (
               <TouchableOpacity style={styles.startButton} onPress={startGame}>
                 <MaterialCommunityIcons name="play" size={24} color="#FFFFFF" />
-                <Text style={styles.startButtonText}>{t('pong.start')}</Text>
+                <Text style={styles.startButtonText}>{getGamesTranslation('games.pong.start', language)}</Text>
               </TouchableOpacity>
             )}
             
             {gameState.isPlaying && (
               <TouchableOpacity style={styles.pauseButton} onPress={pauseGame}>
                 <MaterialCommunityIcons name="pause" size={24} color="#FFFFFF" />
-                <Text style={styles.pauseButtonText}>{t('pong.pause')}</Text>
+                <Text style={styles.pauseButtonText}>{getGamesTranslation('games.pong.pause', language)}</Text>
               </TouchableOpacity>
             )}
             
             {gameState.gamePhase === 'gameOver' && (
               <TouchableOpacity style={styles.startButton} onPress={resetGame}>
                 <MaterialCommunityIcons name="refresh" size={24} color="#FFFFFF" />
-                <Text style={styles.startButtonText}>{t('pong.newGame')}</Text>
+                <Text style={styles.startButtonText}>{getGamesTranslation('games.pong.newGame', language)}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -654,8 +668,8 @@ export default function PongPage() {
               </TouchableOpacity>
               
               <View style={[styles.touchArea, { backgroundColor: isDarkMode ? '#374151' : '#F3F4F6' }]}>
-                <Text className={`text-xs font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>Zone de contrôle</Text>
-                <Text className={`text-xs mt-0.5 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>Touchez ici pour déplacer</Text>
+                <Text className={`text-xs font-semibold ${isDarkMode ? 'text-dark-text' : 'text-text'}`}>{getGamesTranslation('games.pong.controlZone', language)}</Text>
+                <Text className={`text-xs mt-0.5 ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>{getGamesTranslation('games.pong.touchToMove', language)}</Text>
               </View>
               
               <TouchableOpacity 
@@ -678,10 +692,7 @@ export default function PongPage() {
           {/* Instructions */}
           <View style={styles.instructions}>
             <Text className={`text-sm text-center italic ${isDarkMode ? 'text-dark-text-secondary' : 'text-textSecondary'}`}>
-              {gameState.isPlaying 
-                ? t('pong.instructions') 
-                : t('pong.instructions')
-              }
+              {getGamesTranslation('games.pong.instructions', language)}
             </Text>
           </View>
         </View>

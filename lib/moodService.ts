@@ -12,15 +12,15 @@ export interface UserMood {
 
 export const moodService = {
   // Get mood emoji and label
-  getMoodInfo(moodType: string): { emoji: string; label: string } {
+  getMoodInfo(moodType: string, t?: (key: string) => string): { emoji: string; label: string } {
     const moodMap = {
-      joyeux: { emoji: '😊', label: 'Joyeux' },
-      content: { emoji: '🙂', label: 'Content' },
-      neutre: { emoji: '😐', label: 'Neutre' },
-      triste: { emoji: '😢', label: 'Triste' },
-      enerve: { emoji: '😠', label: 'Énervé' }
+      joyeux: { emoji: '😊', label: t ? t('home.moodSelector.moods.joyeux') : 'Joyeux' },
+      content: { emoji: '🙂', label: t ? t('home.moodSelector.moods.content') : 'Content' },
+      neutre: { emoji: '😐', label: t ? t('home.moodSelector.moods.neutre') : 'Neutre' },
+      triste: { emoji: '😢', label: t ? t('home.moodSelector.moods.triste') : 'Triste' },
+      enerve: { emoji: '😠', label: t ? t('home.moodSelector.moods.enerve') : 'Énervé' }
     };
-    return moodMap[moodType as keyof typeof moodMap] || { emoji: '😐', label: 'Neutre' };
+    return moodMap[moodType as keyof typeof moodMap] || { emoji: '😐', label: t ? t('home.moodSelector.moods.neutre') : 'Neutre' };
   },
 
   // Get current user's mood from profiles table
@@ -59,7 +59,7 @@ export const moodService = {
   },
 
   // Get couple's moods (both users) from profiles table
-  async getCoupleMoods(userId: string): Promise<{ data: UserMood[] | null; error: any }> {
+  async getCoupleMoods(userId: string, t?: (key: string) => string): Promise<{ data: UserMood[] | null; error: any }> {
     try {
       // First, find the couple
       const { data: couple, error: coupleError } = await supabase
@@ -88,7 +88,7 @@ export const moodService = {
       const userMoods: UserMood[] = [];
 
       for (const profile of profiles || []) {
-        const moodInfo = this.getMoodInfo(profile.mood || 'neutre');
+        const moodInfo = this.getMoodInfo(profile.mood || 'neutre', t);
         userMoods.push({
           user_id: profile.id,
           user_name: profile.name || 'Utilisateur',

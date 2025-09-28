@@ -1,3 +1,4 @@
+import { useLanguage } from '@/contexts/LanguageContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { supabase } from '@/lib/supabase'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
@@ -22,6 +23,7 @@ const BRAND_PINK = "#F47CC6"
 
 export default function PasswordResetPage() {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const router = useRouter()
   
   // State management
@@ -76,7 +78,7 @@ export default function PasswordResetPage() {
           }
         } catch (error) {
           console.log("Error processing recovery link:", error)
-          Alert.alert("Erreur", "Lien de réinitialisation invalide")
+          Alert.alert(t('common.error'), t('passwordReset.errors.invalidLink'))
         }
       }
     }
@@ -100,7 +102,7 @@ export default function PasswordResetPage() {
   // Send password reset OTP (simple approach)
   const handleSendResetEmail = async () => {
     if (!email.trim()) {
-      setEmailError("Veuillez entrer votre email")
+      setEmailError(t('passwordReset.errors.emailRequired'))
       return
     }
 
@@ -117,16 +119,16 @@ export default function PasswordResetPage() {
       
       if (error) {
         console.log("Password reset error:", error)
-        setEmailError(error.message || "Erreur lors de l'envoi de l'email")
+        setEmailError(error.message || t('passwordReset.errors.sendFailed'))
         return
       }
       
       Alert.alert(
-        "Email envoyé",
-        "Un email de réinitialisation a été envoyé à votre adresse email. Vérifiez votre boîte de réception.",
+        t('passwordReset.emailSent'),
+        t('passwordReset.emailSentMessage'),
         [
           {
-            text: "OK",
+            text: t('common.ok'),
             onPress: () => {
               // Move to OTP step
               setStep('otp')
@@ -136,7 +138,7 @@ export default function PasswordResetPage() {
       )
     } catch (error) {
       console.log("OTP send exception:", error)
-      setEmailError("Une erreur inattendue s'est produite")
+      setEmailError(t('passwordReset.errors.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
@@ -145,7 +147,7 @@ export default function PasswordResetPage() {
   // Verify OTP code (simple validation - no auto-login)
   const handleVerifyOtp = async () => {
     if (!otpCode.trim()) {
-      setOtpError("Veuillez entrer le code OTP")
+      setOtpError(t('passwordReset.errors.codeRequired'))
       return
     }
 
@@ -162,11 +164,11 @@ export default function PasswordResetPage() {
         // Move to password step without signing in
         setStep('newPassword')
       } else {
-        setOtpError("Code OTP invalide. Veuillez entrer un code à 6 chiffres.")
+        setOtpError(t('passwordReset.errors.codeInvalid'))
       }
     } catch (error) {
       console.log("OTP verification exception:", error)
-      setOtpError("Une erreur inattendue s'est produite")
+      setOtpError(t('passwordReset.errors.unexpectedError'))
     } finally {
       setIsVerifyingOtp(false)
     }
@@ -175,17 +177,17 @@ export default function PasswordResetPage() {
   // Update password using Supabase
   const handleUpdatePassword = async () => {
     if (!newPassword.trim()) {
-      setPasswordError("Veuillez entrer un nouveau mot de passe")
+      setPasswordError(t('passwordReset.errors.passwordRequired'))
       return
     }
 
     if (newPassword.length < 6) {
-      setPasswordError("Le mot de passe doit contenir au moins 6 caractères")
+      setPasswordError(t('passwordReset.errors.passwordTooShort'))
       return
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError("Les mots de passe ne correspondent pas")
+      setPasswordError(t('passwordReset.errors.passwordsMismatch'))
       return
     }
 
@@ -204,13 +206,13 @@ export default function PasswordResetPage() {
 
       if (verifyError) {
         console.log("OTP verification error:", verifyError)
-        setPasswordError("Code OTP invalide ou expiré")
+        setPasswordError(t('passwordReset.errors.codeExpired'))
         return
       }
 
       if (!verifyData.session) {
         console.log("No session from OTP verification")
-        setPasswordError("Session de récupération invalide")
+        setPasswordError(t('passwordReset.errors.sessionInvalid'))
         return
       }
 
@@ -223,7 +225,12 @@ export default function PasswordResetPage() {
 
       if (updateError) {
         console.log("Password update error:", updateError)
-        setPasswordError(updateError.message || "Erreur lors de la mise à jour du mot de passe")
+        // Check for specific Supabase error messages and translate them
+        if (updateError.message && updateError.message.includes("should be different from the old password")) {
+          setPasswordError(t('passwordReset.errors.passwordSameAsOld'))
+        } else {
+          setPasswordError(updateError.message || t('passwordReset.errors.updateFailed'))
+        }
         return
       }
 
@@ -235,11 +242,11 @@ export default function PasswordResetPage() {
       
       // Show success and redirect to login
       Alert.alert(
-        "Succès",
-        "Votre mot de passe a été mis à jour avec succès!",
+        t('passwordReset.success'),
+        t('passwordReset.passwordUpdated'),
         [
           {
-            text: "OK",
+            text: t('common.ok'),
             onPress: () => {
               // Navigate back to login
               router.replace('/')
@@ -249,7 +256,7 @@ export default function PasswordResetPage() {
       )
     } catch (error) {
       console.log("Password update exception:", error)
-      setPasswordError("Une erreur inattendue s'est produite")
+      setPasswordError(t('passwordReset.errors.unexpectedError'))
     } finally {
       setIsUpdatingPassword(false)
     }
@@ -271,17 +278,17 @@ export default function PasswordResetPage() {
           <MaterialCommunityIcons name="lock-reset" size={40} color={BRAND_BLUE} />
         </View>
         <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
-          Mot de passe oublié?
+          {t('passwordReset.forgotPassword')}
         </Text>
          <Text style={{ fontSize: 16, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 }}>
-           Entrez votre adresse email et nous vous enverrons un code de vérification pour réinitialiser votre mot de passe.
+           {t('passwordReset.emailInstruction')}
          </Text>
       </View>
 
       <View style={{ gap: 16 }}>
         <View style={{ backgroundColor: colors.surface, borderColor: emailError ? "#FF5A5F" : colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
-            placeholder="Votre adresse email"
+            placeholder={t('passwordReset.emailPlaceholder')}
             value={email}
             onChangeText={(text) => { setEmail(text); setEmailError('') }}
             keyboardType="email-address"
@@ -303,7 +310,7 @@ export default function PasswordResetPage() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
                <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
-                 Envoyer le code de vérification
+                 {t('passwordReset.sendCode')}
                </Text>
             )}
           </LinearGradient>
@@ -313,7 +320,7 @@ export default function PasswordResetPage() {
       <View style={{ alignItems: 'center', marginTop: 24 }}>
         <Pressable onPress={() => router.back()}>
           <Text style={{ color: BRAND_BLUE, fontSize: 16, fontWeight: "500" }}>
-            Retour à la connexion
+            {t('passwordReset.backToLogin')}
           </Text>
         </Pressable>
       </View>
@@ -336,17 +343,17 @@ export default function PasswordResetPage() {
           <MaterialCommunityIcons name="message-text" size={40} color={BRAND_BLUE} />
         </View>
         <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
-          Code de vérification
+          {t('passwordReset.verificationCode')}
         </Text>
         <Text style={{ fontSize: 16, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 }}>
-          Entrez le code de vérification envoyé à votre email.
+          {t('passwordReset.codeInstruction')}
         </Text>
       </View>
 
       <View style={{ gap: 16 }}>
         <View style={{ backgroundColor: colors.surface, borderColor: otpError ? "#FF5A5F" : colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
-            placeholder="Code de vérification"
+            placeholder={t('passwordReset.codePlaceholder')}
             value={otpCode}
             onChangeText={(text) => { setOtpCode(text); setOtpError('') }}
             keyboardType="numeric"
@@ -368,7 +375,7 @@ export default function PasswordResetPage() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
-                Vérifier le code
+                {t('passwordReset.verifyCode')}
               </Text>
             )}
           </LinearGradient>
@@ -378,7 +385,7 @@ export default function PasswordResetPage() {
       <View style={{ alignItems: 'center', marginTop: 24 }}>
         <Pressable onPress={() => setStep('email')}>
           <Text style={{ color: BRAND_BLUE, fontSize: 16, fontWeight: "500" }}>
-            Retour
+            {t('passwordReset.back')}
           </Text>
         </Pressable>
       </View>
@@ -401,17 +408,17 @@ export default function PasswordResetPage() {
           <MaterialCommunityIcons name="key" size={40} color={BRAND_BLUE} />
         </View>
         <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
-          Nouveau mot de passe
+          {t('passwordReset.newPassword')}
         </Text>
         <Text style={{ fontSize: 16, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 }}>
-          Entrez votre nouveau mot de passe.
+          {t('passwordReset.newPasswordInstruction')}
         </Text>
       </View>
 
       <View style={{ gap: 16 }}>
         <View style={{ backgroundColor: colors.surface, borderColor: passwordError ? "#FF5A5F" : colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
-            placeholder="Nouveau mot de passe"
+            placeholder={t('passwordReset.newPasswordPlaceholder')}
             value={newPassword}
             onChangeText={(text) => { setNewPassword(text); setPasswordError('') }}
             secureTextEntry
@@ -422,7 +429,7 @@ export default function PasswordResetPage() {
 
         <View style={{ backgroundColor: colors.surface, borderColor: passwordError ? "#FF5A5F" : colors.border, borderWidth: 1, borderRadius: 12 }}>
           <TextInput
-            placeholder="Confirmer le mot de passe"
+            placeholder={t('passwordReset.confirmPasswordPlaceholder')}
             value={confirmPassword}
             onChangeText={(text) => { setConfirmPassword(text); setPasswordError('') }}
             secureTextEntry
@@ -443,7 +450,7 @@ export default function PasswordResetPage() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
-                Confirmer
+                {t('passwordReset.confirm')}
               </Text>
             )}
           </LinearGradient>
@@ -471,7 +478,7 @@ export default function PasswordResetPage() {
               <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
             </Pressable>
             <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "700", color: colors.text }}>
-              Réinitialiser le mot de passe
+              {t('passwordReset.title')}
             </Text>
           </View>
 

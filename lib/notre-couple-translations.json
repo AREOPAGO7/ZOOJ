@@ -1,0 +1,83 @@
+{
+  "fr": {
+    "ourCouple": {
+      "gameStats": {
+        "title": "Statistiques de Jeux",
+        "gamesPlayed": "Parties jouées",
+        "yourWins": "Vos victoires",
+        "aiWins": "Victoires IA",
+        "pong": "Pong",
+        "chess": "Échecs",
+        "yourWinRate": "Votre taux de victoire",
+        "hisWins": "Ses victoires",
+        "hisWinRate": "Son taux de victoire",
+        "coupleGames": "Jeux en couple",
+        "victories": "victoires",
+        "noGamesPlayed": "Aucune partie jouée",
+        "yourGamesVsAI": "jeux contre l'IA",
+        "draws": "Matchs nuls"
+      }
+    }
+  },
+  "en": {
+    "ourCouple": {
+      "gameStats": {
+        "title": "Game Statistics",
+        "gamesPlayed": "Games Played",
+        "yourWins": "Your Wins",
+        "aiWins": "AI Wins",
+        "pong": "Pong",
+        "chess": "Chess",
+        "yourWinRate": "Your Win Rate",
+        "hisWins": "His Wins",
+        "hisWinRate": "His Win Rate",
+        "coupleGames": "Couple Games",
+        "victories": "victories",
+        "noGamesPlayed": "No games played",
+        "yourGamesVsAI": "games vs AI",
+        "draws": "Draws"
+      }
+    }
+  },
+  "ar": {
+    "ourCouple": {
+      "gameStats": {
+        "title": "إحصائيات الألعاب",
+        "gamesPlayed": "الألعاب المنجزة",
+        "yourWins": "انتصاراتك",
+        "aiWins": "انتصارات الذكاء الاصطناعي",
+        "pong": "بونغ",
+        "chess": "الشطرنج",
+        "yourWinRate": "معدل انتصاراتك",
+        "hisWins": "انتصاراته",
+        "hisWinRate": "معدل انتصاراته",
+        "coupleGames": "ألعاب الزوجين",
+        "victories": "انتصارات",
+        "noGamesPlayed": "لم يتم لعب أي ألعاب",
+        "yourGamesVsAI": "ألعاب ضد الذكاء الاصطناعي",
+        "draws": "تعادلات"
+      }
+    }
+  },
+  "ma": {
+    "ourCouple": {
+      "gameStats": {
+        "title": "إحصائيات الألعاب",
+        "gamesPlayed": "الألعاب المنجزة",
+        "yourWins": "انتصاراتك",
+        "aiWins": "انتصارات الذكاء الاصطناعي",
+        "pong": "بونغ",
+        "chess": "الشطرنج",
+        "yourWinRate": "معدل انتصاراتك",
+        "hisWins": "انتصاراته",
+        "hisWinRate": "معدل انتصاراته",
+        "coupleGames": "ألعاب الزوجين",
+        "victories": "انتصارات",
+        "noGamesPlayed": "ما تم لعبش أي ألعاب",
+        "yourGamesVsAI": "ألعاب ضد الذكاء الاصطناعي",
+        "draws": "تعادلات"
+      }
+    }
+  }
+}
+

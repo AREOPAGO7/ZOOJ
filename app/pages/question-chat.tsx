@@ -225,9 +225,9 @@ export default function QuestionChatPage() {
     if (!questionData || !dailyQuestionData) return false;
     
     const today = new Date();
-    const scheduledDate = new Date(dailyQuestionData.scheduled_for);
+    const createdDate = new Date(dailyQuestionData.created_at);
     
-    const isToday = today.toDateString() === scheduledDate.toDateString();
+    const isToday = today.toDateString() === createdDate.toDateString();
     
     return isToday;
   };
@@ -256,13 +256,13 @@ export default function QuestionChatPage() {
 
       if (coupleData.user1 && coupleData.user2) {
         if (coupleData.user1_id === user!.id) {
-          setUserName(coupleData.user1.name || 'Moi');
-          setPartnerName(coupleData.user2.name || 'Mon partenaire');
+          setUserName(coupleData.user1.name || t('questions.me'));
+          setPartnerName(coupleData.user2.name || t('questions.myPartner'));
           setPartnerProfilePicture(coupleData.user2.profile_picture);
           setPartnerId(coupleData.user2_id);
         } else {
-          setUserName(coupleData.user2.name || 'Moi');
-          setPartnerName(coupleData.user1.name || 'Mon partenaire');
+          setUserName(coupleData.user2.name || t('questions.me'));
+          setPartnerName(coupleData.user1.name || t('questions.myPartner'));
           setPartnerProfilePicture(coupleData.user1.profile_picture);
           setPartnerId(coupleData.user1_id);
         }
@@ -280,7 +280,6 @@ export default function QuestionChatPage() {
           .insert({
             couple_id: coupleData.id,
             question_id: questionId,
-            scheduled_for: today
           })
           .select()
           .single();
@@ -361,7 +360,6 @@ export default function QuestionChatPage() {
           .insert({
             couple_id: coupleData.id,
             question_id: questionId,
-            scheduled_for: today
           })
           .select()
           .single();
@@ -433,7 +431,6 @@ export default function QuestionChatPage() {
           .insert({
             couple_id: coupleData.id,
             question_id: questionId,
-            scheduled_for: today
           })
           .select()
           .single();
@@ -571,8 +568,8 @@ export default function QuestionChatPage() {
             <MaterialCommunityIcons name="chevron-left" size={28} color="#374151" />
           </Pressable>
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Question du jour</Text>
-            <Text style={styles.headerSubtitle}>Avec {partnerName || 'Mon partenaire'}</Text>
+            <Text style={styles.headerTitle}>{t('questions.questionOfDay')}</Text>
+            <Text style={styles.headerSubtitle}>{t('questions.with')} {partnerName || t('questions.myPartner')}</Text>
           </View>
         </View>
 
@@ -617,7 +614,7 @@ export default function QuestionChatPage() {
                 
                 {/* Privacy Notice */}
                 <Text style={styles.privacyNotice}>
-                  Vos réponses sont confidentielles. Consultez notre politique de Confidentialité
+                  {t('questions.privacyNotice')}
                 </Text>
               </View>
             </LinearGradient>
@@ -649,7 +646,7 @@ export default function QuestionChatPage() {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.messageInput}
-                    placeholder="Message..."
+                    placeholder={t('questions.messagePlaceholder')}
                     value={newMessage}
                     onChangeText={setNewMessage}
                     multiline

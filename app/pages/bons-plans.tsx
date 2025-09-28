@@ -2,19 +2,20 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCompletion } from '../../hooks/useProfileCompletion';
 import { getCategoryName, getSubcategoryDescription, getSubcategoryName, useServiceCategories, useServiceSubcategories } from '../../hooks/useServiceData';
 import { useAuth } from '../../lib/auth';
+import { getTranslatedCities } from '../../lib/translationHelpers';
 import AppLayout from '../app-layout';
 
 interface CategoryCardProps {
@@ -154,7 +155,7 @@ export default function BonsPlansPage() {
     }
   };
 
-  const cities = ['Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Agadir', 'Tanger'];
+  const cities = getTranslatedCities(t);
 
   // Group subcategories by category and filter by search query
   const categoriesWithSubcategories = categories
@@ -261,7 +262,7 @@ export default function BonsPlansPage() {
               ? (isDarkMode ? 'text-white' : 'text-gray-900')
               : (isDarkMode ? 'text-gray-300' : 'text-gray-500')
             }>
-              {selectedCity || t('bonsPlans.city.select')}
+              {selectedCity ? cities.find(c => c.key === selectedCity)?.name || selectedCity : t('bonsPlans.city.select')}
             </Text>
             <MaterialCommunityIcons 
               name="chevron-down" 
@@ -280,17 +281,17 @@ export default function BonsPlansPage() {
           }`}>
             {cities.map((city) => (
               <Pressable
-                key={city}
+                key={city.key}
                 className={`p-3 border-b ${
                   isDarkMode ? 'border-dark-border' : 'border-gray-100'
                 }`}
                 onPress={() => {
-                  setSelectedCity(city);
+                  setSelectedCity(city.key);
                   setShowCitySelector(false);
                 }}
               >
                 <Text className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                  {city}
+                  {city.name}
                 </Text>
               </Pressable>
             ))}

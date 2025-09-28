@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useLanguage } from '../contexts/LanguageContext';
 import { PulseWithSender, pulseService } from '../lib/pulseService';
 
 interface ReceivedPulseProps {
@@ -9,6 +10,7 @@ interface ReceivedPulseProps {
 }
 
 export const ReceivedPulse: React.FC<ReceivedPulseProps> = ({ userId }) => {
+  const { t, language } = useLanguage();
   const [currentPulse, setCurrentPulse] = useState<PulseWithSender | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,18 +105,18 @@ export const ReceivedPulse: React.FC<ReceivedPulseProps> = ({ userId }) => {
 
   const getPulseMessage = (emoji: string) => {
     const messageMap: { [key: string]: string } = {
-      '🌸': 'vous a envoyé une fleur',
-      '💘': 'pense à vous avec amour',
-      '😄': 'est de bonne humeur',
-      '😈': 'a une idée coquine',
-      '💨': 'vous envoie un petit vent',
-      '❤️': 'vous envoie de l\'amour',
-      '🔥': 'vous envoie de la passion',
-      '😘': 'vous envoie un bisou',
-      '🤗': 'vous fait un câlin',
-      '💕': 'vous envoie des cœurs'
+      '🌸': t('notifications.messages.pulseMessages.flower'),
+      '💘': t('notifications.messages.pulseMessages.love'),
+      '😄': t('notifications.messages.pulseMessages.happy'),
+      '😈': t('notifications.messages.pulseMessages.naughty'),
+      '💨': t('notifications.messages.pulseMessages.wind'),
+      '❤️': t('notifications.messages.pulseMessages.heart'),
+      '🔥': t('notifications.messages.pulseMessages.passion'),
+      '😘': t('notifications.messages.pulseMessages.kiss'),
+      '🤗': t('notifications.messages.pulseMessages.hug'),
+      '💕': t('notifications.messages.pulseMessages.hearts')
     };
-    return messageMap[emoji] || 'vous a envoyé un pulse';
+    return messageMap[emoji] || t('notifications.messages.pulseMessages.default');
   };
 
   const getTimeAgo = (createdAt: string) => {
@@ -122,14 +124,14 @@ export const ReceivedPulse: React.FC<ReceivedPulseProps> = ({ userId }) => {
     const created = new Date(createdAt);
     const diffInMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
     
-    if (diffInMinutes < 1) return 'À l\'instant';
-    if (diffInMinutes < 60) return `Il y a ${diffInMinutes} min`;
+    if (diffInMinutes < 1) return t('notifications.time.now');
+    if (diffInMinutes < 60) return t('notifications.time.minutesAgo').replace('{count}', diffInMinutes.toString());
     
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `Il y a ${diffInHours}h`;
+    if (diffInHours < 24) return t('notifications.time.hoursAgo').replace('{count}', diffInHours.toString());
     
     const diffInDays = Math.floor(diffInHours / 24);
-    return `Il y a ${diffInDays}j`;
+    return t('notifications.time.daysAgo').replace('{count}', diffInDays.toString());
   };
 
   return (
@@ -164,7 +166,7 @@ export const ReceivedPulse: React.FC<ReceivedPulseProps> = ({ userId }) => {
         )}
         
         <View style={styles.footer}>
-          <Text style={styles.tapToRead}>Appuyez pour marquer comme lu • Disparaît dans 5s</Text>
+          <Text style={styles.tapToRead}>{t('notifications.messages.pulseFooter')}</Text>
         </View>
       </View>
     </Pressable>

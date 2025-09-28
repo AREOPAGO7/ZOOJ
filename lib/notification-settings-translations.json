@@ -1,0 +1,67 @@
+{
+  "fr": {
+    "notificationSettings": {
+      "title": "Notifications",
+      "activateNotifications": "Activer les notifications",
+      "receiveAllNotifications": "Recevoir toutes les notifications",
+      "notificationTypes": "Types de Notifications",
+      "quizInvitation": "Invitation au quiz",
+      "dailyQuestion": "Question du jour",
+      "pulse": "Pulse",
+      "calendarAlarm": "Alarme Calendrier",
+      "messages": "Messages",
+      "notificationSound": "Son des notifications",
+      "sound": "Son",
+      "vibration": "Vibration"
+    }
+  },
+  "en": {
+    "notificationSettings": {
+      "title": "Notifications",
+      "activateNotifications": "Enable notifications",
+      "receiveAllNotifications": "Receive all notifications",
+      "notificationTypes": "Notification Types",
+      "quizInvitation": "Quiz Invitation",
+      "dailyQuestion": "Daily Question",
+      "pulse": "Pulse",
+      "calendarAlarm": "Calendar Alarm",
+      "messages": "Messages",
+      "notificationSound": "Notification Sound",
+      "sound": "Sound",
+      "vibration": "Vibration"
+    }
+  },
+  "ar": {
+    "notificationSettings": {
+      "title": "الإشعارات",
+      "activateNotifications": "تفعيل الإشعارات",
+      "receiveAllNotifications": "تلقي جميع الإشعارات",
+      "notificationTypes": "أنواع الإشعارات",
+      "quizInvitation": "دعوة الاختبار",
+      "dailyQuestion": "سؤال اليوم",
+      "pulse": "نبضة",
+      "calendarAlarm": "تنبيه التقويم",
+      "messages": "الرسائل",
+      "notificationSound": "صوت الإشعارات",
+      "sound": "الصوت",
+      "vibration": "الاهتزاز"
+    }
+  },
+  "ma": {
+    "notificationSettings": {
+      "title": "نوتيفيكاسيونات",
+      "activateNotifications": "فعل نوتيفيكاسيونات",
+      "receiveAllNotifications": "استقبل جميع نوتيفيكاسيونات",
+      "notificationTypes": "أنواع نوتيفيكاسيونات",
+      "quizInvitation": "دعوة لكويز",
+      "dailyQuestion": "سؤال النهار",
+      "pulse": "نبضة",
+      "calendarAlarm": "تنبيه كاليندر",
+      "messages": "رسائل",
+      "notificationSound": "صوت نوتيفيكاسيونات",
+      "sound": "الصوت",
+      "vibration": "الاهتزاز"
+    }
+  }
+}
+

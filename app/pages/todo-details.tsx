@@ -3,17 +3,19 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useDarkTheme } from '../../contexts/DarkThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../lib/auth';
+import todoTranslations from '../../lib/todo-translations.json';
+import { formatDateForTodo, formatTimeForTodo } from '../../lib/todoDateUtils';
 import { Todo, todoService, UpdateTodoData } from '../../lib/todoService';
 import AppLayout from '../app-layout';
 
@@ -22,7 +24,32 @@ export default function TodoDetailsPage() {
   const { todoId } = useLocalSearchParams();
   const { user } = useAuth();
   const { isDarkMode } = useDarkTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  
+  // Todo-specific translation function
+  const todoT = (key: string, params?: Record<string, string>): string => {
+    const keys = key.split('.');
+    let value: any = todoTranslations[language];
+    
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k];
+      } else {
+        return key;
+      }
+    }
+    
+    let result = typeof value === 'string' ? value : key;
+    
+    // Handle placeholder substitution
+    if (params && typeof result === 'string') {
+      Object.entries(params).forEach(([placeholder, replacement]) => {
+        result = result.replace(new RegExp(`\\{${placeholder}\\}`, 'g'), replacement);
+      });
+    }
+    
+    return result;
+  };
 
   const [todo, setTodo] = useState<Todo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +82,7 @@ export default function TodoDetailsPage() {
       
       if (error) {
         console.error('Error fetching todo:', error);
-        Alert.alert('Erreur', 'Impossible de charger la tâche');
+        Alert.alert(todoT('todoDetails.error'), todoT('todoDetails.errorLoading'));
         return;
       }
 
@@ -70,7 +97,7 @@ export default function TodoDetailsPage() {
       }
     } catch (error) {
       console.error('Error fetching todo:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(todoT('todoDetails.error'), todoT('todoDetails.errorOccurred'));
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +107,7 @@ export default function TodoDetailsPage() {
     if (!todo) return;
 
     if (!editTitle.trim()) {
-      Alert.alert('Erreur', 'Le titre est requis');
+      Alert.alert(todoT('todoDetails.error'), todoT('todoDetails.titleRequired'));
       return;
     }
 
@@ -100,18 +127,18 @@ export default function TodoDetailsPage() {
       
       if (error) {
         console.error('Error updating todo:', error);
-        Alert.alert('Erreur', 'Impossible de sauvegarder les modifications');
+        Alert.alert(todoT('todoDetails.error'), todoT('todoDetails.errorSaving'));
         return;
       }
 
       if (data) {
         setTodo(data);
         setIsEditing(false);
-        Alert.alert('Succès', 'Tâche mise à jour avec succès');
+        Alert.alert(todoT('todoDetails.messages.success'), todoT('todoDetails.messages.taskUpdated', { title: data.title }));
       }
     } catch (error) {
       console.error('Error updating todo:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(todoT('todoDetails.error'), todoT('todoDetails.errorOccurred'));
     } finally {
       setIsSaving(false);
     }
@@ -119,15 +146,15 @@ export default function TodoDetailsPage() {
 
   const handleDelete = () => {
     Alert.alert(
-      'Supprimer la tâche',
-      'Êtes-vous sûr de vouloir supprimer cette tâche ? Cette action est irréversible.',
+      todoT('todoDetails.deleteTask'),
+      todoT('todoDetails.messages.deleteConfirmation', { title: todo?.title || '' }),
       [
         {
-          text: 'Annuler',
+          text: todoT('todoDetails.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Supprimer',
+          text: todoT('todoDetails.delete'),
           style: 'destructive',
           onPress: confirmDelete,
         },
@@ -144,19 +171,19 @@ export default function TodoDetailsPage() {
       
       if (error) {
         console.error('Error deleting todo:', error);
-        Alert.alert('Erreur', 'Impossible de supprimer la tâche');
+        Alert.alert(todoT('todoDetails.error'), todoT('todoDetails.errorDeleting'));
         return;
       }
 
-      Alert.alert('Succès', 'Tâche supprimée avec succès', [
+      Alert.alert(todoT('todoDetails.messages.success'), todoT('todoDetails.messages.taskDeleted', { title: todo.title }), [
         {
-          text: 'OK',
+          text: todoT('todoDetails.messages.ok'),
           onPress: () => router.back(),
         },
       ]);
     } catch (error) {
       console.error('Error deleting todo:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(todoT('todoDetails.error'), todoT('todoDetails.errorOccurred'));
     } finally {
       setIsDeleting(false);
     }
@@ -215,19 +242,11 @@ export default function TodoDetailsPage() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    return formatDateForTodo(date, language);
   };
 
   const formatTime = (time: Date) => {
-    return time.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatTimeForTodo(time, language);
   };
 
   if (isLoading) {
@@ -236,7 +255,7 @@ export default function TodoDetailsPage() {
         <View className={`flex-1 ${isDarkMode ? 'bg-dark-bg' : 'bg-background'} justify-center items-center`}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text className={`mt-4 ${isDarkMode ? 'text-white' : 'text-gray-600'}`}>
-            Chargement de la tâche...
+            {todoT('todoDetails.loading')}
           </Text>
         </View>
       </AppLayout>
@@ -253,14 +272,14 @@ export default function TodoDetailsPage() {
             color={isDarkMode ? '#666' : '#999'} 
           />
           <Text className={`mt-4 text-lg ${isDarkMode ? 'text-white' : 'text-gray-600'}`}>
-            Tâche non trouvée
+            {todoT('todoDetails.errorLoading')}
           </Text>
           <TouchableOpacity
             onPress={() => router.back()}
             className={`mt-4 px-6 py-3 rounded-lg ${isDarkMode ? 'bg-dark-card' : 'bg-blue-500'}`}
           >
             <Text className={`${isDarkMode ? 'text-white' : 'text-white'} font-medium`}>
-              Retour
+              {t('common.back')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -316,7 +335,7 @@ export default function TodoDetailsPage() {
               fontWeight: '600',
               color: '#000000'
             }}>
-              {isEditing ? 'Tâche' : 'Détails de la tâche'}
+              {isEditing ? todoT('createTodo.title') : todoT('todoDetails.title')}
             </Text>
           </View>
         </View>
@@ -331,13 +350,13 @@ export default function TodoDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Titre
+              {todoT('todoDetails.fields.title')}
             </Text>
             {isEditing ? (
               <TextInput
                 value={editTitle}
                 onChangeText={setEditTitle}
-                placeholder="Donnez un nom à votre tâche"
+                placeholder={todoT('todoDetails.placeholders.title')}
                 style={{
                   paddingHorizontal: 16,
                   paddingVertical: 12,
@@ -369,13 +388,13 @@ export default function TodoDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Description
+              {todoT('todoDetails.fields.description')}
             </Text>
             {isEditing ? (
               <TextInput
                 value={editDescription}
                 onChangeText={setEditDescription}
-                placeholder="Ajoutez une note (facultatif)"
+                placeholder={todoT('todoDetails.placeholders.description')}
                 multiline
                 numberOfLines={4}
                 style={{
@@ -398,7 +417,7 @@ export default function TodoDetailsPage() {
                 lineHeight: 24,
                 color: isDarkMode ? '#CCCCCC' : '#666666'
               }}>
-                {todo.description || 'Aucune description'}
+                {todo.description || t('common.noDescription')}
               </Text>
             )}
           </View>
@@ -411,7 +430,7 @@ export default function TodoDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Date et Heure d'échéance
+              {todoT('todoDetails.fields.dueDate')}
             </Text>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {/* Date Input */}
@@ -520,7 +539,7 @@ export default function TodoDetailsPage() {
                       fontSize: 16,
                       color: '#000000'
                     }}>
-                      {todo.time || 'Aucune heure définie'}
+                      {todo.time || todoT('todoDetails.placeholders.noTimeSet')}
                     </Text>
                   </View>
                 )}
@@ -565,7 +584,7 @@ export default function TodoDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Priorité
+              {todoT('todoDetails.fields.priority')}
             </Text>
             {isEditing ? (
               <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -589,8 +608,7 @@ export default function TodoDetailsPage() {
                       color: editPriority === priority ? '#4682B4' : '#999999',
                       textAlign: 'center'
                     }}>
-                      {priority === 'urgent' ? 'Urgent' : 
-                       priority === 'normal' ? 'Normal' : 'Peut attendre'}
+                      {todoT(`todoDetails.priorities.${priority}`)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -616,8 +634,7 @@ export default function TodoDetailsPage() {
                   fontSize: 16,
                   color: '#000000'
                 }}>
-                  {todo.priority === 'urgent' ? 'Urgent' : 
-                   todo.priority === 'normal' ? 'Normal' : 'Peut attendre'}
+                  {todoT(`todoDetails.priorities.${todo.priority}`)}
                 </Text>
               </View>
             )}
@@ -631,7 +648,7 @@ export default function TodoDetailsPage() {
               color: isDarkMode ? '#FFFFFF' : '#000000',
               marginBottom: 12
             }}>
-              Statut
+              {todoT('todoDetails.fields.status')}
             </Text>
             {isEditing ? (
               <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -655,8 +672,7 @@ export default function TodoDetailsPage() {
                       color: editStatus === status ? '#DC143C' : '#999999',
                       textAlign: 'center'
                     }}>
-                      {status === 'a_faire' ? 'À faire' : 
-                       status === 'en_cours' ? 'En cours' : 'Terminé'}
+                      {todoT(`todoDetails.statuses.${status}`)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -682,8 +698,7 @@ export default function TodoDetailsPage() {
                   fontSize: 16,
                   color: '#000000'
                 }}>
-                  {todo.status === 'a_faire' ? 'À faire' : 
-                   todo.status === 'en_cours' ? 'En cours' : 'Terminé'}
+                  {todoT(`todoDetails.statuses.${todo.status}`)}
                 </Text>
               </View>
             )}
@@ -692,7 +707,7 @@ export default function TodoDetailsPage() {
           {/* Created Date */}
           <View>
             <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Créé le
+              {todoT('todoDetails.fields.createdOn')}
             </Text>
             <Text className={`text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               {formatDate(new Date(todo.created_at))}
@@ -725,7 +740,7 @@ export default function TodoDetailsPage() {
                     color: 'white',
                     fontWeight: '600',
                     fontSize: 16
-                  }}>Sauvegarde...</Text>
+                  }}>{todoT('todoDetails.loading')}</Text>
                 </View>
               ) : (
                 <Text style={{
@@ -733,7 +748,7 @@ export default function TodoDetailsPage() {
                   fontWeight: '600',
                   fontSize: 16,
                   textAlign: 'center'
-                }}>Sauvegarder</Text>
+                }}>{todoT('todoDetails.save')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -761,7 +776,7 @@ export default function TodoDetailsPage() {
                 fontWeight: '600',
                 fontSize: 16,
                 textAlign: 'center'
-              }}>Modifier la tâche</Text>
+              }}>{todoT('todoDetails.modifyTask')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -783,7 +798,7 @@ export default function TodoDetailsPage() {
                     color: '#DC143C',
                     fontWeight: '600',
                     fontSize: 16
-                  }}>Suppression...</Text>
+                  }}>{todoT('todoDetails.loading')}</Text>
                 </View>
               ) : (
                 <Text style={{
@@ -791,7 +806,7 @@ export default function TodoDetailsPage() {
                   fontWeight: '600',
                   fontSize: 16,
                   textAlign: 'center'
-                }}>Supprimer la tâche</Text>
+                }}>{todoT('todoDetails.deleteTask')}</Text>
               )}
             </TouchableOpacity>
           </View>
